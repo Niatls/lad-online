@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Лад</string>
+    <string name="title_activity_main">Лад</string>
+    <string name="package_name">ru.lad.admin</string>
+    <string name="custom_url_scheme">ru.lad.admin</string>
+</resources>
