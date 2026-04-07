@@ -29,6 +29,11 @@ jobs:
           cd android-app
           npm install
 
+      - name: Sync Capacitor Android
+        run: |
+          cd android-app
+          npx cap sync android
+
       - name: Build with Gradle
         run: |
           cd android-app/android
