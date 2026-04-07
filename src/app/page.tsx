@@ -23,6 +23,7 @@ import {
   Send,
   Menu,
   X,
+  LoaderCircle,
 } from "lucide-react";
 
 /* ─────────────────── Intersection Observer Hook ─────────────────── */
@@ -115,7 +116,9 @@ export default function LadPage() {
     phone: "",
     reason: "",
   });
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submittedApplicationNumber, setSubmittedApplicationNumber] = useState("");
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -128,11 +131,37 @@ export default function LadPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormSubmitted(true);
-    setTimeout(() => setFormSubmitted(false), 4000);
-    setFormData({ name: "", email: "", phone: "", reason: "" });
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "Не удалось отправить заявку");
+      }
+
+      setSubmittedApplicationNumber(result.applicationNumber);
+      setFormData({ name: "", email: "", phone: "", reason: "" });
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Не удалось отправить заявку. Попробуйте еще раз."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const navLinks = [
@@ -814,7 +843,7 @@ export default function LadPage() {
 
               <FadeIn delay={200}>
                 <div className="bg-cream rounded-3xl p-6 sm:p-10 border border-sage-light/20 shadow-sm">
-                  {formSubmitted ? (
+                  {submittedApplicationNumber ? (
                     <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-4">
                       <div className="w-20 h-20 rounded-full bg-sage-light/40 flex items-center justify-center">
                         <CheckCircle2 className="w-10 h-10 text-sage-dark" />
@@ -826,6 +855,22 @@ export default function LadPage() {
                         Мы свяжемся с вами в ближайшее время для назначения консультации.
                         Спасибо за доверие!
                       </p>
+                      <div className="rounded-2xl bg-white px-5 py-4 shadow-sm ring-1 ring-sage-light/20">
+                        <p className="text-xs uppercase tracking-[0.3em] text-forest/35">
+                          Номер заявки
+                        </p>
+                        <p className="mt-2 text-2xl font-bold text-sage-dark">
+                          {submittedApplicationNumber}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSubmittedApplicationNumber("")}
+                        className="rounded-xl border-sage-light/30 bg-white hover:bg-sage-light/10"
+                      >
+                        Отправить еще одну заявку
+                      </Button>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">
@@ -909,11 +954,22 @@ export default function LadPage() {
 
                       <Button
                         type="submit"
+                        disabled={isSubmitting}
                         className="w-full bg-gradient-to-r from-sage to-sage-dark hover:from-sage-dark hover:to-forest text-white border-0 rounded-xl h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                       >
-                        <Send className="w-4 h-4 mr-2" />
+                        {isSubmitting ? (
+                          <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
                         Отправить заявку
                       </Button>
+
+                      {submitError ? (
+                        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+                          {submitError}
+                        </p>
+                      ) : null}
 
                       <p className="text-xs text-forest/30 text-center leading-relaxed">
                         Нажимая кнопку, вы соглашаетесь с правилами нашего сервиса.
