@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   keywords: ["психолог", "консультация", "депрессия", "тревога", "стресс", "ПТСР", "психологическая помощь"],
   icons: {
     icon: [
-      { url: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/favicon.png", sizes: "180x180", type: "image/png" },
     ],
     apple: [
