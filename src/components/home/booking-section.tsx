@@ -15,8 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { HomePageContent } from "@/lib/content";
-import { siteConfig } from "@/lib/site-config";
+import type { HomeContactsContent, HomePageContent } from "@/lib/content";
 
 import { FadeIn } from "./fade-in";
 
@@ -29,6 +28,7 @@ export type BookingFormData = {
 
 type BookingSectionProps = {
   content: HomePageContent;
+  contacts: HomeContactsContent;
   formData: BookingFormData;
   isSubmitting: boolean;
   submitError: string;
@@ -40,6 +40,7 @@ type BookingSectionProps = {
 
 export function BookingSection({
   content,
+  contacts,
   formData,
   isSubmitting,
   submitError,
@@ -74,7 +75,7 @@ export function BookingSection({
                   <div>
                     <p className="mb-0.5 text-xs text-forest/40">Телефон</p>
                     <p className="text-sm font-semibold text-forest">
-                      {siteConfig.phone}
+                      {contacts.phone}
                     </p>
                   </div>
                 </div>
@@ -88,7 +89,7 @@ export function BookingSection({
                       Электронная почта
                     </p>
                     <p className="break-all text-sm font-semibold text-forest">
-                      {siteConfig.email}
+                      {contacts.email}
                     </p>
                   </div>
                 </div>
@@ -100,7 +101,7 @@ export function BookingSection({
                   <div>
                     <p className="mb-0.5 text-xs text-forest/40">Формат</p>
                     <p className="text-sm font-semibold text-forest">
-                      {siteConfig.formatLabel}
+                      {contacts.formatLabel}
                     </p>
                   </div>
                 </div>

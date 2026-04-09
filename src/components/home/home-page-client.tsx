@@ -11,7 +11,6 @@ import {
 } from "@/components/home/booking-section";
 import { HeroSection } from "@/components/home/hero-section";
 import { HomeHeader } from "@/components/home/home-header";
-import { navLinks } from "@/components/home/home-data";
 import { MessengerStrip } from "@/components/home/messenger-strip";
 import { PricingSection } from "@/components/home/pricing-section";
 import { ProcessSection } from "@/components/home/process-section";
@@ -29,11 +28,13 @@ const initialFormData: BookingFormData = {
 type HomePageClientProps = {
   articles: ManagedContentPage[];
   homeContent: HomePageContent;
+  previewMode?: boolean;
 };
 
 export function HomePageClient({
   articles,
   homeContent,
+  previewMode = false,
 }: HomePageClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -62,6 +63,13 @@ export function HomePageClient({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (previewMode) {
+      setSubmittedApplicationNumber("PREVIEW-001");
+      setSubmitError("");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError("");
 
@@ -98,7 +106,8 @@ export function HomePageClient({
       <HomeHeader
         mobileMenuOpen={mobileMenuOpen}
         scrolled={scrolled}
-        navLinks={navLinks}
+        brandName={homeContent.contacts.brandName}
+        navLinks={homeContent.navLinks}
         onToggleMobileMenu={() => setMobileMenuOpen((current) => !current)}
         onScrollToSection={scrollToSection}
       />
@@ -107,12 +116,13 @@ export function HomePageClient({
         <HeroSection content={homeContent} onScrollToSection={scrollToSection} />
         <MessengerStrip />
         <ProcessSection />
-        <ServicesSection />
+        <ServicesSection services={homeContent.services} />
         <AboutSection content={homeContent} />
         <ArticlesSection articles={articles} />
         <PricingSection />
         <BookingSection
           content={homeContent}
+          contacts={homeContent.contacts}
           formData={formData}
           isSubmitting={isSubmitting}
           submitError={submitError}
@@ -123,7 +133,12 @@ export function HomePageClient({
         />
       </main>
 
-      <SiteFooter navLinks={navLinks} onScrollToSection={scrollToSection} />
+      <SiteFooter
+        contacts={homeContent.contacts}
+        navLinks={homeContent.navLinks}
+        services={homeContent.services}
+        onScrollToSection={scrollToSection}
+      />
     </div>
   );
 }

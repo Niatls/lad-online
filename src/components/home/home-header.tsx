@@ -3,11 +3,11 @@
 import { ArrowRight, Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { siteConfig } from "@/lib/site-config";
 
 import type { NavLink } from "./home-data";
 
 type HomeHeaderProps = {
+  brandName: string;
   mobileMenuOpen: boolean;
   scrolled: boolean;
   navLinks: NavLink[];
@@ -16,6 +16,7 @@ type HomeHeaderProps = {
 };
 
 export function HomeHeader({
+  brandName,
   mobileMenuOpen,
   scrolled,
   navLinks,
@@ -38,11 +39,11 @@ export function HomeHeader({
           >
             <img
               src="/favicon.svg"
-              alt={siteConfig.brandName}
+              alt={brandName}
               className="w-10 h-10 rounded-xl shadow-md group-hover:shadow-lg transition-shadow"
             />
             <span className="text-xl font-bold tracking-tight text-forest">
-              {siteConfig.brandName}
+              {brandName}
             </span>
           </button>
 

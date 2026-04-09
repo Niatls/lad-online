@@ -7,76 +7,55 @@ import {
   Users,
 } from "lucide-react";
 
+import type { HomeServiceItem } from "@/lib/content";
+
 import { FadeIn } from "./fade-in";
 
-const services = [
-  {
-    icon: Shield,
-    title: "Личные границы",
-    desc: "Работа над личными границами, развитие навыков отстаивать свои интересы и строить здоровые отношения с окружающими.",
-  },
-  {
-    icon: Heart,
-    title: "Стресс и тревога",
-    desc: "Помощь при стрессовых ситуациях, тревожных расстройствах, фобиях и панических атаках. Научимся управлять эмоциями.",
-  },
-  {
-    icon: Sparkles,
-    title: "Депрессия и апатия",
-    desc: "Поддержка при депрессивных состояниях, потере мотивации, апатии. Возвращение интереса к жизни и энергии.",
-  },
-  {
-    icon: Users,
-    title: "Семейные отношения",
-    desc: "Психологическая помощь при разводе, расставании, семейных конфликтах и трудностях в браке.",
-  },
-  {
-    icon: Star,
-    title: "Принятие себя",
-    desc: "Работа с самооценкой, принятие себя после травматических событий, развитие самосознания и внутренней силы.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Свободная тематика",
-    desc: "Консультирование по любым вопросам, которые вас беспокоят. Вы определяете направление работы.",
-  },
-];
+const serviceIcons = [Shield, Heart, Sparkles, Users, Star, MessageCircle];
 
-export function ServicesSection() {
+type ServicesSectionProps = {
+  services: HomeServiceItem[];
+};
+
+export function ServicesSection({ services }: ServicesSectionProps) {
   return (
-    <section id="services" className="py-24 sm:py-32 bg-cream">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="services" className="bg-cream py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <FadeIn>
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-sage-light/20 text-sage-dark text-xs font-semibold uppercase tracking-wider rounded-full mb-4">
+          <div className="mx-auto mb-16 max-w-2xl text-center">
+            <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-sage-light/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-sage-dark">
               Помощь
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold text-forest mb-4">
+            <h2 className="mb-4 text-3xl font-bold text-forest sm:text-4xl">
               С чем мы можем помочь
             </h2>
-            <p className="text-forest/50 leading-relaxed">
+            <p className="leading-relaxed text-forest/50">
               Наши специалисты работают с широким спектром психологических
               трудностей
             </p>
           </div>
         </FadeIn>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <FadeIn key={service.title} delay={index * 100}>
-              <div className="group bg-white rounded-2xl p-6 sm:p-8 border border-sage-light/15 hover:border-sage/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sage-light/50 to-sage/20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300">
-                  <service.icon className="w-7 h-7 text-sage-dark" />
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {services.map((service, index) => {
+            const Icon = serviceIcons[index % serviceIcons.length];
+
+            return (
+              <FadeIn key={`${service.title}-${index}`} delay={index * 100}>
+                <div className="group h-full rounded-2xl border border-sage-light/15 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-sage/30 hover:shadow-xl sm:p-8">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sage-light/50 to-sage/20 transition-transform duration-300 group-hover:scale-110">
+                    <Icon className="h-7 w-7 text-sage-dark" />
+                  </div>
+                  <h3 className="mb-3 text-lg font-bold text-forest">
+                    {service.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-forest/50">
+                    {service.description}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-forest mb-3">
-                  {service.title}
-                </h3>
-                <p className="text-forest/50 text-sm leading-relaxed">
-                  {service.desc}
-                </p>
-              </div>
-            </FadeIn>
-          ))}
+              </FadeIn>
+            );
+          })}
         </div>
       </div>
     </section>

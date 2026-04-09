@@ -1,46 +1,54 @@
 import { Mail, Phone } from "lucide-react";
 
-import { footerServices, siteConfig, siteMessengerLinks } from "@/lib/site-config";
+import type {
+  HomeContactsContent,
+  HomeServiceItem,
+} from "@/lib/content";
+import { siteMessengerLinks } from "@/lib/site-config";
 
 import type { NavLink } from "./home-data";
 
 type SiteFooterProps = {
+  contacts: HomeContactsContent;
   navLinks: NavLink[];
+  services: HomeServiceItem[];
   onScrollToSection: (id: string) => void;
 };
 
 export function SiteFooter({
+  contacts,
   navLinks,
+  services,
   onScrollToSection,
 }: SiteFooterProps) {
   return (
     <footer id="contacts" className="bg-forest text-white/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="mb-4 flex items-center gap-3">
               <img
                 src="/favicon.svg"
-                alt={siteConfig.brandName}
-                className="w-10 h-10 rounded-xl"
+                alt={contacts.brandName}
+                className="h-10 w-10 rounded-xl"
               />
               <span className="text-xl font-bold text-white">
-                {siteConfig.brandName}
+                {contacts.brandName}
               </span>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed">
-              {siteConfig.description}
+            <p className="text-sm leading-relaxed text-white/50">
+              {contacts.description}
             </p>
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">Навигация</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">Навигация</h4>
             <ul className="space-y-2">
               {navLinks.map((link) => (
                 <li key={link.target}>
                   <button
                     onClick={() => onScrollToSection(link.target)}
-                    className="text-sm text-white/50 hover:text-white transition-colors"
+                    className="text-sm text-white/50 transition-colors hover:text-white"
                   >
                     {link.label}
                   </button>
@@ -50,35 +58,35 @@ export function SiteFooter({
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">Услуги</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">Услуги</h4>
             <ul className="space-y-2">
-              {footerServices.map((service) => (
-                <li key={service}>
-                  <span className="text-sm text-white/50">{service}</span>
+              {services.map((service) => (
+                <li key={service.title}>
+                  <span className="text-sm text-white/50">{service.title}</span>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">Контакты</h4>
+            <h4 className="mb-4 text-sm font-semibold text-white">Контакты</h4>
             <ul className="space-y-3">
               <li>
                 <a
-                  href={siteConfig.phoneHref}
-                  className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
+                  href={contacts.phoneHref}
+                  className="flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
                 >
-                  <Phone className="w-4 h-4" />
-                  {siteConfig.phone}
+                  <Phone className="h-4 w-4" />
+                  {contacts.phone}
                 </a>
               </li>
               <li>
                 <a
-                  href={siteConfig.emailHref}
-                  className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors break-all"
+                  href={contacts.emailHref}
+                  className="flex items-center gap-2 break-all text-sm text-white/50 transition-colors hover:text-white"
                 >
-                  <Mail className="w-4 h-4 flex-shrink-0" />
-                  {siteConfig.email}
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  {contacts.email}
                 </a>
               </li>
               <li className="flex gap-3 pt-2">
@@ -86,7 +94,7 @@ export function SiteFooter({
                   <a
                     key={label}
                     href={href}
-                    className="w-9 h-9 rounded-lg bg-white/10 hover:bg-sage/50 flex items-center justify-center text-white/60 hover:text-white transition-all duration-300"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-all duration-300 hover:bg-sage/50 hover:text-white"
                   >
                     <Icon size={18} />
                   </a>
@@ -96,13 +104,13 @@ export function SiteFooter({
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
           <p className="text-xs text-white/30">
-            © {new Date().getFullYear()} {siteConfig.brandName} —
-            Психологические консультации. Все права защищены.
+            © {new Date().getFullYear()} {contacts.brandName} - Психологические
+            консультации. Все права защищены.
           </p>
           <p className="text-xs text-white/30">
-            {siteConfig.dataProtectionLabel}
+            {contacts.dataProtectionLabel}
           </p>
         </div>
       </div>

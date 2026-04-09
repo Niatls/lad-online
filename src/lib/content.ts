@@ -1,16 +1,40 @@
 import { db } from "@/lib/db";
 import { articles as fallbackArticles } from "@/components/home/home-data";
 
+export type HomeNavLink = {
+  label: string;
+  target: string;
+};
+
+export type HomeServiceItem = {
+  description: string;
+  title: string;
+};
+
+export type HomeContactsContent = {
+  brandName: string;
+  dataProtectionLabel: string;
+  description: string;
+  email: string;
+  emailHref: string;
+  formatLabel: string;
+  phone: string;
+  phoneHref: string;
+};
+
 export type HomePageContent = {
   aboutDescription: string;
   aboutIntro: string;
   aboutTitle: string;
   bookingDescription: string;
   bookingTitle: string;
+  contacts: HomeContactsContent;
   heroBadge: string;
   heroDescription: string;
   heroTitle: string;
   heroTitleAccent: string;
+  navLinks: HomeNavLink[];
+  services: HomeServiceItem[];
 };
 
 export type ManagedContentPage = {
@@ -32,6 +56,60 @@ export type ManagedContentPage = {
 
 const HOME_CONTENT_KEY = "homepage";
 
+export const defaultHomeNavLinks: HomeNavLink[] = [
+  { label: "О нас", target: "about" },
+  { label: "Как это работает", target: "process" },
+  { label: "Услуги", target: "services" },
+  { label: "Статьи", target: "articles" },
+  { label: "Цены", target: "pricing" },
+  { label: "Контакты", target: "contacts" },
+];
+
+export const defaultHomeServices: HomeServiceItem[] = [
+  {
+    title: "Личные границы",
+    description:
+      "Работа над личными границами, развитие навыков отстаивать свои интересы и строить здоровые отношения с окружающими.",
+  },
+  {
+    title: "Стресс и тревога",
+    description:
+      "Помощь при стрессовых ситуациях, тревожных расстройствах, фобиях и панических атаках. Научимся управлять эмоциями.",
+  },
+  {
+    title: "Депрессия и апатия",
+    description:
+      "Поддержка при депрессивных состояниях, потере мотивации, апатии. Возвращение интереса к жизни и энергии.",
+  },
+  {
+    title: "Семейные отношения",
+    description:
+      "Психологическая помощь при разводе, расставании, семейных конфликтах и трудностях в браке.",
+  },
+  {
+    title: "Принятие себя",
+    description:
+      "Работа с самооценкой, принятие себя после травматических событий, развитие самосознания и внутренней силы.",
+  },
+  {
+    title: "Свободная тематика",
+    description:
+      "Консультирование по любым вопросам, которые вас беспокоят. Вы определяете направление работы.",
+  },
+];
+
+export const defaultHomeContacts: HomeContactsContent = {
+  brandName: "Лад",
+  phone: "+7 (978) 293-95-29",
+  phoneHref: "tel:+79782939529",
+  email: "lad.psychologicalconsultations@mail.ru",
+  emailHref: "mailto:lad.psychologicalconsultations@mail.ru",
+  formatLabel: "Онлайн-консультации",
+  description:
+    "Профессиональные психологические консультации онлайн. Ваше ментальное здоровье - наш приоритет.",
+  dataProtectionLabel: "Защита персональных данных по ФЗ-152",
+};
+
 export const defaultHomePageContent: HomePageContent = {
   heroBadge: "Психологические консультации",
   heroTitle: "Ваше ментальное",
@@ -46,6 +124,9 @@ export const defaultHomePageContent: HomePageContent = {
   bookingTitle: "Запишитесь на консультацию",
   bookingDescription:
     "Заполните форму ниже, и мы свяжемся с вами в ближайшее время для назначения консультации. Все данные защищены.",
+  navLinks: defaultHomeNavLinks,
+  services: defaultHomeServices,
+  contacts: defaultHomeContacts,
 };
 
 const fallbackManagedArticles: ManagedContentPage[] = fallbackArticles.map(
@@ -85,6 +166,108 @@ function normalizeSummaryPoints(value: unknown): string[] {
   return value
     .map((item) => (typeof item === "string" ? item.trim() : ""))
     .filter(Boolean);
+}
+
+function normalizeNavLinks(value: unknown): HomeNavLink[] {
+  if (!Array.isArray(value)) {
+    return defaultHomeNavLinks;
+  }
+
+  const links = value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const label =
+        typeof record.label === "string" ? record.label.trim() : "";
+      const target =
+        typeof record.target === "string" ? record.target.trim() : "";
+
+      if (!label || !target) {
+        return null;
+      }
+
+      return { label, target };
+    })
+    .filter((item): item is HomeNavLink => item !== null);
+
+  return links.length ? links : defaultHomeNavLinks;
+}
+
+function normalizeServices(value: unknown): HomeServiceItem[] {
+  if (!Array.isArray(value)) {
+    return defaultHomeServices;
+  }
+
+  const services = value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const record = item as Record<string, unknown>;
+      const title =
+        typeof record.title === "string" ? record.title.trim() : "";
+      const description =
+        typeof record.description === "string"
+          ? record.description.trim()
+          : "";
+
+      if (!title || !description) {
+        return null;
+      }
+
+      return { title, description };
+    })
+    .filter((item): item is HomeServiceItem => item !== null);
+
+  return services.length ? services : defaultHomeServices;
+}
+
+function normalizeContacts(value: unknown): HomeContactsContent {
+  if (!value || typeof value !== "object") {
+    return defaultHomeContacts;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return {
+    brandName:
+      typeof record.brandName === "string" && record.brandName.trim()
+        ? record.brandName.trim()
+        : defaultHomeContacts.brandName,
+    description:
+      typeof record.description === "string" && record.description.trim()
+        ? record.description.trim()
+        : defaultHomeContacts.description,
+    phone:
+      typeof record.phone === "string" && record.phone.trim()
+        ? record.phone.trim()
+        : defaultHomeContacts.phone,
+    phoneHref:
+      typeof record.phoneHref === "string" && record.phoneHref.trim()
+        ? record.phoneHref.trim()
+        : defaultHomeContacts.phoneHref,
+    email:
+      typeof record.email === "string" && record.email.trim()
+        ? record.email.trim()
+        : defaultHomeContacts.email,
+    emailHref:
+      typeof record.emailHref === "string" && record.emailHref.trim()
+        ? record.emailHref.trim()
+        : defaultHomeContacts.emailHref,
+    formatLabel:
+      typeof record.formatLabel === "string" && record.formatLabel.trim()
+        ? record.formatLabel.trim()
+        : defaultHomeContacts.formatLabel,
+    dataProtectionLabel:
+      typeof record.dataProtectionLabel === "string" &&
+      record.dataProtectionLabel.trim()
+        ? record.dataProtectionLabel.trim()
+        : defaultHomeContacts.dataProtectionLabel,
+  };
 }
 
 function mapContentPage(page: {
@@ -189,6 +372,9 @@ export async function getHomePageContent() {
       typeof value.bookingDescription === "string"
         ? value.bookingDescription
         : defaultHomePageContent.bookingDescription,
+    navLinks: normalizeNavLinks(value.navLinks),
+    services: normalizeServices(value.services),
+    contacts: normalizeContacts(value.contacts),
   };
 }
 
