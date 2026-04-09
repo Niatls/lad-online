@@ -1,31 +1,4 @@
-import {
-  DiscordIcon,
-  TelegramIcon,
-  VKIcon,
-  WhatsAppIcon,
-} from "./messenger-icons";
-
-const messengers = [
-  {
-    Icon: TelegramIcon,
-    label: "Telegram",
-    href: "#",
-    color: "hover:bg-white/30",
-  },
-  {
-    Icon: WhatsAppIcon,
-    label: "WhatsApp",
-    href: "#",
-    color: "hover:bg-white/30",
-  },
-  { Icon: VKIcon, label: "VK", href: "#", color: "hover:bg-white/30" },
-  {
-    Icon: DiscordIcon,
-    label: "Discord",
-    href: "#",
-    color: "hover:bg-white/30",
-  },
-];
+import { siteMessengerLinks } from "@/lib/site-config";
 
 export function MessengerStrip() {
   return (
@@ -45,7 +18,7 @@ export function MessengerStrip() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {messengers.map(({ Icon, label, href, color }) => (
+            {siteMessengerLinks.map(({ Icon, label, href, color }) => (
               <a
                 key={label}
                 href={href}

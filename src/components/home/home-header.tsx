@@ -3,6 +3,7 @@
 import { ArrowRight, Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { siteConfig } from "@/lib/site-config";
 
 import type { NavLink } from "./home-data";
 
@@ -37,11 +38,11 @@ export function HomeHeader({
           >
             <img
               src="/favicon.svg"
-              alt="Лад"
+              alt={siteConfig.brandName}
               className="w-10 h-10 rounded-xl shadow-md group-hover:shadow-lg transition-shadow"
             />
             <span className="text-xl font-bold tracking-tight text-forest">
-              Лад
+              {siteConfig.brandName}
             </span>
           </button>
 

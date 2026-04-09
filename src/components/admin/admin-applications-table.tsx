@@ -4,6 +4,7 @@ import {
   applicationStatuses,
   formatApplicationDate,
   formatApplicationNumber,
+  getApplicationStatusLabel,
 } from "@/lib/applications";
 
 import { statusBadgeClass } from "./admin-utils";
@@ -31,9 +32,7 @@ function ApplicationStatusCell({ application }: { application: Application }) {
           application.status
         )}`}
       >
-        {applicationStatuses[
-          application.status as keyof typeof applicationStatuses
-        ] ?? application.status}
+        {getApplicationStatusLabel(application.status)}
       </span>
 
       <form action="/admin/status" method="post" className="space-y-2">

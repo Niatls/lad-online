@@ -5,8 +5,8 @@ import { AdminFilters } from "@/components/admin/admin-filters";
 import { AdminLogin } from "@/components/admin/admin-login";
 import { AdminOverview } from "@/components/admin/admin-overview";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { db } from "@/lib/db";
 import { applicationStatuses } from "@/lib/applications";
+import { getAdminDashboardData } from "@/lib/admin-dashboard";
 import {
   isAdminAuthenticated,
   isAdminPasswordConfigured,
@@ -32,22 +32,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     return <AdminLogin error={params.error} />;
   }
 
-  const [applications, stats, totalApplications] = await Promise.all([
-    db.application.findMany({
-      where: filterStatus ? { status: filterStatus } : undefined,
-      orderBy: { createdAt: "desc" },
-    }),
-    db.application.groupBy({
-      by: ["status"],
-      _count: true,
-    }),
-    db.application.count(),
-  ]);
-
-  const totals = stats.reduce<Record<string, number>>((accumulator, item) => {
-    accumulator[item.status] = item._count;
-    return accumulator;
-  }, {});
+  const { applications, totals, totalApplications } =
+    await getAdminDashboardData(filterStatus);
 
   return (
     <AdminShell>

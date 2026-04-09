@@ -18,6 +18,12 @@ export const applicationStatuses = {
 
 export type ApplicationStatus = keyof typeof applicationStatuses;
 
+export function getApplicationStatusLabel(status: string) {
+  return (
+    applicationStatuses[status as keyof typeof applicationStatuses] ?? status
+  );
+}
+
 export function formatApplicationNumber(id: number) {
   return `LAD-${id.toString().padStart(6, "0")}`;
 }

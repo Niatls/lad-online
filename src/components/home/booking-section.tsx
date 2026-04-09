@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { siteConfig } from "@/lib/site-config";
 
 import { FadeIn } from "./fade-in";
 
@@ -71,7 +72,7 @@ export function BookingSection({
                   <div>
                     <p className="text-xs text-forest/40 mb-0.5">Телефон</p>
                     <p className="text-sm font-semibold text-forest">
-                      +7 (978) 293-95-29
+                      {siteConfig.phone}
                     </p>
                   </div>
                 </div>
@@ -85,7 +86,7 @@ export function BookingSection({
                       Электронная почта
                     </p>
                     <p className="text-sm font-semibold text-forest break-all">
-                      lad.psychologicalconsultations@mail.ru
+                      {siteConfig.email}
                     </p>
                   </div>
                 </div>
@@ -97,7 +98,7 @@ export function BookingSection({
                   <div>
                     <p className="text-xs text-forest/40 mb-0.5">Формат</p>
                     <p className="text-sm font-semibold text-forest">
-                      Онлайн-консультации
+                      {siteConfig.formatLabel}
                     </p>
                   </div>
                 </div>
