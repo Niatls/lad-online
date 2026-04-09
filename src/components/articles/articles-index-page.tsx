@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Leaf } from "lucide-react";
 
-import type { Article } from "@/components/home/home-data";
+import type { ManagedContentPage } from "@/lib/content";
 
 type ArticlesIndexPageProps = {
-  articles: Article[];
+  articles: ManagedContentPage[];
 };
 
 export function ArticlesIndexPage({ articles }: ArticlesIndexPageProps) {
@@ -52,42 +52,50 @@ export function ArticlesIndexPage({ articles }: ArticlesIndexPageProps) {
               className="flex h-full flex-col rounded-[2rem] border border-sage-light/20 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               <p className="mb-3 text-xs uppercase tracking-[0.25em] text-sage-dark/80">
-                Полная статья
+                {article.pageType === "article" ? "Статья" : "Страница"}
               </p>
               <h2 className="mb-4 text-2xl font-bold leading-tight text-forest">
                 {article.title}
               </h2>
-              <p className="mb-6 leading-7 text-forest/60">{article.intro}</p>
+              <p className="mb-6 leading-7 text-forest/60">{article.excerpt}</p>
 
-              <ul className="mb-8 space-y-4">
-                {article.points.map((point) => (
-                  <li
-                    key={point}
-                    className="flex items-start gap-3 text-sm leading-6 text-forest/65"
-                  >
-                    <Leaf className="mt-1 h-4 w-4 flex-shrink-0 text-sage" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
+              {article.summaryPoints.length ? (
+                <ul className="mb-8 space-y-4">
+                  {article.summaryPoints.map((point) => (
+                    <li
+                      key={point}
+                      className="flex items-start gap-3 text-sm leading-6 text-forest/65"
+                    >
+                      <Leaf className="mt-1 h-4 w-4 flex-shrink-0 text-sage" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
               <div className="mt-auto flex flex-col gap-3">
                 <Link
-                  href={`/articles/${article.slug}`}
+                  href={
+                    article.pageType === "article"
+                      ? `/articles/${article.slug}`
+                      : `/pages/${article.slug}`
+                  }
                   className="group inline-flex items-center justify-between rounded-xl bg-sage px-5 py-3 text-sm font-semibold text-white transition hover:bg-sage-dark"
                 >
-                  <span>Открыть статью</span>
+                  <span>Открыть</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
-                <a
-                  href={article.sourceHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group inline-flex items-center justify-between rounded-xl bg-cream px-5 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
-                >
-                  <span>Открыть источник</span>
-                  <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
-                </a>
+                {article.sourceHref ? (
+                  <a
+                    href={article.sourceHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group inline-flex items-center justify-between rounded-xl bg-cream px-5 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
+                  >
+                    <span>{article.sourceLabel || "Открыть источник"}</span>
+                    <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
+                  </a>
+                ) : null}
               </div>
             </article>
           ))}

@@ -67,3 +67,28 @@ model VkConversationSession {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model ContentPage {
+  id             Int      @id @default(autoincrement())
+  slug           String   @unique
+  title          String
+  excerpt        String
+  content        String
+  pageType       String   @default("page")
+  published      Boolean  @default(true)
+  showOnHomepage Boolean  @default(false)
+  summaryPoints  Json?
+  sourceLabel    String?
+  sourceHref     String?
+  researchLabel  String?
+  researchHref   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SiteContent {
+  key       String   @id
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

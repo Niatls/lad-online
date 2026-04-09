@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Leaf } from "lucide-react";
 
+import type { ManagedContentPage } from "@/lib/content";
+
 import { FadeIn } from "./fade-in";
-import type { Article } from "./home-data";
 
 type ArticlesSectionProps = {
-  articles: Article[];
+  articles: ManagedContentPage[];
 };
 
 export function ArticlesSection({ articles }: ArticlesSectionProps) {
@@ -50,11 +51,11 @@ export function ArticlesSection({ articles }: ArticlesSectionProps) {
                 </div>
 
                 <p className="mb-6 leading-relaxed text-forest/60">
-                  {article.intro}
+                  {article.excerpt}
                 </p>
 
                 <ul className="mb-8 space-y-4">
-                  {article.points.map((point) => (
+                  {article.summaryPoints.map((point) => (
                     <li
                       key={point}
                       className="flex items-start gap-3 text-sm leading-6 text-forest/65"
@@ -74,31 +75,37 @@ export function ArticlesSection({ articles }: ArticlesSectionProps) {
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
 
-                  <div className="rounded-2xl border border-sage-light/20 bg-cream p-5">
-                    <p className="mb-4 text-xs uppercase tracking-[0.25em] text-forest/35">
-                      Источники
-                    </p>
-                    <div className="flex flex-col gap-3">
-                      <a
-                        href={article.sourceHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group inline-flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
-                      >
-                        <span>{article.sourceLabel}</span>
-                        <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
-                      </a>
-                      <a
-                        href={article.researchHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group inline-flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
-                      >
-                        <span>{article.researchLabel}</span>
-                        <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
-                      </a>
+                  {(article.sourceHref || article.researchHref) && (
+                    <div className="rounded-2xl border border-sage-light/20 bg-cream p-5">
+                      <p className="mb-4 text-xs uppercase tracking-[0.25em] text-forest/35">
+                        Источники
+                      </p>
+                      <div className="flex flex-col gap-3">
+                        {article.sourceHref ? (
+                          <a
+                            href={article.sourceHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group inline-flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
+                          >
+                            <span>{article.sourceLabel || "Источник"}</span>
+                            <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
+                          </a>
+                        ) : null}
+                        {article.researchHref ? (
+                          <a
+                            href={article.researchHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group inline-flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-forest ring-1 ring-sage-light/20 transition hover:ring-sage/40"
+                          >
+                            <span>{article.researchLabel || "Исследование"}</span>
+                            <ArrowRight className="h-4 w-4 text-sage-dark transition-transform group-hover:translate-x-1" />
+                          </a>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </article>
             </FadeIn>

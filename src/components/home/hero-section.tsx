@@ -13,8 +13,10 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { HomePageContent } from "@/lib/content";
 
 type HeroSectionProps = {
+  content: HomePageContent;
   onScrollToSection: (id: string) => void;
 };
 
@@ -24,104 +26,101 @@ const heroStats = [
   { icon: Clock, label: "Онлайн-формат" },
 ];
 
-export function HeroSection({ onScrollToSection }: HeroSectionProps) {
+export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden">
+    <section className="relative flex min-h-screen items-center overflow-hidden">
       <div className="absolute inset-0">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/hero-original.png')" }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-cream/95 via-cream/85 to-cream/60" />
-        <div className="absolute top-20 right-10 w-72 h-72 bg-sage-light/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-sage/10 rounded-full blur-3xl animate-float animation-delay-400" />
+        <div className="absolute right-10 top-20 h-72 w-72 animate-float rounded-full bg-sage-light/20 blur-3xl" />
+        <div className="animation-delay-400 absolute bottom-20 left-10 h-96 w-96 animate-float rounded-full bg-sage/10 blur-3xl" />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 sm:py-40">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <div className="relative mx-auto max-w-7xl px-4 py-32 sm:px-6 sm:py-40 lg:px-8">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div className="space-y-8">
             <div className="animate-fade-in-up">
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-sage-light/30 text-sage-dark text-sm font-medium rounded-full border border-sage-light/40">
-                <Sparkles className="w-4 h-4" />
-                Психологические консультации
+              <span className="inline-flex items-center gap-2 rounded-full border border-sage-light/40 bg-sage-light/30 px-4 py-2 text-sm font-medium text-sage-dark">
+                <Sparkles className="h-4 w-4" />
+                {content.heroBadge}
               </span>
             </div>
 
-            <h1 className="animate-fade-in-up animation-delay-200 text-4xl sm:text-5xl lg:text-6xl font-bold text-forest leading-tight">
-              Ваше ментальное
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-sage to-sage-dark">
-                здоровье —
+            <h1 className="animation-delay-200 animate-fade-in-up text-4xl font-bold leading-tight text-forest sm:text-5xl lg:text-6xl">
+              {content.heroTitle}
+              <span className="block bg-gradient-to-r from-sage to-sage-dark bg-clip-text text-transparent">
+                {content.heroTitleAccent}
               </span>
-              наша цель
             </h1>
 
-            <p className="animate-fade-in-up animation-delay-400 text-lg sm:text-xl text-forest/60 max-w-lg leading-relaxed">
-              Добро пожаловать! Мы — команда профессиональных психологов,
-              готовых помочь вам справиться с жизненными трудностями и обрести
-              внутреннюю гармонию.
+            <p className="animation-delay-400 animate-fade-in-up max-w-lg text-lg leading-relaxed text-forest/60 sm:text-xl">
+              {content.heroDescription}
             </p>
 
-            <div className="animate-fade-in-up animation-delay-600 flex flex-wrap gap-4">
+            <div className="animation-delay-600 animate-fade-in-up flex flex-wrap gap-4">
               <Button
                 size="lg"
                 onClick={() => onScrollToSection("booking")}
-                className="bg-gradient-to-r from-sage to-sage-dark hover:from-sage-dark hover:to-forest text-white border-0 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-base"
+                className="rounded-xl border-0 bg-gradient-to-r from-sage to-sage-dark px-8 py-6 text-base text-white shadow-lg transition-all duration-300 hover:from-sage-dark hover:to-forest hover:shadow-xl"
               >
                 Записаться на консультацию
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 onClick={() => onScrollToSection("process")}
-                className="border-2 border-sage-light text-forest hover:bg-sage-light/20 rounded-xl px-8 py-6 text-base"
+                className="rounded-xl border-2 border-sage-light px-8 py-6 text-base text-forest hover:bg-sage-light/20"
               >
                 Как это работает
               </Button>
             </div>
 
-            <div className="animate-fade-in-up animation-delay-800 flex gap-8 pt-4">
+            <div className="animation-delay-800 animate-fade-in-up flex gap-8 pt-4">
               {heroStats.map((stat) => (
                 <div
                   key={stat.label}
                   className="flex items-center gap-2 text-sm text-forest/50"
                 >
-                  <stat.icon className="w-4 h-4 text-sage" />
+                  <stat.icon className="h-4 w-4 text-sage" />
                   <span className="hidden sm:inline">{stat.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="hidden lg:flex justify-center">
+          <div className="hidden justify-center lg:flex">
             <div className="relative">
-              <div className="w-80 h-96 rounded-3xl bg-gradient-to-br from-sage-light/40 to-sage/20 backdrop-blur-sm border border-sage-light/30 shadow-2xl p-8 flex flex-col justify-between animate-float">
+              <div className="animate-float flex h-96 w-80 flex-col justify-between rounded-3xl border border-sage-light/30 bg-gradient-to-br from-sage-light/40 to-sage/20 p-8 shadow-2xl backdrop-blur-sm">
                 <div>
-                  <div className="w-16 h-16 rounded-2xl bg-white/60 backdrop-blur-sm flex items-center justify-center mb-6 shadow-lg">
-                    <Heart className="w-8 h-8 text-sage-dark" />
+                  <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/60 shadow-lg backdrop-blur-sm">
+                    <Heart className="h-8 w-8 text-sage-dark" />
                   </div>
-                  <h3 className="text-xl font-bold text-forest mb-3">
+                  <h3 className="mb-3 text-xl font-bold text-forest">
                     Начните путь к себе
                   </h3>
-                  <p className="text-forest/60 text-sm leading-relaxed">
-                    Первый шаг к изменениям — это признание необходимости помощи.
-                    Мы рядом.
+                  <p className="text-sm leading-relaxed text-forest/60">
+                    Первый шаг к изменениям — это признание необходимости
+                    помощи. Мы рядом.
                   </p>
                 </div>
                 <div className="flex gap-2">
                   {[...Array(5)].map((_, index) => (
                     <Star
                       key={index}
-                      className="w-5 h-5 text-amber-400 fill-amber-400"
+                      className="h-5 w-5 fill-amber-400 text-amber-400"
                     />
                   ))}
                 </div>
               </div>
 
-              <div className="absolute -bottom-4 -left-8 w-48 bg-white rounded-2xl shadow-xl border border-sage-light/20 p-4 animate-float animation-delay-400">
+              <div className="animation-delay-400 absolute -bottom-4 -left-8 w-48 animate-float rounded-2xl border border-sage-light/20 bg-white p-4 shadow-xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
                     <p className="text-xs text-forest/50">Более</p>
@@ -137,7 +136,7 @@ export function HeroSection({ onScrollToSection }: HeroSectionProps) {
       </div>
 
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <ChevronDown className="w-6 h-6 text-sage/50" />
+        <ChevronDown className="h-6 w-6 text-sage/50" />
       </div>
     </section>
   );
