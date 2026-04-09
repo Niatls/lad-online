@@ -18,7 +18,7 @@ export function ArticleDetailPage({ article }: ArticleDetailPageProps) {
 
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <Link
-            href="/#articles"
+            href="/articles"
             className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-forest/65 transition hover:text-forest"
           >
             <ArrowLeft className="h-4 w-4" />
