@@ -311,6 +311,20 @@ async function resetSession(chatId: string) {
 
 export const telegramBot = createBot();
 
+let telegramBotInitializationPromise: Promise<void> | null = null;
+
+export async function initializeTelegramBot() {
+  if (!telegramBot) {
+    return;
+  }
+
+  if (!telegramBotInitializationPromise) {
+    telegramBotInitializationPromise = telegramBot.init();
+  }
+
+  await telegramBotInitializationPromise;
+}
+
 export function isTelegramBotConfigured() {
   return Boolean(TELEGRAM_TOKEN);
 }

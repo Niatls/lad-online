@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
+  initializeTelegramBot,
   isTelegramBotConfigured,
   telegramBot,
 } from "@/lib/telegram-bot";
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
 
   try {
     const update = await request.json();
+    await initializeTelegramBot();
     await telegramBot.handleUpdate(update);
 
     return NextResponse.json({ ok: true });
