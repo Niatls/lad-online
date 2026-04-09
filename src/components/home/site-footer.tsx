@@ -28,7 +28,7 @@ export function SiteFooter({
           <div className="sm:col-span-2 lg:col-span-1">
             <div className="mb-4 flex items-center gap-3">
               <img
-                src="/favicon.svg"
+                src="/favicon.ico"
                 alt={contacts.brandName}
                 className="h-10 w-10 rounded-xl"
               />

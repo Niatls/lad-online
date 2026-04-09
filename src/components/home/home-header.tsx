@@ -38,7 +38,7 @@ export function HomeHeader({
             className="flex items-center gap-3 group"
           >
             <img
-              src="/favicon.svg"
+              src="/favicon.ico"
               alt={brandName}
               className="w-10 h-10 rounded-xl shadow-md group-hover:shadow-lg transition-shadow"
             />
