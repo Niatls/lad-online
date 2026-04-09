@@ -1,5 +1,20 @@
 import { Bot, Context, Keyboard } from "grammy";
 
+import { createBotApplication } from "@/lib/bot-applications";
+import {
+  BACK_TO_MENU_TEXT,
+  BOOKING_CONTACT_PROMPT,
+  BOOKING_TIME_PROMPT,
+  MAIN_MENU_TEXT,
+  PRICES_TEXT,
+  QUESTION_BODY_PROMPT,
+  QUESTION_CONTACT_PROMPT,
+  QUESTION_NAME_PROMPT,
+  START_BOOKING_TEXT,
+  START_PRICING_TEXT,
+  START_QUESTION_TEXT,
+  UNKNOWN_COMMAND_TEXT,
+} from "@/lib/bot-copy";
 import { db } from "@/lib/db";
 
 type TelegramSessionState =
@@ -19,11 +34,6 @@ type TelegramSessionRecord = Awaited<
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-const START_QUESTION_TEXT = "Задать вопрос";
-const START_BOOKING_TEXT = "Записаться на консультацию";
-const START_PRICING_TEXT = "Узнать расценки";
-const BACK_TO_MENU_TEXT = "Вернуться в меню";
-
 const MAIN_KEYBOARD = new Keyboard()
   .text(START_QUESTION_TEXT)
   .text(START_BOOKING_TEXT)
@@ -32,22 +42,6 @@ const MAIN_KEYBOARD = new Keyboard()
   .resized();
 
 const BACK_KEYBOARD = new Keyboard().text(BACK_TO_MENU_TEXT).resized();
-
-const PRICES_TEXT = `
-💰 Наши расценки:
-
-• Начальная консультация: 500 ₽
-• Стандартная консультация: 500 — 2 500 ₽
-• Консультация с подростками: 500 — 2 000 ₽
-• Консультация ПТСР: 1 000 — 3 500 ₽
-• Консультация с детьми: 500 — 1 500 ₽
-• Семейное консультирование: 1 000 — 3 000 ₽
-• После развода: 500 — 2 000 ₽
-• Групповой сеанс: 1 500 — 3 000 ₽
-• Свободная тематика: 500 — 1 500 ₽
-
-Все консультации проводятся в онлайн-формате.
-`.trim();
 
 function createBot() {
   if (!TELEGRAM_TOKEN) {
@@ -58,10 +52,7 @@ function createBot() {
 
   bot.command("start", async (ctx) => {
     await resetSession(String(ctx.chat.id));
-    await ctx.reply(
-      "Здравствуйте! Вы попали в бот сайта психологических консультаций «Лад». Чем мы можем вам помочь?",
-      { reply_markup: MAIN_KEYBOARD }
-    );
+    await ctx.reply(MAIN_MENU_TEXT, { reply_markup: MAIN_KEYBOARD });
   });
 
   bot.hears(BACK_TO_MENU_TEXT, async (ctx) => {
@@ -83,7 +74,7 @@ function createBot() {
       preferredTime: null,
     });
 
-    await ctx.reply("Как нам к вам обращаться?", {
+    await ctx.reply(QUESTION_NAME_PROMPT, {
       reply_markup: BACK_KEYBOARD,
     });
   });
@@ -96,7 +87,7 @@ function createBot() {
       preferredTime: null,
     });
 
-    await ctx.reply("Как нам к вам обращаться?", {
+    await ctx.reply(QUESTION_NAME_PROMPT, {
       reply_markup: BACK_KEYBOARD,
     });
   });
@@ -122,10 +113,9 @@ function createBot() {
           state: "ask_question_contact",
           draftName: messageText,
         });
-        await ctx.reply(
-          "Укажите ваш номер телефона или другой способ связи, например Telegram username:",
-          { reply_markup: BACK_KEYBOARD }
-        );
+        await ctx.reply(QUESTION_CONTACT_PROMPT, {
+          reply_markup: BACK_KEYBOARD,
+        });
         return;
 
       case "ask_question_contact":
@@ -133,7 +123,7 @@ function createBot() {
           state: "ask_question_body",
           draftContact: messageText,
         });
-        await ctx.reply("Опишите ваш вопрос:", {
+        await ctx.reply(QUESTION_BODY_PROMPT, {
           reply_markup: BACK_KEYBOARD,
         });
         return;
@@ -147,7 +137,7 @@ function createBot() {
           state: "booking_contact",
           draftName: messageText,
         });
-        await ctx.reply("Укажите ваш номер телефона или способ связи:", {
+        await ctx.reply(BOOKING_CONTACT_PROMPT, {
           reply_markup: BACK_KEYBOARD,
         });
         return;
@@ -157,10 +147,9 @@ function createBot() {
           state: "booking_time",
           draftContact: messageText,
         });
-        await ctx.reply(
-          "Предложите удобное для вас время по Москве, например: завтра 18:00",
-          { reply_markup: BACK_KEYBOARD }
-        );
+        await ctx.reply(BOOKING_TIME_PROMPT, {
+          reply_markup: BACK_KEYBOARD,
+        });
         return;
 
       case "booking_time":
@@ -168,10 +157,9 @@ function createBot() {
         return;
 
       default:
-        await ctx.reply(
-          "Пожалуйста, воспользуйтесь меню ниже или командой /start для начала работы.",
-          { reply_markup: MAIN_KEYBOARD }
-        );
+        await ctx.reply(UNKNOWN_COMMAND_TEXT, {
+          reply_markup: MAIN_KEYBOARD,
+        });
     }
   });
 
@@ -195,21 +183,17 @@ async function createQuestionApplication(
   }
 
   try {
-    const application = await db.application.create({
-      data: {
-        name: session.draftName,
-        phone: session.draftContact,
-        reason: question,
-        source: "telegram_bot",
-        telegramId: ctx.from?.id.toString(),
-      },
+    const { applicationNumber } = await createBotApplication({
+      name: session.draftName,
+      contact: session.draftContact,
+      reason: question,
+      source: "telegram_bot",
+      externalUserId: ctx.from?.id.toString(),
     });
 
     await resetSession(String(ctx.chat.id));
     await ctx.reply(
-      `Спасибо! Ваш вопрос принят. Номер заявки: LAD-${application.id
-        .toString()
-        .padStart(6, "0")}. Мы свяжемся с вами в ближайшее время.`,
+      `Спасибо! Ваш вопрос принят. Номер заявки: ${applicationNumber}. Мы свяжемся с вами в ближайшее время.`,
       {
         reply_markup: MAIN_KEYBOARD,
       }
@@ -242,22 +226,18 @@ async function createBookingApplication(
   }
 
   try {
-    const application = await db.application.create({
-      data: {
-        name: session.draftName,
-        phone: session.draftContact,
-        reason: "Запись на консультацию через Telegram-бота",
-        preferredTime,
-        source: "telegram_bot",
-        telegramId: ctx.from?.id.toString(),
-      },
+    const { applicationNumber } = await createBotApplication({
+      name: session.draftName,
+      contact: session.draftContact,
+      preferredTime,
+      reason: "Запись на консультацию через Telegram-бота",
+      source: "telegram_bot",
+      externalUserId: ctx.from?.id.toString(),
     });
 
     await resetSession(String(ctx.chat.id));
     await ctx.reply(
-      `Спасибо! Ваша заявка принята. Номер заявки: LAD-${application.id
-        .toString()
-        .padStart(6, "0")}. Мы свяжемся с вами для подтверждения времени.`,
+      `Спасибо! Ваша заявка принята. Номер заявки: ${applicationNumber}. Мы свяжемся с вами для подтверждения времени.`,
       {
         reply_markup: MAIN_KEYBOARD,
       }
