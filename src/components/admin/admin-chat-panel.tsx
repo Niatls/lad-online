@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { MessageCircle, Send, Loader2, ArrowLeft, User, Clock } from "lucide-react";
+import { MessageCircle, Send, Loader2, ArrowLeft, User, Clock, Phone } from "lucide-react";
+import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
+import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
 type Message = {
   id: number;
@@ -28,6 +30,8 @@ export function AdminChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [creatingVoiceToken, setCreatingVoiceToken] = useState(false);
+  const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -36,7 +40,6 @@ export function AdminChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Load sessions list
   const loadSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/chat/sessions");
@@ -57,7 +60,6 @@ export function AdminChatPanel() {
     return () => clearInterval(interval);
   }, [loadSessions]);
 
-  // Load messages for selected session
   const loadMessages = useCallback(async (sessionId: number) => {
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}/messages?after=0`);
@@ -73,7 +75,6 @@ export function AdminChatPanel() {
     }
   }, []);
 
-  // Poll messages for active conversation
   const pollMessages = useCallback(async () => {
     if (!selectedId) return;
     try {
@@ -136,6 +137,28 @@ export function AdminChatPanel() {
     }
   };
 
+  const handleGenerateVoiceToken = async () => {
+    if (!selectedId || creatingVoiceToken) return;
+
+    setCreatingVoiceToken(true);
+    try {
+      const res = await fetch(`/api/admin/chat/sessions/${selectedId}/voice-token`, {
+        method: "POST",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create voice token");
+      }
+
+      await loadMessages(selectedId);
+      await loadSessions();
+    } catch (err) {
+      console.error("Failed to generate voice token:", err);
+    } finally {
+      setCreatingVoiceToken(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -148,14 +171,85 @@ export function AdminChatPanel() {
     const now = new Date();
     const isToday = d.toDateString() === now.toDateString();
     if (isToday) return d.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
-    return d.toLocaleDateString("ru", { day: "numeric", month: "short" }) + " " +
-           d.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+    return (
+      d.toLocaleDateString("ru", { day: "numeric", month: "short" }) +
+      " " +
+      d.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })
+    );
+  };
+
+  const renderMessage = (msg: Message) => {
+    const voiceToken = parseVoiceInviteToken(msg.content);
+
+    if (voiceToken) {
+      return (
+        <div key={msg.id} className="flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="w-full max-w-[78%] rounded-[1.75rem] border border-sage-light/20 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 h-11 w-11 rounded-2xl bg-forest text-white flex items-center justify-center shadow-lg shadow-forest/15">
+                <Phone className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-forest">Токен голосового режима отправлен</p>
+                <p className="mt-1 text-xs leading-relaxed text-forest/55">
+                  Посетитель увидит кнопку звонка в чате. Вы можете подключиться по этому же токену из панели администратора.
+                </p>
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setActiveVoiceToken(voiceToken)}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2 text-xs font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Присоединиться
+                  </button>
+                  <span className="rounded-full bg-cream px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-forest/45 uppercase">
+                    {voiceToken}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 text-[10px] font-bold text-forest/30 uppercase tracking-[0.2em]">
+              {formatTime(msg.createdAt)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const isAdmin = msg.sender === "admin";
+    const isSystem = msg.sender === "system";
+
+    return (
+      <div
+        key={msg.id}
+        className={`flex animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+          isSystem ? "justify-center" : isAdmin ? "justify-end" : "justify-start"
+        }`}
+      >
+        <div className={`flex flex-col ${isSystem ? "items-center" : isAdmin ? "items-end" : "items-start"} max-w-[70%]`}>
+          <div
+            className={`rounded-[1.75rem] px-5 py-4 text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${
+              isSystem
+                ? "bg-cream text-forest border border-sage-light/20"
+                : isAdmin
+                  ? "bg-forest text-white rounded-br-none"
+                  : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
+            }`}
+          >
+            {msg.content}
+          </div>
+          <span className="text-[10px] font-bold text-forest/20 mt-2 uppercase tracking-tighter">
+            {formatTime(msg.createdAt)}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
     <div className="rounded-[2.5rem] border border-sage-light/20 bg-white/80 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden border border-white/40">
       <div className="flex h-[calc(100vh-220px)] min-h-[600px]">
-        {/* Sessions sidebar */}
         <div className={`w-96 border-r border-sage-light/10 flex flex-col shrink-0 ${selectedId ? "hidden md:flex" : "flex w-full md:w-96"}`}>
           <div className="p-6 border-b border-sage-light/10 bg-white/40">
             <h2 className="text-xl font-bold text-forest flex items-center gap-3">
@@ -187,6 +281,7 @@ export function AdminChatPanel() {
               sessions.map((s) => {
                 const lastMsg = s.messages?.[0];
                 const isActive = s.id === selectedId;
+                const lastVoiceToken = lastMsg ? parseVoiceInviteToken(lastMsg.content) : null;
                 return (
                   <button
                     key={s.id}
@@ -211,7 +306,11 @@ export function AdminChatPanel() {
                           </span>
                         </div>
                         <p className={`text-xs truncate ${isActive ? "text-white/70" : "text-forest/50"}`}>
-                          {lastMsg ? (lastMsg.sender === "admin" ? "Вы: " : "") + lastMsg.content : "Новый диалог"}
+                          {lastMsg
+                            ? lastVoiceToken
+                              ? "Voice token отправлен"
+                              : (lastMsg.sender === "admin" ? "Вы: " : "") + lastMsg.content
+                            : "Новый диалог"}
                         </p>
                       </div>
                       {s._count.messages > 0 && !isActive && (
@@ -219,14 +318,22 @@ export function AdminChatPanel() {
                       )}
                     </div>
                   </button>
-                )
+                );
               })
             )}
           </div>
         </div>
 
-        {/* Chat area */}
-        <div className={`flex-1 flex flex-col bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
+        <div className={`relative flex-1 flex flex-col bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
+          {activeVoiceToken ? (
+            <VoiceCallPanel
+              token={activeVoiceToken}
+              role="admin"
+              title={sessions.find((s) => s.id === selectedId)?.visitorName || `Посетитель #${selectedId}`}
+              onClose={() => setActiveVoiceToken(null)}
+            />
+          ) : null}
+
           {!selectedId ? (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-in fade-in duration-700">
               <div className="w-24 h-24 rounded-[2.5rem] bg-sage/5 flex items-center justify-center mb-8 rotate-12">
@@ -239,7 +346,6 @@ export function AdminChatPanel() {
             </div>
           ) : (
             <>
-              {/* Chat header */}
               <div className="flex items-center gap-4 px-8 py-6 border-b border-sage-light/10 bg-white/60 backdrop-blur-md shrink-0">
                 <button
                   onClick={() => setSelectedId(null)}
@@ -268,34 +374,30 @@ export function AdminChatPanel() {
                 </div>
               </div>
 
-              {/* Messages area */}
               <div className="flex-1 overflow-y-auto px-8 py-8 space-y-6 bg-cream/10">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className={`flex flex-col ${msg.sender === "admin" ? "items-end" : "items-start"} max-w-[70%]`}>
-                      <div
-                        className={`rounded-[1.75rem] px-5 py-4 text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${
-                          msg.sender === "admin"
-                            ? "bg-forest text-white rounded-br-none"
-                            : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
-                        }`}
-                      >
-                        {msg.content}
-                      </div>
-                      <span className="text-[10px] font-bold text-forest/20 mt-2 uppercase tracking-tighter">
-                        {formatTime(msg.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                {messages.map(renderMessage)}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input section */}
               <div className="shrink-0 p-6 bg-white/60 backdrop-blur-md border-t border-sage-light/10">
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.5rem] border border-sage-light/15 bg-cream/35 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-bold text-forest">Voice-режим</p>
+                    <p className="text-xs text-forest/50">
+                      Сгенерируйте токен, отправьте его в чат и дождитесь, пока посетитель нажмёт кнопку звонка.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateVoiceToken}
+                    disabled={creatingVoiceToken}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
+                  >
+                    {creatingVoiceToken ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
+                    Создать токен
+                  </button>
+                </div>
+
                 <div className="flex items-end gap-3 p-2 rounded-[2rem] bg-cream/30 border border-sage-light/20 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
                   <textarea
                     value={input}
@@ -321,3 +423,4 @@ export function AdminChatPanel() {
     </div>
   );
 }
+

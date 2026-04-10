@@ -94,13 +94,14 @@ model SiteContent {
 }
 
 model ChatSession {
-  id         Int           @id @default(autoincrement())
-  visitorId  String
-  visitorName String?
-  status     String        @default("active") // active, closed
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  messages   ChatMessage[]
+  id           Int               @id @default(autoincrement())
+  visitorId    String
+  visitorName  String?
+  status       String            @default("active") // active, closed
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  messages     ChatMessage[]
+  voiceInvites ChatVoiceInvite[]
 
   @@index([visitorId])
   @@index([status])
@@ -115,4 +116,33 @@ model ChatMessage {
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+}
+
+model ChatVoiceInvite {
+  id        Int               @id @default(autoincrement())
+  sessionId Int
+  token     String            @unique
+  status    String            @default("pending") // pending, active, ended, expired
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  expiresAt DateTime
+  joinedAt  DateTime?
+  endedAt   DateTime?
+  session   ChatSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  signals   ChatVoiceSignal[]
+
+  @@index([sessionId])
+  @@index([status])
+}
+
+model ChatVoiceSignal {
+  id         Int             @id @default(autoincrement())
+  inviteId    Int
+  senderRole  String
+  signalType  String
+  payload     Json
+  createdAt   DateTime       @default(now())
+  invite      ChatVoiceInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([inviteId, id])
 }
