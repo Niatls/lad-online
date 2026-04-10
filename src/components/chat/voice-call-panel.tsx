@@ -18,30 +18,16 @@ type VoiceSignal = {
   createdAt: string;
 };
 
-const rtcConfig: RTCConfiguration = {
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    {
-      urls: "stun:openrelay.metered.ca:80",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:80",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-    {
-      urls: "turn:openrelay.metered.ca:443?transport=tcp",
-      username: "openrelayproject",
-      credential: "openrelayproject",
-    },
-  ],
+type IceServer = {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
 };
+
+const defaultIceServers: IceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
 
 export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelProps) {
   const [status, setStatus] = useState("Готовим аудио...");
@@ -207,7 +193,16 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         localStreamRef.current = stream;
 
-        const pc = new RTCPeerConnection(rtcConfig);
+        const iceConfigRes = await fetch("/api/chat/voice/ice-servers", { cache: "no-store" }).catch(() => null);
+        const iceConfigJson = iceConfigRes && iceConfigRes.ok ? await iceConfigRes.json() : null;
+        const iceServers = Array.isArray(iceConfigJson?.iceServers) && iceConfigJson.iceServers.length > 0
+          ? iceConfigJson.iceServers
+          : defaultIceServers;
+
+        const pc = new RTCPeerConnection({
+          iceServers,
+          iceCandidatePoolSize: 4,
+        });
         peerRef.current = pc;
 
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
