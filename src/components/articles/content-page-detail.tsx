@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, FileText } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 
 import type { ManagedContentPage } from "@/lib/content";
+
+import { RichMarkdown } from "./rich-markdown";
 
 type ContentPageDetailProps = {
   page: ManagedContentPage;
@@ -47,9 +48,7 @@ export function ContentPageDetail({ page }: ContentPageDetailProps) {
       <section className="pb-24">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:px-8">
           <article className="rounded-[2rem] border border-sage-light/20 bg-white p-8 shadow-sm sm:p-10">
-            <div className="prose prose-stone max-w-none prose-headings:text-forest prose-p:text-forest/70 prose-p:leading-8 prose-li:text-forest/65">
-              <ReactMarkdown>{page.content}</ReactMarkdown>
-            </div>
+            <RichMarkdown content={page.content} />
           </article>
 
           {(page.sourceHref || page.researchHref) && (

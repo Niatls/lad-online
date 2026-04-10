@@ -4,6 +4,11 @@ import type React from "react";
 import { useRef } from "react";
 import { LayoutTemplate } from "lucide-react";
 
+import {
+  MarkdownSnippetToolbar,
+  type MarkdownSnippet,
+} from "./markdown-snippet-toolbar";
+
 type SectionShellProps = {
   children: React.ReactNode;
   description: string;
@@ -76,32 +81,25 @@ export function MarkdownTextareaField({
 }: MarkdownTextareaFieldProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const applySnippet = (
-    before: string,
-    after = "",
-    placeholderText = "текст"
-  ) => {
+  const applySnippet = (snippet: MarkdownSnippet) => {
     const textarea = textareaRef.current;
+    const placeholderText = "текст";
     if (!textarea) {
-      onChange(value + before + placeholderText + after);
+      onChange(value + snippet.template.replace("{text}", placeholderText));
       return;
     }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = value.slice(start, end) || placeholderText;
-    const nextValue =
-      value.slice(0, start) +
-      before +
-      selectedText +
-      after +
-      value.slice(end);
+    const insertedText = snippet.template.replace("{text}", selectedText);
+    const nextValue = value.slice(0, start) + insertedText + value.slice(end);
 
     onChange(nextValue);
 
     requestAnimationFrame(() => {
       textarea.focus();
-      const cursor = start + before.length + selectedText.length + after.length;
+      const cursor = start + insertedText.length;
       textarea.setSelectionRange(cursor, cursor);
     });
   };
@@ -110,25 +108,12 @@ export function MarkdownTextareaField({
     <label className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-forest">{label}</span>
-        <div className="flex flex-wrap gap-2">
-          <ToolbarButton
-            label="Жирный"
-            onClick={() => applySnippet("**", "**", "акцент")}
-          />
-          <ToolbarButton
-            label="H2"
-            onClick={() => applySnippet("\n## ", "", "Заголовок")}
-          />
-          <ToolbarButton
-            label="Список"
-            onClick={() => applySnippet("\n- ", "", "Пункт")}
-          />
-          <ToolbarButton
-            label="Цитата"
-            onClick={() => applySnippet("\n> ", "", "Цитата")}
-          />
-        </div>
+        <MarkdownSnippetToolbar onInsert={applySnippet} />
       </div>
+      <p className="text-xs leading-5 text-forest/45">
+        Можно быстро вставлять плашки, блоки, заголовки, списки, цитаты,
+        ссылки и разделители.
+      </p>
 
       <textarea
         ref={textareaRef}
@@ -139,23 +124,5 @@ export function MarkdownTextareaField({
         className="w-full rounded-2xl border border-sage-light/30 bg-white px-4 py-3 font-mono text-sm text-forest outline-none transition focus:border-sage"
       />
     </label>
-  );
-}
-
-function ToolbarButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full bg-cream px-3 py-1 text-xs font-semibold text-forest transition hover:bg-sage-light/20"
-    >
-      {label}
-    </button>
   );
 }
