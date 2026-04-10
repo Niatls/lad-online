@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Eye, FilePenLine, LayoutPanelTop, Settings2 } from "lucide-react";
+
 import { ContentPagesSection } from "@/components/admin/content-pages-section";
 import { HomeContentSection } from "@/components/admin/home-content-section";
 import { emptyPageForm, type PageFormState } from "@/components/admin/editor-types";
@@ -54,15 +55,18 @@ export function AdminContentEditor({
   ) {
     setHomeForm((current) => ({ ...current, [key]: value }));
   }
+
   const saveHomeContent = async () => {
     setIsSavingHome(true);
     setStatusMessage("");
+
     const response = await fetch("/api/admin/content/home", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(homeForm),
     });
     const result = await response.json();
+
     setIsSavingHome(false);
     setStatusMessage(
       response.ok && result.ok
@@ -80,12 +84,15 @@ export function AdminContentEditor({
             page.slug === savedPage.slug
           )
       );
+
       return [savedPage, ...remaining];
     });
   };
+
   const savePage = async () => {
     setIsSavingPage(true);
     setStatusMessage("");
+
     const payload = {
       ...pageForm,
       summaryPoints: pageForm.summaryPoints
@@ -93,16 +100,19 @@ export function AdminContentEditor({
         .map((item) => item.trim())
         .filter(Boolean),
     };
+
     const url = pageForm.id
       ? `/api/admin/content/pages/${pageForm.id}`
       : "/api/admin/content/pages";
     const method = pageForm.id ? "PUT" : "POST";
+
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const result = await response.json();
+
     setIsSavingPage(false);
     if (!response.ok || !result.ok) {
       setStatusMessage(result.message || "Не удалось сохранить материал.");
@@ -117,6 +127,7 @@ export function AdminContentEditor({
           ? new Date(responsePage.updatedAt)
           : null,
       };
+
       upsertManagedPage(savedPage);
       setPageForm({
         id: savedPage.id,
@@ -133,10 +144,12 @@ export function AdminContentEditor({
         researchLabel: savedPage.researchLabel,
         researchHref: savedPage.researchHref,
       });
+
       const publicPath =
         savedPage.pageType === "article"
           ? `/articles/${savedPage.slug}`
           : `/pages/${savedPage.slug}`;
+
       setStatusMessage(
         savedPage.published
           ? `Материал сохранен и опубликован. Адрес: ${publicPath}`
@@ -153,10 +166,12 @@ export function AdminContentEditor({
       setStatusMessage("Удалять можно только уже сохраненные материалы.");
       return;
     }
+
     const response = await fetch(`/api/admin/content/pages/${pageForm.id}`, {
       method: "DELETE",
     });
     const result = await response.json();
+
     if (!response.ok || !result.ok) {
       setStatusMessage(result.message || "Не удалось удалить материал.");
       return;
@@ -168,6 +183,7 @@ export function AdminContentEditor({
     setPageForm(emptyPageForm);
     setStatusMessage("Материал удален.");
   };
+
   return (
     <div className="space-y-6">
       <section className="rounded-[2rem] border border-sage-light/30 bg-white/90 p-6 shadow-lg sm:p-8">
@@ -176,8 +192,8 @@ export function AdminContentEditor({
             <h1 className="text-3xl font-bold text-forest">Редактор сайта</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-forest/60">
               Управляйте главной страницей, меню, услугами, контактами и
-              материалами. Теперь редактор разбит на вкладки и секции, чтобы не
-              приходилось листать огромную форму.
+              материалами. Для главной теперь есть перетаскивание секций, а
+              предпросмотр открывается отдельно на весь экран.
             </p>
           </div>
 
@@ -230,7 +246,6 @@ export function AdminContentEditor({
             mode="main"
             onOpenPreview={() => setIsPreviewOpen(true)}
             onSave={saveHomeContent}
-            previewArticles={previewArticles}
             setHomeField={setHomeField}
           />
         </TabsContent>
@@ -242,7 +257,6 @@ export function AdminContentEditor({
             mode="settings"
             onOpenPreview={() => setIsPreviewOpen(true)}
             onSave={saveHomeContent}
-            previewArticles={previewArticles}
             setHomeField={setHomeField}
           />
         </TabsContent>
@@ -263,7 +277,7 @@ export function AdminContentEditor({
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent
           showCloseButton
-          className="h-[92vh] max-w-[96vw] overflow-hidden border-0 p-0"
+          className="h-screen w-screen max-w-none overflow-hidden rounded-none border-0 p-0"
         >
           <DialogHeader className="border-b border-sage-light/20 px-6 py-4">
             <DialogTitle>Предпросмотр главной страницы</DialogTitle>

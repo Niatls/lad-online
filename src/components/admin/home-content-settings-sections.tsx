@@ -1,6 +1,7 @@
 "use client";
 
-import { Grip, ListChecks, Plus } from "lucide-react";
+import { Grip, GripVertical, ListChecks, Plus } from "lucide-react";
+import { useState } from "react";
 
 import type {
   HomeNavLink,
@@ -14,6 +15,7 @@ import { EditorAccordionSection } from "./editor-accordion-section";
 import { Field, MarkdownTextareaField } from "./editor-shared";
 import { menuTargets } from "./editor-types";
 import { ActionButton, ItemCard } from "./home-content-cards";
+import { reorderItems } from "./sort-utils";
 
 type HomeContentSettingsSectionsProps = {
   homeForm: HomePageContent;
@@ -27,6 +29,11 @@ export function HomeContentSettingsSections({
   homeForm,
   setHomeField,
 }: HomeContentSettingsSectionsProps) {
+  const [draggingMenuIndex, setDraggingMenuIndex] = useState<number | null>(null);
+  const [draggingServiceIndex, setDraggingServiceIndex] = useState<number | null>(
+    null
+  );
+
   const updateNavLink = (
     index: number,
     key: keyof HomeNavLink,
@@ -62,7 +69,7 @@ export function HomeContentSettingsSections({
       <EditorAccordionSection
         value="menu"
         title="Меню"
-        description="Пункты навигации в шапке сайта."
+        description="Пункты навигации в шапке сайта. Их можно перетаскивать."
       >
         <div className="mb-4 flex justify-end">
           <ActionButton
@@ -79,44 +86,66 @@ export function HomeContentSettingsSections({
 
         <div className="space-y-3">
           {homeForm.navLinks.map((item, index) => (
-            <ItemCard
+            <div
               key={`${item.target}-${index}`}
-              title={`Пункт ${index + 1}`}
-              icon={Grip}
-              onRemove={() =>
+              draggable
+              onDragStart={() => setDraggingMenuIndex(index)}
+              onDragEnd={() => setDraggingMenuIndex(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                if (draggingMenuIndex === null) {
+                  return;
+                }
                 setHomeField(
                   "navLinks",
-                  homeForm.navLinks.filter((_, itemIndex) => itemIndex !== index)
-                )
-              }
-              disableRemove={homeForm.navLinks.length <= 1}
+                  reorderItems(homeForm.navLinks, draggingMenuIndex, index)
+                );
+                setDraggingMenuIndex(null);
+              }}
+              className={draggingMenuIndex === index ? "opacity-60" : ""}
             >
-              <div className="grid gap-3">
-                <Field
-                  label="Название"
-                  value={item.label}
-                  onChange={(value) => updateNavLink(index, "label", value)}
-                />
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-forest">
-                    Ведет к блоку
-                  </span>
-                  <select
-                    value={item.target}
-                    onChange={(event) =>
-                      updateNavLink(index, "target", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm text-forest outline-none transition focus:border-sage"
-                  >
-                    {menuTargets.map((target) => (
-                      <option key={target.value} value={target.value}>
-                        {target.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </ItemCard>
+              <ItemCard
+                title={`Пункт ${index + 1}`}
+                icon={Grip}
+                onRemove={() =>
+                  setHomeField(
+                    "navLinks",
+                    homeForm.navLinks.filter((_, itemIndex) => itemIndex !== index)
+                  )
+                }
+                disableRemove={homeForm.navLinks.length <= 1}
+              >
+                <div className="mb-3 flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-xs font-medium text-forest/55">
+                  <GripVertical className="h-4 w-4" />
+                  Перетащите для смены порядка
+                </div>
+                <div className="grid gap-3">
+                  <Field
+                    label="Название"
+                    value={item.label}
+                    onChange={(value) => updateNavLink(index, "label", value)}
+                  />
+                  <label className="space-y-2">
+                    <span className="text-sm font-medium text-forest">
+                      Ведет к блоку
+                    </span>
+                    <select
+                      value={item.target}
+                      onChange={(event) =>
+                        updateNavLink(index, "target", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm text-forest outline-none transition focus:border-sage"
+                    >
+                      {menuTargets.map((target) => (
+                        <option key={target.value} value={target.value}>
+                          {target.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </ItemCard>
+            </div>
           ))}
         </div>
       </EditorAccordionSection>
@@ -216,7 +245,7 @@ export function HomeContentSettingsSections({
       <EditorAccordionSection
         value="services"
         title="Услуги"
-        description="Карточки услуг на главной странице."
+        description="Карточки услуг на главной странице. Их тоже можно перетаскивать."
       >
         <div className="mb-4 flex justify-end">
           <ActionButton
@@ -236,32 +265,54 @@ export function HomeContentSettingsSections({
 
         <div className="grid gap-4 lg:grid-cols-2">
           {homeForm.services.map((service, index) => (
-            <ItemCard
+            <div
               key={`${service.title}-${index}`}
-              title={`Услуга ${index + 1}`}
-              icon={ListChecks}
-              onRemove={() =>
+              draggable
+              onDragStart={() => setDraggingServiceIndex(index)}
+              onDragEnd={() => setDraggingServiceIndex(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                if (draggingServiceIndex === null) {
+                  return;
+                }
                 setHomeField(
                   "services",
-                  homeForm.services.filter((_, itemIndex) => itemIndex !== index)
-                )
-              }
-              disableRemove={homeForm.services.length <= 1}
+                  reorderItems(homeForm.services, draggingServiceIndex, index)
+                );
+                setDraggingServiceIndex(null);
+              }}
+              className={draggingServiceIndex === index ? "opacity-60" : ""}
             >
-              <div className="space-y-4">
-                <Field
-                  label="Название услуги"
-                  value={service.title}
-                  onChange={(value) => updateService(index, "title", value)}
-                />
-                <MarkdownTextareaField
-                  label="Описание"
-                  rows={4}
-                  value={service.description}
-                  onChange={(value) => updateService(index, "description", value)}
-                />
-              </div>
-            </ItemCard>
+              <ItemCard
+                title={`Услуга ${index + 1}`}
+                icon={ListChecks}
+                onRemove={() =>
+                  setHomeField(
+                    "services",
+                    homeForm.services.filter((_, itemIndex) => itemIndex !== index)
+                  )
+                }
+                disableRemove={homeForm.services.length <= 1}
+              >
+                <div className="mb-3 flex items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-xs font-medium text-forest/55">
+                  <GripVertical className="h-4 w-4" />
+                  Перетащите для смены порядка
+                </div>
+                <div className="space-y-4">
+                  <Field
+                    label="Название услуги"
+                    value={service.title}
+                    onChange={(value) => updateService(index, "title", value)}
+                  />
+                  <MarkdownTextareaField
+                    label="Описание"
+                    rows={4}
+                    value={service.description}
+                    onChange={(value) => updateService(index, "description", value)}
+                  />
+                </div>
+              </ItemCard>
+            </div>
           ))}
         </div>
       </EditorAccordionSection>

@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   Eye,
   EyeOff,
+  GripVertical,
   Plus,
   Quote,
   Sparkles,
@@ -22,6 +24,7 @@ type HomeSectionListProps = {
   onAddSection: (section: HomePageSection) => void;
   onDeleteSection: (id: string) => void;
   onMoveSection: (id: string, direction: "up" | "down") => void;
+  onReorderSections: (fromId: string, toId: string) => void;
   onSelectSection: (id: string) => void;
   onToggleSection: (id: string) => void;
   sections: HomePageSection[];
@@ -42,17 +45,20 @@ export function HomeSectionList({
   onAddSection,
   onDeleteSection,
   onMoveSection,
+  onReorderSections,
   onSelectSection,
   onToggleSection,
   sections,
   selectedSectionId,
 }: HomeSectionListProps) {
+  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
+
   return (
     <div className="space-y-4 rounded-[1.5rem] border border-sage-light/20 bg-white p-5">
       <div>
         <h3 className="text-lg font-semibold text-forest">Секции главной</h3>
         <p className="mt-1 text-sm leading-6 text-forest/55">
-          Меняйте порядок, скрывайте блоки и добавляйте новые секции-шаблоны.
+          Меняйте порядок мышкой, скрывайте блоки и добавляйте новые секции-шаблоны.
         </p>
       </div>
 
@@ -77,24 +83,43 @@ export function HomeSectionList({
           return (
             <div
               key={section.id}
+              draggable
+              onDragStart={() => setDraggingSectionId(section.id)}
+              onDragEnd={() => setDraggingSectionId(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => {
+                if (draggingSectionId && draggingSectionId !== section.id) {
+                  onReorderSections(draggingSectionId, section.id);
+                }
+                setDraggingSectionId(null);
+              }}
               className={`rounded-2xl border p-4 transition ${
                 isSelected
                   ? "border-sage bg-sage-light/10 shadow-sm"
                   : "border-sage-light/20 bg-cream/70"
-              }`}
+              } ${draggingSectionId === section.id ? "opacity-60" : ""}`}
             >
-              <button
-                type="button"
-                onClick={() => onSelectSection(section.id)}
-                className="w-full text-left"
-              >
-                <p className="text-sm font-semibold text-forest">
-                  {getSectionDisplayTitle(section)}
-                </p>
-                <p className="mt-1 text-xs uppercase tracking-[0.2em] text-forest/35">
-                  {section.kind === "custom" ? "Своя секция" : "Шаблон сайта"}
-                </p>
-              </button>
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  aria-label="Перетащить секцию"
+                  className="rounded-lg bg-white p-2 text-forest/50 transition hover:bg-sage-light/20 hover:text-forest"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectSection(section.id)}
+                  className="flex-1 text-left"
+                >
+                  <p className="text-sm font-semibold text-forest">
+                    {getSectionDisplayTitle(section)}
+                  </p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.2em] text-forest/35">
+                    {section.kind === "custom" ? "Своя секция" : "Шаблон сайта"}
+                  </p>
+                </button>
+              </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
