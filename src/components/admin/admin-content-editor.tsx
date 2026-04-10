@@ -1,14 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye } from "lucide-react";
-
+import { Eye, FilePenLine, LayoutPanelTop, Settings2 } from "lucide-react";
 import { ContentPagesSection } from "@/components/admin/content-pages-section";
 import { HomeContentSection } from "@/components/admin/home-content-section";
-import {
-  emptyPageForm,
-  type PageFormState,
-} from "@/components/admin/editor-types";
+import { emptyPageForm, type PageFormState } from "@/components/admin/editor-types";
 import { HomePageClient } from "@/components/home/home-page-client";
 import {
   Dialog,
@@ -17,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
 type AdminContentEditorProps = {
@@ -57,18 +54,15 @@ export function AdminContentEditor({
   ) {
     setHomeForm((current) => ({ ...current, [key]: value }));
   }
-
   const saveHomeContent = async () => {
     setIsSavingHome(true);
     setStatusMessage("");
-
     const response = await fetch("/api/admin/content/home", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(homeForm),
     });
     const result = await response.json();
-
     setIsSavingHome(false);
     setStatusMessage(
       response.ok && result.ok
@@ -86,15 +80,12 @@ export function AdminContentEditor({
             page.slug === savedPage.slug
           )
       );
-
       return [savedPage, ...remaining];
     });
   };
-
   const savePage = async () => {
     setIsSavingPage(true);
     setStatusMessage("");
-
     const payload = {
       ...pageForm,
       summaryPoints: pageForm.summaryPoints
@@ -102,19 +93,16 @@ export function AdminContentEditor({
         .map((item) => item.trim())
         .filter(Boolean),
     };
-
     const url = pageForm.id
       ? `/api/admin/content/pages/${pageForm.id}`
       : "/api/admin/content/pages";
     const method = pageForm.id ? "PUT" : "POST";
-
     const response = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const result = await response.json();
-
     setIsSavingPage(false);
     if (!response.ok || !result.ok) {
       setStatusMessage(result.message || "Не удалось сохранить материал.");
@@ -129,7 +117,6 @@ export function AdminContentEditor({
           ? new Date(responsePage.updatedAt)
           : null,
       };
-
       upsertManagedPage(savedPage);
       setPageForm({
         id: savedPage.id,
@@ -146,12 +133,10 @@ export function AdminContentEditor({
         researchLabel: savedPage.researchLabel,
         researchHref: savedPage.researchHref,
       });
-
       const publicPath =
         savedPage.pageType === "article"
           ? `/articles/${savedPage.slug}`
           : `/pages/${savedPage.slug}`;
-
       setStatusMessage(
         savedPage.published
           ? `Материал сохранен и опубликован. Адрес: ${publicPath}`
@@ -168,12 +153,10 @@ export function AdminContentEditor({
       setStatusMessage("Удалять можно только уже сохраненные материалы.");
       return;
     }
-
     const response = await fetch(`/api/admin/content/pages/${pageForm.id}`, {
       method: "DELETE",
     });
     const result = await response.json();
-
     if (!response.ok || !result.ok) {
       setStatusMessage(result.message || "Не удалось удалить материал.");
       return;
@@ -185,7 +168,6 @@ export function AdminContentEditor({
     setPageForm(emptyPageForm);
     setStatusMessage("Материал удален.");
   };
-
   return (
     <div className="space-y-6">
       <section className="rounded-[2rem] border border-sage-light/30 bg-white/90 p-6 shadow-lg sm:p-8">
@@ -194,8 +176,8 @@ export function AdminContentEditor({
             <h1 className="text-3xl font-bold text-forest">Редактор сайта</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-forest/60">
               Управляйте главной страницей, меню, услугами, контактами и
-              материалами. После сохранения статьи редактор сразу покажет,
-              опубликована она или осталась черновиком.
+              материалами. Теперь редактор разбит на вкладки и секции, чтобы не
+              приходилось листать огромную форму.
             </p>
           </div>
 
@@ -216,23 +198,65 @@ export function AdminContentEditor({
         ) : null}
       </section>
 
-      <HomeContentSection
-        homeForm={homeForm}
-        isSavingHome={isSavingHome}
-        onOpenPreview={() => setIsPreviewOpen(true)}
-        onSave={saveHomeContent}
-        setHomeField={setHomeField}
-      />
+      <Tabs defaultValue="home" className="space-y-6">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-white/90 p-2">
+          <TabsTrigger
+            value="home"
+            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
+          >
+            <LayoutPanelTop className="h-4 w-4" />
+            Главная
+          </TabsTrigger>
+          <TabsTrigger
+            value="settings"
+            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
+          >
+            <Settings2 className="h-4 w-4" />
+            Навигация и услуги
+          </TabsTrigger>
+          <TabsTrigger
+            value="pages"
+            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
+          >
+            <FilePenLine className="h-4 w-4" />
+            Материалы
+          </TabsTrigger>
+        </TabsList>
 
-      <ContentPagesSection
-        isSavingPage={isSavingPage}
-        onDelete={deletePage}
-        onReset={() => setPageForm(emptyPageForm)}
-        onSave={savePage}
-        pageForm={pageForm}
-        pages={managedPages}
-        setPageForm={setPageForm}
-      />
+        <TabsContent value="home">
+          <HomeContentSection
+            homeForm={homeForm}
+            isSavingHome={isSavingHome}
+            mode="main"
+            onOpenPreview={() => setIsPreviewOpen(true)}
+            onSave={saveHomeContent}
+            setHomeField={setHomeField}
+          />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <HomeContentSection
+            homeForm={homeForm}
+            isSavingHome={isSavingHome}
+            mode="settings"
+            onOpenPreview={() => setIsPreviewOpen(true)}
+            onSave={saveHomeContent}
+            setHomeField={setHomeField}
+          />
+        </TabsContent>
+
+        <TabsContent value="pages">
+          <ContentPagesSection
+            isSavingPage={isSavingPage}
+            onDelete={deletePage}
+            onReset={() => setPageForm(emptyPageForm)}
+            onSave={savePage}
+            pageForm={pageForm}
+            pages={managedPages}
+            setPageForm={setPageForm}
+          />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent
