@@ -54,7 +54,7 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
-    await updateManagedContentPage(Number(id), {
+    const page = await updateManagedContentPage(Number(id), {
       slug: payload.slug.trim(),
       title: payload.title.trim(),
       excerpt: payload.excerpt?.trim() || payload.title.trim(),
@@ -75,7 +75,27 @@ export async function PUT(request: Request, context: RouteContext) {
     revalidatePath(`/articles/${payload.slug.trim()}`);
     revalidatePath(`/pages/${payload.slug.trim()}`);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      page: {
+        id: page.id,
+        slug: page.slug,
+        title: page.title,
+        excerpt: page.excerpt,
+        content: page.content,
+        pageType: page.pageType === "page" ? "page" : "article",
+        published: page.published,
+        showOnHomepage: page.showOnHomepage,
+        summaryPoints: Array.isArray(page.summaryPoints)
+          ? page.summaryPoints
+          : [],
+        sourceLabel: page.sourceLabel ?? "",
+        sourceHref: page.sourceHref ?? "",
+        researchLabel: page.researchLabel ?? "",
+        researchHref: page.researchHref ?? "",
+        updatedAt: page.updatedAt,
+      },
+    });
   } catch (error) {
     console.error("Failed to update content page", error);
 

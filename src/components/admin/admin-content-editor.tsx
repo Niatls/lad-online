@@ -5,7 +5,10 @@ import { Eye } from "lucide-react";
 
 import { ContentPagesSection } from "@/components/admin/content-pages-section";
 import { HomeContentSection } from "@/components/admin/home-content-section";
-import { emptyPageForm, type PageFormState } from "@/components/admin/editor-types";
+import {
+  emptyPageForm,
+  type PageFormState,
+} from "@/components/admin/editor-types";
 import { HomePageClient } from "@/components/home/home-page-client";
 import {
   Dialog,
@@ -21,11 +24,16 @@ type AdminContentEditorProps = {
   pages: ManagedContentPage[];
 };
 
+type SavedPageResponse = Omit<ManagedContentPage, "updatedAt"> & {
+  updatedAt: string | null;
+};
+
 export function AdminContentEditor({
   homeContent,
   pages,
 }: AdminContentEditorProps) {
   const [homeForm, setHomeForm] = useState(homeContent);
+  const [managedPages, setManagedPages] = useState(pages);
   const [pageForm, setPageForm] = useState<PageFormState>(emptyPageForm);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isSavingHome, setIsSavingHome] = useState(false);
@@ -34,13 +42,13 @@ export function AdminContentEditor({
 
   const previewArticles = useMemo(
     () =>
-      pages.filter(
+      managedPages.filter(
         (page) =>
           page.pageType === "article" &&
           page.published &&
           page.showOnHomepage
       ),
-    [pages]
+    [managedPages]
   );
 
   function setHomeField<K extends keyof HomePageContent>(
@@ -67,6 +75,20 @@ export function AdminContentEditor({
         ? "Главная страница сохранена."
         : result.message || "Не удалось сохранить главную страницу."
     );
+  };
+
+  const upsertManagedPage = (savedPage: ManagedContentPage) => {
+    setManagedPages((current) => {
+      const remaining = current.filter(
+        (page) =>
+          !(
+            (savedPage.id !== null && page.id === savedPage.id) ||
+            page.slug === savedPage.slug
+          )
+      );
+
+      return [savedPage, ...remaining];
+    });
   };
 
   const savePage = async () => {
@@ -99,8 +121,46 @@ export function AdminContentEditor({
       return;
     }
 
-    setStatusMessage("Материал сохранен. Обновляю страницу...");
-    window.location.reload();
+    if (result.page) {
+      const responsePage = result.page as SavedPageResponse;
+      const savedPage: ManagedContentPage = {
+        ...responsePage,
+        updatedAt: responsePage.updatedAt
+          ? new Date(responsePage.updatedAt)
+          : null,
+      };
+
+      upsertManagedPage(savedPage);
+      setPageForm({
+        id: savedPage.id,
+        slug: savedPage.slug,
+        title: savedPage.title,
+        excerpt: savedPage.excerpt,
+        content: savedPage.content,
+        pageType: savedPage.pageType,
+        published: savedPage.published,
+        showOnHomepage: savedPage.showOnHomepage,
+        summaryPoints: savedPage.summaryPoints.join("\n"),
+        sourceLabel: savedPage.sourceLabel,
+        sourceHref: savedPage.sourceHref,
+        researchLabel: savedPage.researchLabel,
+        researchHref: savedPage.researchHref,
+      });
+
+      const publicPath =
+        savedPage.pageType === "article"
+          ? `/articles/${savedPage.slug}`
+          : `/pages/${savedPage.slug}`;
+
+      setStatusMessage(
+        savedPage.published
+          ? `Материал сохранен и опубликован. Адрес: ${publicPath}`
+          : "Материал сохранен как черновик. Он уже появился в списке слева, но пока не виден на сайте."
+      );
+      return;
+    }
+
+    setStatusMessage("Материал сохранен.");
   };
 
   const deletePage = async () => {
@@ -119,8 +179,11 @@ export function AdminContentEditor({
       return;
     }
 
-    setStatusMessage("Материал удален. Обновляю страницу...");
-    window.location.reload();
+    setManagedPages((current) =>
+      current.filter((page) => page.id !== pageForm.id)
+    );
+    setPageForm(emptyPageForm);
+    setStatusMessage("Материал удален.");
   };
 
   return (
@@ -131,7 +194,8 @@ export function AdminContentEditor({
             <h1 className="text-3xl font-bold text-forest">Редактор сайта</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-forest/60">
               Управляйте главной страницей, меню, услугами, контактами и
-              материалами. Теперь редактор разбит на компактные модули.
+              материалами. После сохранения статьи редактор сразу покажет,
+              опубликована она или осталась черновиком.
             </p>
           </div>
 
@@ -166,7 +230,7 @@ export function AdminContentEditor({
         onReset={() => setPageForm(emptyPageForm)}
         onSave={savePage}
         pageForm={pageForm}
-        pages={pages}
+        pages={managedPages}
         setPageForm={setPageForm}
       />
 
