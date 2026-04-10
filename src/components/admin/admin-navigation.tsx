@@ -3,6 +3,7 @@ import Link from "next/link";
 const links = [
   { href: "/admin", label: "Заявки" },
   { href: "/admin/editor", label: "Редактор" },
+  { href: "/admin/chat", label: "Чат" },
 ];
 
 export function AdminNavigation() {

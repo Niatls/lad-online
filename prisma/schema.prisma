@@ -92,3 +92,27 @@ model SiteContent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model ChatSession {
+  id         Int           @id @default(autoincrement())
+  visitorId  String
+  visitorName String?
+  status     String        @default("active") // active, closed
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  messages   ChatMessage[]
+
+  @@index([visitorId])
+  @@index([status])
+}
+
+model ChatMessage {
+  id        Int         @id @default(autoincrement())
+  sessionId Int
+  sender    String      // "visitor" or "admin"
+  content   String
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
