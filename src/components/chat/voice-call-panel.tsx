@@ -22,6 +22,24 @@ const rtcConfig: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    {
+      urls: "stun:openrelay.metered.ca:80",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
 };
 
@@ -212,8 +230,27 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           if (pc.connectionState === "connected") {
             setStatus("Звонок активен");
             setConnecting(false);
-          } else if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
+          } else if (pc.connectionState === "connecting") {
+            setStatus("Соединяем аудиоканал...");
+          } else if (pc.connectionState === "failed") {
+            setStatus("Не удалось установить аудиосоединение");
+            setError("Похоже, прямое WebRTC-соединение недоступно. Попробуйте ещё раз.");
+            setConnecting(false);
+          } else if (["disconnected", "closed"].includes(pc.connectionState)) {
             setStatus("Соединение завершено");
+            setConnecting(false);
+          }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+          if (pc.iceConnectionState === "checking") {
+            setStatus("Проверяем маршрут для звонка...");
+          } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+            setStatus("Звонок активен");
+            setConnecting(false);
+          } else if (pc.iceConnectionState === "failed") {
+            setStatus("ICE-маршрут не поднялся");
+            setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
             setConnecting(false);
           }
         };
