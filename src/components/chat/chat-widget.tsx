@@ -28,6 +28,7 @@ export function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -39,6 +40,7 @@ export function ChatWidget() {
   // Initialize session
   const initSession = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const visitorId = getVisitorId();
       const res = await fetch("/api/chat/sessions", {
@@ -53,9 +55,12 @@ export function ChatWidget() {
         if (session.messages?.length) {
           lastMsgIdRef.current = session.messages[session.messages.length - 1].id;
         }
+      } else {
+        setError("Не удалось подключиться к чату. Пожалуйста, попробуйте позже.");
       }
     } catch (err) {
       console.error("Failed to init chat:", err);
+      setError("Ошибка сети. Проверьте соединение.");
     } finally {
       setLoading(false);
     }
@@ -63,13 +68,19 @@ export function ChatWidget() {
 
   // Poll for new messages
   const pollMessages = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || !isOpen) return;
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}/messages?after=${lastMsgIdRef.current}`);
       if (res.ok) {
         const newMsgs: Message[] = await res.json();
         if (newMsgs.length > 0) {
-          setMessages((prev) => [...prev, ...newMsgs]);
+          setMessages((prev) => {
+            // Filter out any messages that might already be there (e.g. from optimistic updates that were subsequently matched)
+            const existingIds = new Set(prev.map(m => m.id));
+            const uniqueNew = newMsgs.filter(m => !existingIds.has(m.id));
+            if (uniqueNew.length === 0) return prev;
+            return [...prev, ...uniqueNew];
+          });
           lastMsgIdRef.current = newMsgs[newMsgs.length - 1].id;
           // If chat is closed and admin responded, show unread indicator
           if (!isOpen && newMsgs.some((m) => m.sender === "admin")) {
@@ -84,11 +95,11 @@ export function ChatWidget() {
   }, [sessionId, isOpen, scrollToBottom]);
 
   useEffect(() => {
-    if (sessionId) {
+    if (sessionId && isOpen) {
       pollRef.current = setInterval(pollMessages, 3000);
       return () => clearInterval(pollRef.current);
     }
-  }, [sessionId, pollMessages]);
+  }, [sessionId, isOpen, pollMessages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -104,13 +115,16 @@ export function ChatWidget() {
 
   const handleSend = async () => {
     if (!input.trim() || !sessionId || sending) return;
+    if (error) setError(null);
+    
     const text = input.trim();
     setInput("");
     setSending(true);
 
     // Optimistic update
+    const tempId = Date.now();
     const optimistic: Message = {
-      id: Date.now(),
+      id: tempId,
       sender: "visitor",
       content: text,
       createdAt: new Date().toISOString(),
@@ -123,13 +137,20 @@ export function ChatWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text, sender: "visitor" }),
       });
+      
       if (res.ok) {
         const msg = await res.json();
-        setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? msg : m)));
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? msg : m)));
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, msg.id);
+      } else {
+        throw new Error("Failed to send");
       }
     } catch (err) {
       console.error("Failed to send:", err);
+      setError("Не удалось отправить сообщение.");
+      // Remove optimistic message on permanent failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInput(text); // Restore input so user can try again
     } finally {
       setSending(false);
     }
@@ -210,6 +231,19 @@ export function ChatWidget() {
                   Мы всегда на связи. Опишите вашу ситуацию, и наш специалист ответит вам в ближайшее время.
                 </p>
               </div>
+            ) : error && !sessionId ? (
+              <div className="text-center py-12 px-6 flex flex-col items-center justify-center h-full">
+                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+                  <X className="h-8 w-8 text-red-400" />
+                </div>
+                <p className="text-forest/70 text-sm font-medium mb-4">{error}</p>
+                <button
+                  onClick={initSession}
+                  className="px-6 py-2 rounded-xl bg-forest text-white text-sm font-bold shadow-lg hover:bg-forest/90 transition-all"
+                >
+                  Попробовать снова
+                </button>
+              </div>
             ) : (
               messages.map((msg) => (
                 <div
@@ -235,19 +269,28 @@ export function ChatWidget() {
           </div>
 
           {/* Input container */}
-          <div className="shrink-0 p-4 bg-white">
+          <div className="shrink-0 p-4 bg-white relative">
+            {error && sessionId && (
+              <div className="absolute -top-10 left-4 right-4 bg-red-50 text-red-600 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-red-100 flex items-center justify-between animate-in slide-in-from-bottom-2">
+                <span>{error}</span>
+                <button onClick={() => setError(null)} className="p-0.5 hover:bg-red-100 rounded">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
             <div className="p-2 rounded-[1.75rem] bg-cream/30 border border-sage-light/20 flex items-end gap-2 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ваше сообщение..."
+                placeholder={error && !sessionId ? "Чат недоступен..." : "Ваше сообщение..."}
+                disabled={!sessionId && !loading}
                 rows={1}
-                className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest placeholder:text-forest/30 outline-none max-h-[120px]"
+                className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest placeholder:text-forest/30 outline-none max-h-[120px] disabled:opacity-50"
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || sending}
+                disabled={!input.trim() || sending || (!sessionId && !loading)}
                 className="mb-1 p-3 rounded-2xl bg-forest text-white hover:bg-forest/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-forest/20 active:scale-95"
               >
                 {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}

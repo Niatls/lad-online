@@ -6,8 +6,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { visitorId, visitorName } = body;
+    console.log(`[Chat API] Session request for visitor: ${visitorId}`);
 
     if (!visitorId || typeof visitorId !== "string") {
+      console.warn(`[Chat API] Missing visitorId in request`);
       return NextResponse.json({ error: "visitorId required" }, { status: 400 });
     }
 
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error("Chat session error:", error);
+    console.error(`[Chat API] Session error for visitor:`, error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

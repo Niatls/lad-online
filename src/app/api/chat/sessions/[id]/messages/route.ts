@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json(messages);
   } catch (error) {
-    console.error("Chat messages GET error:", error);
+    console.error(`[Chat API] Poll error:`, error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -38,8 +38,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const body = await req.json();
     const { content, sender } = body;
+    console.log(`[Chat API] Message from ${sender} in session ${sessionId}`);
 
     if (!content || typeof content !== "string" || !sender) {
+      console.warn(`[Chat API] Invalid message payload`);
       return NextResponse.json({ error: "content and sender required" }, { status: 400 });
     }
 
