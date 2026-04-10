@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { createChatMessage, getChatMessages } from "@/lib/chat-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -15,10 +15,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const afterParam = req.nextUrl.searchParams.get("after");
     const afterId = afterParam ? parseInt(afterParam) : 0;
 
-    const messages = await db.chatMessage.findMany({
-      where: { sessionId, id: { gt: afterId } },
-      orderBy: { createdAt: "asc" },
-    });
+    const messages = await getChatMessages(sessionId, afterId);
 
     return NextResponse.json(messages);
   } catch (error) {
@@ -46,20 +43,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Ensure session exists
-    const session = await db.chatSession.findUnique({ where: { id: sessionId } });
-    if (!session) {
+    const message = await createChatMessage(sessionId, content, sender);
+    if (!message) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
-
-    const message = await db.chatMessage.create({
-      data: { sessionId, content: content.trim(), sender },
-    });
-
-    // Touch session updatedAt
-    await db.chatSession.update({
-      where: { id: sessionId },
-      data: { updatedAt: new Date() },
-    });
 
     return NextResponse.json(message);
   } catch (error) {

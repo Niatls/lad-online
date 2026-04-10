@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { db } from "@/lib/db";
+import { getAdminChatSessions } from "@/lib/chat-store";
 
 // GET /api/admin/chat/sessions — list all chat sessions (admin only)
 export async function GET() {
@@ -11,16 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sessions = await db.chatSession.findMany({
-      orderBy: { updatedAt: "desc" },
-      include: {
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-        _count: { select: { messages: true } },
-      },
-    });
+    const sessions = await getAdminChatSessions();
 
     return NextResponse.json(sessions);
   } catch (error) {

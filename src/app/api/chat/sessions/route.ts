@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getOrCreateChatSession } from "@/lib/chat-store";
 
 // POST /api/chat/sessions — create or get existing session
 export async function POST(req: NextRequest) {
@@ -14,20 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find existing active session or create new
-    let session = await db.chatSession.findFirst({
-      where: { visitorId, status: "active" },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
-    });
-
-    if (!session) {
-      session = await db.chatSession.create({
-        data: {
-          visitorId,
-          visitorName: visitorName || null,
-        },
-        include: { messages: { orderBy: { createdAt: "asc" } } },
-      });
-    }
+    const session = await getOrCreateChatSession(visitorId, visitorName);
 
     return NextResponse.json(session);
   } catch (error) {
