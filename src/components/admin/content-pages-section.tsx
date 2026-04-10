@@ -34,7 +34,9 @@ export function ContentPagesSection({
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold text-forest">Материалы</h2>
-            <p className="text-sm text-forest/55">Статьи и отдельные страницы</p>
+            <p className="text-sm text-forest/55">
+              Статьи и отдельные страницы
+            </p>
           </div>
           <button
             type="button"
@@ -55,10 +57,13 @@ export function ContentPagesSection({
             >
               <p className="text-sm font-semibold text-forest">{page.title}</p>
               <p className="mt-1 text-xs uppercase tracking-[0.2em] text-forest/40">
-                {page.pageType === "article" ? "Статья" : "Страница"} · {page.slug}
+                {page.pageType === "article" ? "Статья" : "Страница"} В·{" "}
+                {page.slug}
               </p>
               {page.id === null ? (
-                <p className="mt-1 text-xs text-forest/40">Встроенный материал</p>
+                <p className="mt-1 text-xs text-forest/40">
+                  Встроенный материал
+                </p>
               ) : null}
             </button>
           ))}
@@ -147,10 +152,34 @@ export function ContentPagesSection({
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field label="Название источника" value={pageForm.sourceLabel} onChange={(value) => setPageForm((current) => ({ ...current, sourceLabel: value }))} />
-          <Field label="Ссылка на источник" value={pageForm.sourceHref} onChange={(value) => setPageForm((current) => ({ ...current, sourceHref: value }))} />
-          <Field label="Название исследования" value={pageForm.researchLabel} onChange={(value) => setPageForm((current) => ({ ...current, researchLabel: value }))} />
-          <Field label="Ссылка на исследование" value={pageForm.researchHref} onChange={(value) => setPageForm((current) => ({ ...current, researchHref: value }))} />
+          <Field
+            label="Название источника"
+            value={pageForm.sourceLabel}
+            onChange={(value) =>
+              setPageForm((current) => ({ ...current, sourceLabel: value }))
+            }
+          />
+          <Field
+            label="Ссылка на источник"
+            value={pageForm.sourceHref}
+            onChange={(value) =>
+              setPageForm((current) => ({ ...current, sourceHref: value }))
+            }
+          />
+          <Field
+            label="Название исследования"
+            value={pageForm.researchLabel}
+            onChange={(value) =>
+              setPageForm((current) => ({ ...current, researchLabel: value }))
+            }
+          />
+          <Field
+            label="Ссылка на исследование"
+            value={pageForm.researchHref}
+            onChange={(value) =>
+              setPageForm((current) => ({ ...current, researchHref: value }))
+            }
+          />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-6">

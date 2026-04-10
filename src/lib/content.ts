@@ -449,7 +449,8 @@ export async function getPublishedContentPageBySlug(
   }
 
   return fallbackManagedArticles.find(
-    (article) => article.slug === slug && (!pageType || article.pageType === pageType)
+    (article) =>
+      article.slug === slug && (!pageType || article.pageType === pageType)
   );
 }
 

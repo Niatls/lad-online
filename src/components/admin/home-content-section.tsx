@@ -1,6 +1,13 @@
 "use client";
 
-import { Eye, Grip, LayoutTemplate, ListChecks, Plus, Save } from "lucide-react";
+import {
+  Eye,
+  Grip,
+  LayoutTemplate,
+  ListChecks,
+  Plus,
+  Save,
+} from "lucide-react";
 
 import type {
   HomeNavLink,
@@ -135,12 +142,16 @@ export function HomeContentSection({
           <Card
             title="Меню"
             action={
-              <ActionButton label="Добавить" onClick={() =>
-                setHomeField("navLinks", [
-                  ...homeForm.navLinks,
-                  { label: "Новый пункт", target: "about" },
-                ])
-              } icon={Plus} />
+              <ActionButton
+                label="Добавить"
+                onClick={() =>
+                  setHomeField("navLinks", [
+                    ...homeForm.navLinks,
+                    { label: "Новый пункт", target: "about" },
+                  ])
+                }
+                icon={Plus}
+              />
             }
           >
             <div className="space-y-3">
@@ -152,7 +163,9 @@ export function HomeContentSection({
                   onRemove={() =>
                     setHomeField(
                       "navLinks",
-                      homeForm.navLinks.filter((_, itemIndex) => itemIndex !== index)
+                      homeForm.navLinks.filter(
+                        (_, itemIndex) => itemIndex !== index
+                      )
                     )
                   }
                   disableRemove={homeForm.navLinks.length <= 1}
@@ -164,10 +177,14 @@ export function HomeContentSection({
                       onChange={(value) => updateNavLink(index, "label", value)}
                     />
                     <label className="space-y-2">
-                      <span className="text-sm font-medium text-forest">Ведет к блоку</span>
+                      <span className="text-sm font-medium text-forest">
+                        Ведет к блоку
+                      </span>
                       <select
                         value={item.target}
-                        onChange={(event) => updateNavLink(index, "target", event.target.value)}
+                        onChange={(event) =>
+                          updateNavLink(index, "target", event.target.value)
+                        }
                         className="w-full rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm text-forest outline-none transition focus:border-sage"
                       >
                         {menuTargets.map((target) => (
@@ -189,7 +206,10 @@ export function HomeContentSection({
                 label="Название бренда"
                 value={homeForm.contacts.brandName}
                 onChange={(value) =>
-                  setHomeField("contacts", { ...homeForm.contacts, brandName: value })
+                  setHomeField("contacts", {
+                    ...homeForm.contacts,
+                    brandName: value,
+                  })
                 }
               />
               <MarkdownTextareaField
@@ -197,16 +217,73 @@ export function HomeContentSection({
                 rows={3}
                 value={homeForm.contacts.description}
                 onChange={(value) =>
-                  setHomeField("contacts", { ...homeForm.contacts, description: value })
+                  setHomeField("contacts", {
+                    ...homeForm.contacts,
+                    description: value,
+                  })
                 }
               />
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Телефон" value={homeForm.contacts.phone} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, phone: value })} />
-                <Field label="Ссылка телефона" value={homeForm.contacts.phoneHref} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, phoneHref: value })} />
-                <Field label="Email" value={homeForm.contacts.email} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, email: value })} />
-                <Field label="Ссылка email" value={homeForm.contacts.emailHref} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, emailHref: value })} />
-                <Field label="Формат консультаций" value={homeForm.contacts.formatLabel} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, formatLabel: value })} />
-                <Field label="Подпись о защите данных" value={homeForm.contacts.dataProtectionLabel} onChange={(value) => setHomeField("contacts", { ...homeForm.contacts, dataProtectionLabel: value })} />
+                <Field
+                  label="Телефон"
+                  value={homeForm.contacts.phone}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      phone: value,
+                    })
+                  }
+                />
+                <Field
+                  label="Ссылка телефона"
+                  value={homeForm.contacts.phoneHref}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      phoneHref: value,
+                    })
+                  }
+                />
+                <Field
+                  label="Email"
+                  value={homeForm.contacts.email}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      email: value,
+                    })
+                  }
+                />
+                <Field
+                  label="Ссылка email"
+                  value={homeForm.contacts.emailHref}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      emailHref: value,
+                    })
+                  }
+                />
+                <Field
+                  label="Формат консультаций"
+                  value={homeForm.contacts.formatLabel}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      formatLabel: value,
+                    })
+                  }
+                />
+                <Field
+                  label="Подпись о защите данных"
+                  value={homeForm.contacts.dataProtectionLabel}
+                  onChange={(value) =>
+                    setHomeField("contacts", {
+                      ...homeForm.contacts,
+                      dataProtectionLabel: value,
+                    })
+                  }
+                />
               </div>
             </div>
           </Card>
@@ -217,14 +294,23 @@ export function HomeContentSection({
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-forest">Услуги</h3>
-            <p className="text-sm text-forest/50">Отдельный редактор карточек услуг на главной и в футере.</p>
+            <p className="text-sm text-forest/50">
+              Отдельный редактор карточек услуг на главной и в футере.
+            </p>
           </div>
-          <ActionButton label="Добавить услугу" onClick={() =>
-            setHomeField("services", [
-              ...homeForm.services,
-              { title: "Новая услуга", description: "Краткое описание услуги." },
-            ])
-          } icon={Plus} />
+          <ActionButton
+            label="Добавить услугу"
+            onClick={() =>
+              setHomeField("services", [
+                ...homeForm.services,
+                {
+                  title: "Новая услуга",
+                  description: "Краткое описание услуги.",
+                },
+              ])
+            }
+            icon={Plus}
+          />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -251,7 +337,9 @@ export function HomeContentSection({
                   label="Описание"
                   rows={4}
                   value={service.description}
-                  onChange={(value) => updateService(index, "description", value)}
+                  onChange={(value) =>
+                    updateService(index, "description", value)
+                  }
                 />
               </div>
             </ItemCard>
