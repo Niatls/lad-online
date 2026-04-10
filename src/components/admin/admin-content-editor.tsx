@@ -277,7 +277,7 @@ export function AdminContentEditor({
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent
           showCloseButton
-          className="h-screen w-screen max-w-none overflow-hidden rounded-none border-0 p-0"
+          className="h-screen w-screen max-w-none sm:max-w-none overflow-hidden rounded-none border-0 p-0"
         >
           <DialogHeader className="border-b border-sage-light/20 px-6 py-4">
             <DialogTitle>Предпросмотр главной страницы</DialogTitle>
