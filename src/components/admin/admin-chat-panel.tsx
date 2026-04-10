@@ -150,6 +150,11 @@ export function AdminChatPanel() {
         throw new Error("Failed to create voice token");
       }
 
+      const invite = await res.json();
+      if (invite?.token) {
+        setActiveVoiceToken(invite.token);
+      }
+
       await loadMessages(selectedId);
       await loadSessions();
     } catch (err) {
@@ -394,7 +399,7 @@ export function AdminChatPanel() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
                   >
                     {creatingVoiceToken ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
-                    Создать токен
+                    Создать и ждать
                   </button>
                 </div>
 
