@@ -16,30 +16,40 @@ export async function getAdminDashboardData(
     ? { status: filterStatus }
     : undefined;
 
-  const [applications, stats, totalApplications] = await Promise.all([
-    db.application.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    }),
-    db.application.groupBy({
-      by: ["status"],
-      _count: true,
-    }),
-    db.application.count(),
-  ]);
+  try {
+    const [applications, stats, totalApplications] = await Promise.all([
+      db.application.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.application.groupBy({
+        by: ["status"],
+        _count: true,
+      }),
+      db.application.count(),
+    ]);
 
-  const totals = stats.reduce<Record<string, number>>((accumulator, item) => {
-    accumulator[item.status] = item._count;
-    return accumulator;
-  }, {});
+    const totals = stats.reduce<Record<string, number>>((accumulator, item) => {
+      accumulator[item.status] = item._count;
+      return accumulator;
+    }, {});
 
-  for (const status of Object.keys(applicationStatuses)) {
-    totals[status] ??= 0;
+    for (const status of Object.keys(applicationStatuses)) {
+      totals[status] ??= 0;
+    }
+
+    return {
+      applications,
+      totals,
+      totalApplications,
+    };
+  } catch (error) {
+    console.error("Failed to fetch admin dashboard data:", error);
+    // Return empty/fallback data instead of throwing to avoid 500
+    return {
+      applications: [],
+      totals: {},
+      totalApplications: 0,
+    };
   }
-
-  return {
-    applications,
-    totals,
-    totalApplications,
-  };
 }

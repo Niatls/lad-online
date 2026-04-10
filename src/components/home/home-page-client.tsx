@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { type BookingFormData } from "@/components/home/booking-section";
 import { HomeHeader } from "@/components/home/home-header";
+import { useLiveEditor } from "@/components/admin/live-editor-context";
 import { HomeSectionsRenderer } from "@/components/home/home-sections-renderer";
 import { SiteFooter } from "@/components/home/site-footer";
 import type { HomePageContent, ManagedContentPage } from "@/lib/content";
@@ -34,6 +35,9 @@ export function HomePageClient({
   const [submitError, setSubmitError] = useState("");
   const [submittedApplicationNumber, setSubmittedApplicationNumber] =
     useState("");
+
+  const { homeContent: liveHomeContent } = useLiveEditor();
+  const currentHomeContent = liveHomeContent || homeContent;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -96,8 +100,8 @@ export function HomePageClient({
       <HomeHeader
         mobileMenuOpen={mobileMenuOpen}
         scrolled={scrolled}
-        brandName={homeContent.contacts.brandName}
-        navLinks={homeContent.navLinks}
+        brandName={currentHomeContent.contacts.brandName}
+        navLinks={currentHomeContent.navLinks}
         onToggleMobileMenu={() => setMobileMenuOpen((current) => !current)}
         onScrollToSection={scrollToSection}
       />
@@ -106,7 +110,7 @@ export function HomePageClient({
         <HomeSectionsRenderer
           articles={articles}
           formData={formData}
-          homeContent={homeContent}
+          homeContent={currentHomeContent}
           isSubmitting={isSubmitting}
           onFieldChange={handleFieldChange}
           onResetSuccess={() => setSubmittedApplicationNumber("")}
@@ -118,9 +122,9 @@ export function HomePageClient({
       </main>
 
       <SiteFooter
-        contacts={homeContent.contacts}
-        navLinks={homeContent.navLinks}
-        services={homeContent.services}
+        contacts={currentHomeContent.contacts}
+        navLinks={currentHomeContent.navLinks}
+        services={currentHomeContent.services}
         onScrollToSection={scrollToSection}
       />
     </div>

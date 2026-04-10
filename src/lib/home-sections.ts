@@ -9,6 +9,15 @@ export type BuiltInHomeSectionKind =
 
 export type HomeSectionVariant = "default" | "highlight" | "quote";
 
+export type ElementKind = "badge" | "heading" | "paragraph" | "button" | "socials";
+
+export type PageElement = {
+  id: string;
+  kind: ElementKind;
+  content: string;
+  target?: string;
+};
+
 export type HomePageSection = {
   badge: string;
   body: string;
@@ -16,10 +25,11 @@ export type HomePageSection = {
   ctaTarget: string;
   enabled: boolean;
   id: string;
-  kind: BuiltInHomeSectionKind | "custom";
+  kind: BuiltInHomeSectionKind | "custom" | "constructor";
   subtitle: string;
   title: string;
   variant: HomeSectionVariant;
+  elements?: PageElement[];
 };
 
 const builtInSectionOrder: BuiltInHomeSectionKind[] = [
@@ -54,12 +64,16 @@ export const defaultHomeSections: HomePageSection[] = builtInSectionOrder.map(
     ctaLabel: "",
     ctaTarget: "",
     variant: "default",
+    elements: [],
   })
 );
 
 export function getSectionDisplayTitle(section: HomePageSection) {
   if (section.kind === "custom") {
     return section.title.trim() || "Новый блок";
+  }
+  if (section.kind === "constructor") {
+    return "Пустой блок";
   }
 
   return builtInSectionTitles[section.kind];
@@ -111,6 +125,7 @@ function normalizeBuiltInSection(
     ctaLabel: "",
     ctaTarget: "",
     variant: "default",
+    elements: [],
   };
 }
 
@@ -141,6 +156,28 @@ function normalizeCustomSection(
       section.variant === "highlight" || section.variant === "quote"
         ? section.variant
         : "default",
+    elements: Array.isArray(section.elements) ? section.elements : [],
+  };
+}
+
+function normalizeConstructorSection(
+  section: Partial<HomePageSection>
+): HomePageSection | null {
+  const id = typeof section.id === "string" ? section.id.trim() : "";
+  if (!id) return null;
+
+  return {
+    id,
+    kind: "constructor",
+    enabled: section.enabled ?? true,
+    title: "",
+    badge: "",
+    subtitle: "",
+    body: "",
+    ctaLabel: "",
+    ctaTarget: "",
+    variant: "default",
+    elements: Array.isArray(section.elements) ? section.elements : [],
   };
 }
 
@@ -166,7 +203,7 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
       section.kind === "booking"
     ) {
       if (!builtInKinds.has(section.kind)) {
-        result.push(normalizeBuiltInSection(section));
+        result.push(normalizeBuiltInSection(section as Partial<HomePageSection> & { kind: BuiltInHomeSectionKind }));
         builtInKinds.add(section.kind);
       }
       continue;
@@ -178,6 +215,16 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
         result.push(normalized);
         seenIds.add(normalized.id);
       }
+      continue;
+    }
+
+    if (section.kind === "constructor") {
+      const normalized = normalizeConstructorSection(section);
+      if (normalized && !seenIds.has(normalized.id)) {
+        result.push(normalized);
+        seenIds.add(normalized.id);
+      }
+      continue;
     }
   }
 

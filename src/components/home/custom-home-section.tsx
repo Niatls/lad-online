@@ -1,6 +1,8 @@
 import { ArrowRight } from "lucide-react";
 
 import { RichMarkdown } from "@/components/articles/rich-markdown";
+import { useLiveEditor } from "@/components/admin/live-editor-context";
+import { EditableText } from "@/components/admin/editable-text";
 import type { HomePageSection } from "@/lib/home-sections";
 
 type CustomHomeSectionProps = {
@@ -12,6 +14,7 @@ export function CustomHomeSection({
   onScrollToSection,
   section,
 }: CustomHomeSectionProps) {
+  const { updateSection } = useLiveEditor();
   const wrapperClassName =
     section.variant === "highlight"
       ? "bg-[linear-gradient(180deg,_#f3ebdc_0%,_#fffaf3_100%)]"
@@ -38,26 +41,32 @@ export function CustomHomeSection({
                   : "bg-sage-light/20 text-sage-dark"
               }`}
             >
-              {section.badge}
+              <EditableText
+                tagName="span"
+                value={section.badge}
+                onChange={(val) => updateSection(section.id, { badge: val })}
+              />
             </span>
           ) : null}
 
-          <h2
+          <EditableText
+            tagName="h2"
             className={`text-3xl font-bold leading-tight sm:text-4xl ${
               section.variant === "quote" ? "text-white" : "text-forest"
             }`}
-          >
-            {section.title}
-          </h2>
+            value={section.title}
+            onChange={(val) => updateSection(section.id, { title: val })}
+          />
 
           {section.subtitle ? (
-            <p
+            <EditableText
+              tagName="p"
               className={`mt-4 text-lg leading-8 ${
                 section.variant === "quote" ? "text-white/70" : "text-forest/60"
               }`}
-            >
-              {section.subtitle}
-            </p>
+              value={section.subtitle}
+              onChange={(val) => updateSection(section.id, { subtitle: val })}
+            />
           ) : null}
 
           {section.body ? (
@@ -79,7 +88,11 @@ export function CustomHomeSection({
                   : "bg-sage text-white hover:bg-sage-dark"
               }`}
             >
-              {section.ctaLabel}
+              <EditableText
+                tagName="span"
+                value={section.ctaLabel}
+                onChange={(val) => updateSection(section.id, { ctaLabel: val })}
+              />
               <ArrowRight className="h-4 w-4" />
             </button>
           ) : null}

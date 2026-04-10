@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useLiveEditor } from "@/components/admin/live-editor-context";
+import { EditableText } from "@/components/admin/editable-text";
 import type { HomePageContent } from "@/lib/content";
 
 type HeroSectionProps = {
@@ -27,6 +29,9 @@ const heroStats = [
 ];
 
 export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
+  const { setHomeContent, homeContent } = useLiveEditor();
+  const activeContent = homeContent || content;
+
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden">
       <div className="absolute inset-0">
@@ -45,20 +50,34 @@ export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
             <div className="animate-fade-in-up">
               <span className="inline-flex items-center gap-2 rounded-full border border-sage-light/40 bg-sage-light/30 px-4 py-2 text-sm font-medium text-sage-dark">
                 <Sparkles className="h-4 w-4" />
-                {content.heroBadge}
+                <EditableText
+                  tagName="span"
+                  value={activeContent.heroBadge}
+                  onChange={(val) => setHomeContent({ ...activeContent, heroBadge: val })}
+                />
               </span>
             </div>
 
             <h1 className="animation-delay-200 animate-fade-in-up text-4xl font-bold leading-tight text-forest sm:text-5xl lg:text-6xl">
-              {content.heroTitle}
-              <span className="block bg-gradient-to-r from-sage to-sage-dark bg-clip-text text-transparent">
-                {content.heroTitleAccent}
-              </span>
+              <EditableText
+                tagName="span"
+                value={activeContent.heroTitle}
+                onChange={(val) => setHomeContent({ ...activeContent, heroTitle: val })}
+              />
+              <EditableText
+                tagName="span"
+                className="block bg-gradient-to-r from-sage to-sage-dark bg-clip-text text-transparent"
+                value={activeContent.heroTitleAccent}
+                onChange={(val) => setHomeContent({ ...activeContent, heroTitleAccent: val })}
+              />
             </h1>
 
-            <p className="animation-delay-400 animate-fade-in-up max-w-lg text-lg leading-relaxed text-forest/60 sm:text-xl">
-              {content.heroDescription}
-            </p>
+            <EditableText
+              tagName="p"
+              className="animation-delay-400 animate-fade-in-up max-w-lg text-lg leading-relaxed text-forest/60 sm:text-xl"
+              value={activeContent.heroDescription}
+              onChange={(val) => setHomeContent({ ...activeContent, heroDescription: val })}
+            />
 
             <div className="animation-delay-600 animate-fade-in-up flex flex-wrap gap-4">
               <Button

@@ -14,6 +14,9 @@ import { MessengerStrip } from "@/components/home/messenger-strip";
 import { PricingSection } from "@/components/home/pricing-section";
 import { ProcessSection } from "@/components/home/process-section";
 import { ServicesSection } from "@/components/home/services-section";
+import { SortableSection } from "@/components/admin/sortable-section";
+import { ConstructorSection } from "@/components/admin/constructor-section";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
 type HomeSectionsRendererProps = {
@@ -41,57 +44,82 @@ export function HomeSectionsRenderer({
   submitError,
   submittedApplicationNumber,
 }: HomeSectionsRendererProps) {
-  return homeContent.sections
-    .filter((section) => section.enabled)
-    .map((section) => {
-      switch (section.kind) {
-        case "hero":
-          return (
-            <div key={section.id}>
-              <HeroSection
-                content={homeContent}
-                onScrollToSection={onScrollToSection}
-              />
-              <MessengerStrip />
-            </div>
-          );
-        case "process":
-          return <ProcessSection key={section.id} />;
-        case "services":
-          return (
-            <ServicesSection key={section.id} services={homeContent.services} />
-          );
-        case "about":
-          return <AboutSection key={section.id} content={homeContent} />;
-        case "articles":
-          return <ArticlesSection key={section.id} articles={articles} />;
-        case "pricing":
-          return <PricingSection key={section.id} />;
-        case "booking":
-          return (
-            <BookingSection
-              key={section.id}
-              content={homeContent}
-              contacts={homeContent.contacts}
-              formData={formData}
-              isSubmitting={isSubmitting}
-              submitError={submitError}
-              submittedApplicationNumber={submittedApplicationNumber}
-              onSubmit={onSubmit}
-              onResetSuccess={onResetSuccess}
-              onFieldChange={onFieldChange}
-            />
-          );
-        case "custom":
-          return (
-            <CustomHomeSection
-              key={section.id}
-              onScrollToSection={onScrollToSection}
-              section={section}
-            />
-          );
-        default:
-          return null;
-      }
-    });
+  return (
+    <SortableContext
+      items={homeContent.sections.map((s) => s.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <div className="flex flex-col min-h-[50vh]">
+        {homeContent.sections
+          .filter((section) => section.enabled)
+          .map((section) => {
+            let contentNode: React.ReactNode = null;
+            switch (section.kind) {
+              case "hero":
+                contentNode = (
+                  <>
+                    <HeroSection
+                      content={homeContent}
+                      onScrollToSection={onScrollToSection}
+                    />
+                    <MessengerStrip />
+                  </>
+                );
+                break;
+              case "process":
+                contentNode = <ProcessSection />;
+                break;
+              case "services":
+                contentNode = <ServicesSection services={homeContent.services} />;
+                break;
+              case "about":
+                contentNode = <AboutSection content={homeContent} />;
+                break;
+              case "articles":
+                contentNode = <ArticlesSection articles={articles} />;
+                break;
+              case "pricing":
+                contentNode = <PricingSection />;
+                break;
+              case "booking":
+                contentNode = (
+                  <BookingSection
+                    content={homeContent}
+                    contacts={homeContent.contacts}
+                    formData={formData}
+                    isSubmitting={isSubmitting}
+                    submitError={submitError}
+                    submittedApplicationNumber={submittedApplicationNumber}
+                    onSubmit={onSubmit}
+                    onResetSuccess={onResetSuccess}
+                    onFieldChange={onFieldChange}
+                  />
+                );
+                break;
+              case "custom":
+                contentNode = (
+                  <CustomHomeSection
+                    onScrollToSection={onScrollToSection}
+                    section={section}
+                  />
+                );
+                break;
+              case "constructor":
+                contentNode = <ConstructorSection section={section} />;
+                break;
+              default:
+                contentNode = null;
+            }
+
+            if (!contentNode) return null;
+
+            return (
+              <SortableSection key={section.id} id={section.id}>
+                {contentNode}
+              </SortableSection>
+            );
+          })}
+      </div>
+    </SortableContext>
+  );
 }

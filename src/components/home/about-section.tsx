@@ -1,5 +1,8 @@
 import { CheckCircle2, Leaf, Shield } from "lucide-react";
+import Image from "next/image";
 
+import { useLiveEditor } from "@/components/admin/live-editor-context";
+import { EditableText } from "@/components/admin/editable-text";
 import type { HomePageContent } from "@/lib/content";
 
 import { FadeIn } from "./fade-in";
@@ -24,8 +27,11 @@ type AboutSectionProps = {
 };
 
 export function AboutSection({ content }: AboutSectionProps) {
+  const { setHomeContent, homeContent } = useLiveEditor();
+  const activeContent = homeContent || content;
+
   return (
-    <section id="about" className="bg-white py-24 sm:py-32">
+    <section id="about" className="relative py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <FadeIn>
@@ -57,17 +63,27 @@ export function AboutSection({ content }: AboutSectionProps) {
                 <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-sage-light/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-sage-dark">
                   О нас
                 </span>
-                <h2 className="mb-6 text-3xl font-bold text-forest sm:text-4xl">
-                  {content.aboutTitle}
+                <h2 className="text-3xl font-bold tracking-tight text-forest sm:text-4xl">
+                  <EditableText
+                    tagName="span"
+                    value={activeContent.aboutTitle}
+                    onChange={(val) => setHomeContent({ ...activeContent, aboutTitle: val })}
+                  />
                 </h2>
+                <EditableText
+                  tagName="p"
+                  className="mt-6 text-lg leading-8 text-forest/70"
+                  value={activeContent.aboutIntro}
+                  onChange={(val) => setHomeContent({ ...activeContent, aboutIntro: val })}
+                />
+                <div className="mt-8 space-y-6 text-base leading-7 text-forest/60">
+                  <EditableText
+                    tagName="p"
+                    value={activeContent.aboutDescription}
+                    onChange={(val) => setHomeContent({ ...activeContent, aboutDescription: val })}
+                  />
+                </div>
               </div>
-
-              <p className="leading-relaxed text-forest/60">
-                {content.aboutIntro}
-              </p>
-              <p className="leading-relaxed text-forest/60">
-                {content.aboutDescription}
-              </p>
 
               <div className="rounded-2xl border border-sage-light/20 bg-cream p-6">
                 <h4 className="mb-4 flex items-center gap-2 text-sm font-bold text-forest">
