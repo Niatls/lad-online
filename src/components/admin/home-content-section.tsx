@@ -2,12 +2,12 @@
 
 import { Eye, LayoutTemplate, Save } from "lucide-react";
 
-import type { HomePageContent } from "@/lib/content";
+import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
-import { HomeContentMainSections } from "./home-content-main-sections";
-import { HomeContentSettingsSections } from "./home-content-settings-sections";
 import { SectionShell } from "./editor-shared";
 import { ActionButton } from "./home-content-cards";
+import { HomeContentMainSections } from "./home-content-main-sections";
+import { HomeContentSettingsSections } from "./home-content-settings-sections";
 
 type HomeContentSectionProps = {
   homeForm: HomePageContent;
@@ -15,6 +15,7 @@ type HomeContentSectionProps = {
   mode: "main" | "settings";
   onOpenPreview: () => void;
   onSave: () => void;
+  previewArticles: ManagedContentPage[];
   setHomeField: <K extends keyof HomePageContent>(
     key: K,
     value: HomePageContent[K]
@@ -27,6 +28,7 @@ export function HomeContentSection({
   mode,
   onOpenPreview,
   onSave,
+  previewArticles,
   setHomeField,
 }: HomeContentSectionProps) {
   return (
@@ -34,14 +36,15 @@ export function HomeContentSection({
       title={mode === "main" ? "Главная страница" : "Навигация и контакты"}
       description={
         mode === "main"
-          ? "Редактируйте первый экран, блок «О нас» и секцию записи отдельными компактными блоками."
-          : "Здесь собраны меню, контакты и услуги. Каждый раздел можно открыть отдельно без длинной простыни полей."
+          ? "Конструктор секций главной страницы: порядок блоков, свои вставки и предпросмотр рядом."
+          : "Меню, контакты и услуги собраны отдельно, чтобы не мешать конструктору главной."
       }
       icon={LayoutTemplate}
     >
       {mode === "main" ? (
         <HomeContentMainSections
           homeForm={homeForm}
+          previewArticles={previewArticles}
           setHomeField={setHomeField}
         />
       ) : (
@@ -64,7 +67,7 @@ export function HomeContentSection({
           className="inline-flex items-center gap-2 rounded-xl bg-cream px-5 py-3 text-sm font-semibold text-forest transition hover:bg-sage-light/20"
         >
           <Eye className="h-4 w-4" />
-          Открыть предпросмотр
+          Открыть полноэкранный предпросмотр
         </button>
       </div>
     </SectionShell>

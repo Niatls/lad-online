@@ -230,6 +230,7 @@ export function AdminContentEditor({
             mode="main"
             onOpenPreview={() => setIsPreviewOpen(true)}
             onSave={saveHomeContent}
+            previewArticles={previewArticles}
             setHomeField={setHomeField}
           />
         </TabsContent>
@@ -241,6 +242,7 @@ export function AdminContentEditor({
             mode="settings"
             onOpenPreview={() => setIsPreviewOpen(true)}
             onSave={saveHomeContent}
+            previewArticles={previewArticles}
             setHomeField={setHomeField}
           />
         </TabsContent>

@@ -11,6 +11,7 @@ import {
   upsertHomePageContent,
   type HomePageContent,
 } from "@/lib/content";
+import { normalizeHomeSections } from "@/lib/home-sections";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
@@ -64,6 +65,7 @@ export async function POST(request: Request) {
         payload.bookingDescription?.trim() ||
         defaultHomePageContent.bookingDescription,
       navLinks: navLinks.length ? navLinks : defaultHomeNavLinks,
+      sections: normalizeHomeSections(payload.sections),
       services: services.length ? services : defaultHomeServices,
       contacts: {
         brandName:

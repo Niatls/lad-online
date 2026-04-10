@@ -1,5 +1,10 @@
 import { db } from "@/lib/db";
 import { articles as fallbackArticles } from "@/components/home/home-data";
+import {
+  defaultHomeSections,
+  normalizeHomeSections,
+  type HomePageSection,
+} from "@/lib/home-sections";
 
 export type HomeNavLink = {
   label: string;
@@ -34,6 +39,7 @@ export type HomePageContent = {
   heroTitle: string;
   heroTitleAccent: string;
   navLinks: HomeNavLink[];
+  sections: HomePageSection[];
   services: HomeServiceItem[];
 };
 
@@ -125,6 +131,7 @@ export const defaultHomePageContent: HomePageContent = {
   bookingDescription:
     "Заполните форму ниже, и мы свяжемся с вами в ближайшее время для назначения консультации. Все данные защищены.",
   navLinks: defaultHomeNavLinks,
+  sections: defaultHomeSections,
   services: defaultHomeServices,
   contacts: defaultHomeContacts,
 };
@@ -373,6 +380,7 @@ export async function getHomePageContent() {
         ? value.bookingDescription
         : defaultHomePageContent.bookingDescription,
     navLinks: normalizeNavLinks(value.navLinks),
+    sections: normalizeHomeSections(value.sections),
     services: normalizeServices(value.services),
     contacts: normalizeContacts(value.contacts),
   };

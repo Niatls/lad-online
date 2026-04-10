@@ -3,18 +3,9 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 
-import { AboutSection } from "@/components/home/about-section";
-import { ArticlesSection } from "@/components/home/articles-section";
-import {
-  BookingSection,
-  type BookingFormData,
-} from "@/components/home/booking-section";
-import { HeroSection } from "@/components/home/hero-section";
+import { type BookingFormData } from "@/components/home/booking-section";
 import { HomeHeader } from "@/components/home/home-header";
-import { MessengerStrip } from "@/components/home/messenger-strip";
-import { PricingSection } from "@/components/home/pricing-section";
-import { ProcessSection } from "@/components/home/process-section";
-import { ServicesSection } from "@/components/home/services-section";
+import { HomeSectionsRenderer } from "@/components/home/home-sections-renderer";
 import { SiteFooter } from "@/components/home/site-footer";
 import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
@@ -48,7 +39,6 @@ export function HomePageClient({
     const handleScroll = () => setScrolled(window.scrollY > 50);
 
     window.addEventListener("scroll", handleScroll);
-
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -113,23 +103,17 @@ export function HomePageClient({
       />
 
       <main className="flex-1">
-        <HeroSection content={homeContent} onScrollToSection={scrollToSection} />
-        <MessengerStrip />
-        <ProcessSection />
-        <ServicesSection services={homeContent.services} />
-        <AboutSection content={homeContent} />
-        <ArticlesSection articles={articles} />
-        <PricingSection />
-        <BookingSection
-          content={homeContent}
-          contacts={homeContent.contacts}
+        <HomeSectionsRenderer
+          articles={articles}
           formData={formData}
+          homeContent={homeContent}
           isSubmitting={isSubmitting}
+          onFieldChange={handleFieldChange}
+          onResetSuccess={() => setSubmittedApplicationNumber("")}
+          onScrollToSection={scrollToSection}
+          onSubmit={handleSubmit}
           submitError={submitError}
           submittedApplicationNumber={submittedApplicationNumber}
-          onSubmit={handleSubmit}
-          onResetSuccess={() => setSubmittedApplicationNumber("")}
-          onFieldChange={handleFieldChange}
         />
       </main>
 
