@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Eye, FilePenLine, LayoutPanelTop, Settings2 } from "lucide-react";
+import { Eye, FilePenLine, LayoutPanelTop, MonitorPlay, Settings2 } from "lucide-react";
+import Link from "next/link";
 
 import { ContentPagesSection } from "@/components/admin/content-pages-section";
 import { HomeContentSection } from "@/components/admin/home-content-section";
@@ -20,6 +21,7 @@ import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 type AdminContentEditorProps = {
   homeContent: HomePageContent;
   pages: ManagedContentPage[];
+  onSaved?: () => void;
 };
 
 type SavedPageResponse = Omit<ManagedContentPage, "updatedAt"> & {
@@ -29,6 +31,7 @@ type SavedPageResponse = Omit<ManagedContentPage, "updatedAt"> & {
 export function AdminContentEditor({
   homeContent,
   pages,
+  onSaved,
 }: AdminContentEditorProps) {
   const [homeForm, setHomeForm] = useState(homeContent);
   const [managedPages, setManagedPages] = useState(pages);
@@ -73,6 +76,10 @@ export function AdminContentEditor({
         ? "Главная страница сохранена."
         : result.message || "Не удалось сохранить главную страницу."
     );
+
+    if (response.ok && result.ok) {
+      onSaved?.();
+    }
   };
 
   const upsertManagedPage = (savedPage: ManagedContentPage) => {
@@ -155,10 +162,12 @@ export function AdminContentEditor({
           ? `Материал сохранен и опубликован. Адрес: ${publicPath}`
           : "Материал сохранен как черновик. Он уже появился в списке слева, но пока не виден на сайте."
       );
+      onSaved?.();
       return;
     }
 
     setStatusMessage("Материал сохранен.");
+    onSaved?.();
   };
 
   const deletePage = async () => {
@@ -182,6 +191,7 @@ export function AdminContentEditor({
     );
     setPageForm(emptyPageForm);
     setStatusMessage("Материал удален.");
+    onSaved?.();
   };
 
   return (
@@ -197,14 +207,24 @@ export function AdminContentEditor({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsPreviewOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90"
-          >
-            <Eye className="h-4 w-4" />
-            Предпросмотр страницы
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/live"
+              target="_blank"
+              className="inline-flex items-center gap-2 rounded-xl bg-forest/10 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest/20"
+            >
+              <MonitorPlay className="h-4 w-4" />
+              Live-редактор
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90"
+            >
+              <Eye className="h-4 w-4" />
+              Предпросмотр внутри админки
+            </button>
+          </div>
         </div>
 
         {statusMessage ? (
