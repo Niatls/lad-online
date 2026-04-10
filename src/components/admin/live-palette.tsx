@@ -11,11 +11,11 @@ const STRUCTURE_TEMPLATES = [
 ];
 
 const ELEMENT_TEMPLATES = [
-  { id: "badge", title: "Плашка", icon: Sparkles, kind: "badge", isElement: true, content: "Новая плашка" },
-  { id: "heading", title: "Заголовок", icon: Type, kind: "heading", isElement: true, content: "Заголовок" },
-  { id: "paragraph", title: "Текст", icon: AlignLeft, kind: "paragraph", isElement: true, content: "Обычный текст" },
-  { id: "button", title: "Кнопка", icon: MousePointerClick, kind: "button", isElement: true, content: "Кнопка", target: "booking" },
-  { id: "socials", title: "Облако соцсетей", icon: MessageCircle, kind: "socials", isElement: true, content: "Свяжитесь с нами" },
+  { id: "badge", title: "Плашка", icon: Sparkles, kind: "badge", isElement: true, content: "Новая плашка", colSpan: 24 },
+  { id: "heading", title: "Заголовок", icon: Type, kind: "heading", isElement: true, content: "Заголовок", colSpan: 24 },
+  { id: "paragraph", title: "Текст", icon: AlignLeft, kind: "paragraph", isElement: true, content: "Обычный текст", colSpan: 24 },
+  { id: "button", title: "Кнопка", icon: MousePointerClick, kind: "button", isElement: true, content: "Кнопка", target: "booking", colSpan: 8 },
+  { id: "socials", title: "Облако соцсетей", icon: MessageCircle, kind: "socials", isElement: true, content: "Свяжитесь с нами", colSpan: 24 },
 ];
 
 function PaletteItem({ template }: { template: any }) {

@@ -16,6 +16,9 @@ export type PageElement = {
   kind: ElementKind;
   content: string;
   target?: string;
+  colStart?: number; // 1-24, default 1
+  colSpan?: number;  // 1-24, default 24
+  rowSpan?: number;  // number of rows, default 1
 };
 
 export type HomePageSection = {

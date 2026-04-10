@@ -77,6 +77,8 @@ function LiveEditorInner({ children, onSaved }: { children: React.ReactNode; onS
           kind: template.kind,
           content: template.content,
           target: template.target,
+          colStart: 1,
+          colSpan: template.colSpan || 24,
         };
 
         setHomeContent({
