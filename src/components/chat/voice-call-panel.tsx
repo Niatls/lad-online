@@ -121,6 +121,92 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     reconnectAllowedRef.current = false;
   }, [role, token]);
 
+  const wait = useCallback((ms: number) => {
+    return new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }, []);
+
+  const normalizeMediaError = useCallback((error: unknown) => {
+    if (!(error instanceof Error)) {
+      return "Не удалось получить доступ к микрофону.";
+    }
+
+    const mediaError = error as Error & { name?: string };
+    const name = mediaError.name ?? "";
+    const message = mediaError.message || "";
+    const lowerMessage = message.toLowerCase();
+
+    if (name === "NotAllowedError" || lowerMessage.includes("permission")) {
+      return "Нет доступа к микрофону. Разрешите микрофон для сайта в браузере.";
+    }
+
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "Микрофон не найден на устройстве.";
+    }
+
+    if (
+      name === "NotReadableError" ||
+      name === "TrackStartError" ||
+      lowerMessage.includes("could not start audio source")
+    ) {
+      return "Не удалось запустить микрофон. Закройте приложения, которые могут использовать микрофон, и повторите.";
+    }
+
+    if (name === "AbortError") {
+      return "Не удалось инициализировать микрофон. Попробуйте ещё раз.";
+    }
+
+    return message || "Не удалось получить доступ к микрофону.";
+  }, []);
+
+  const acquireLocalAudioStream = useCallback(async () => {
+    const variants: MediaStreamConstraints[] = [
+      {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      },
+      {
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      },
+      { audio: true },
+    ];
+
+    let lastError: unknown = null;
+
+    for (const constraints of variants) {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+          lastError = error;
+          const mediaError = error as Error & { name?: string };
+          const name = mediaError.name ?? "";
+          const message = mediaError.message?.toLowerCase() ?? "";
+          const micBusyError =
+            name === "NotReadableError" ||
+            name === "TrackStartError" ||
+            message.includes("could not start audio source");
+
+          if (!micBusyError) {
+            break;
+          }
+
+          await wait(350 + attempt * 350);
+        }
+      }
+    }
+
+    throw new Error(normalizeMediaError(lastError));
+  }, [normalizeMediaError, wait]);
+
   const postSignal = useCallback(
     async (signalType: string, payload: unknown) => {
       await fetch(`/api/chat/voice/${token}/signals`, {
@@ -592,7 +678,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           }
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await acquireLocalAudioStream();
         if (!mounted) {
           stream.getTracks().forEach((track) => track.stop());
           return;
@@ -743,7 +829,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
+  }, [acquireLocalAudioStream, attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
