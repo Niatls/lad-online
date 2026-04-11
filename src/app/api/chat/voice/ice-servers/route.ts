@@ -6,7 +6,38 @@ type IceServer = {
   credential?: string;
 };
 
+function buildExpressTurnServers(): IceServer[] {
+  const server = process.env.EXPRESSTURN_SERVER?.trim();
+  const username = process.env.EXPRESSTURN_USERNAME?.trim();
+  const credential = process.env.EXPRESSTURN_CREDENTIAL?.trim();
+  const googleStun =
+    process.env.NEXT_PUBLIC_GOOGLE_STUN?.trim() || "stun:stun.l.google.com:19302";
+
+  if (!server || !username || !credential) {
+    return [];
+  }
+
+  const turnHost = server.replace(/^(turns?:|stuns?:)/, "");
+
+  return [
+    { urls: googleStun },
+    {
+      urls: [
+        `turn:${turnHost}?transport=udp`,
+        `turn:${turnHost}?transport=tcp`,
+      ],
+      username,
+      credential,
+    },
+  ];
+}
+
 function parseStaticIceServers(): IceServer[] {
+  const expressTurnServers = buildExpressTurnServers();
+  if (expressTurnServers.length > 0) {
+    return expressTurnServers;
+  }
+
   const urls = process.env.TURN_URLS?.split(",")
     .map((value) => value.trim())
     .filter(Boolean);

@@ -1,17 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { CSSProperties } from "react";
 import { ChatWidgetWrapper } from "@/components/chat/chat-widget-wrapper";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "cyrillic"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Лад — Психологические консультации",
@@ -39,9 +29,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html
+      lang="ru"
+      suppressHydrationWarning
+      style={
+        {
+          "--font-geist-sans": '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+          "--font-geist-mono": '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
+        } as CSSProperties
+      }
+    >
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-cream text-foreground`}
+        className="antialiased bg-cream text-foreground"
       >
         {children}
         <ChatWidgetWrapper />
