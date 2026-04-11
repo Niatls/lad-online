@@ -66,6 +66,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const lastEventAtRef = useRef(0);
   const lastEventValueRef = useRef("Инициализация звонка");
   const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -524,10 +529,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void postVoiceEvent("remote-hangup", "Собеседник завершил звонок");
         setConnecting(false);
         cleanup();
-        onClose();
+        onCloseRef.current();
       }
     },
-    [cleanup, flushPendingCandidates, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
+    [cleanup, flushPendingCandidates, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, postSignal, postVoiceEvent, role, updateLastEvent],
   );
 
   const pollSignals = useCallback(async () => {
@@ -549,12 +554,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         updateLastEvent("Invite завершён или истёк", true);
         setConnecting(false);
         cleanup();
-        onClose();
+        onCloseRef.current();
       }
     } catch (pollError) {
       console.error("Voice signal polling failed:", pollError);
     }
-  }, [cleanup, handleSignal, onClose, role, token, updateLastEvent]);
+  }, [cleanup, handleSignal, role, token, updateLastEvent]);
 
   useEffect(() => {
     let mounted = true;
@@ -755,7 +760,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     void postVoiceEvent("local-hangup", "Пользователь завершил звонок");
     await endInviteRemotely();
     cleanup();
-    onClose();
+    onCloseRef.current();
   };
 
   return (
