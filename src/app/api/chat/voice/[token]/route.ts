@@ -30,7 +30,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const action = typeof body?.action === "string" ? body.action : "join";
 
     if (action === "end") {
-      const invite = await endVoiceInvite(token);
+      const invite = await endVoiceInvite(token, {
+        dataUsageBytes: typeof body?.dataUsageBytes === "number" ? body.dataUsageBytes : 0,
+        durationSeconds: typeof body?.durationSeconds === "number" ? body.durationSeconds : 0,
+        closedBy: typeof body?.role === "string" ? body.role : undefined,
+      });
       if (!invite) {
         return NextResponse.json({ error: "Invite unavailable" }, { status: 404 });
       }

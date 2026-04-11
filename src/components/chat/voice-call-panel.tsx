@@ -193,7 +193,23 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void fetch(`/api/chat/voice/${token}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "end" }),
+          body: JSON.stringify({
+            action: "end",
+            role,
+            dataUsageBytes: usageBytes,
+            durationSeconds,
+          }),
+        }).catch(() => undefined);
+      } else {
+        void fetch(`/api/chat/voice/${token}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "end",
+            role,
+            dataUsageBytes: usageBytes,
+            durationSeconds,
+          }),
         }).catch(() => undefined);
       }
 
@@ -213,7 +229,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       connectedAtRef.current = null;
     },
-    [postSignal, token],
+    [durationSeconds, postSignal, role, token, usageBytes],
   );
 
   const handleSignal = useCallback(

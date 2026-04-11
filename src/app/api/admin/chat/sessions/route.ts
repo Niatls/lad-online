@@ -11,9 +11,9 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sessions = await getAdminChatSessions();
+    const payload = await getAdminChatSessions();
 
-    return NextResponse.json(sessions);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("Admin chat sessions error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

@@ -123,6 +123,9 @@ model ChatVoiceInvite {
   sessionId Int
   token     String            @unique
   status    String            @default("pending") // pending, active, ended, expired
+  dataUsageBytes BigInt       @default(0)
+  durationSeconds Int         @default(0)
+  closedBy  String?
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   expiresAt DateTime

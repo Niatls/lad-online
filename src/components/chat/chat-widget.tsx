@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2, User, Phone } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
@@ -10,6 +10,12 @@ type Message = {
   sender: string;
   content: string;
   createdAt: string;
+};
+
+type VoiceInvite = {
+  token: string;
+  status: string;
+  expiresAt: string;
 };
 
 function getVisitorId(): string {
@@ -22,25 +28,64 @@ function getVisitorId(): string {
   return id;
 }
 
+function getStoredVisitorName(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("chat_visitor_name") ?? "";
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [visitorName, setVisitorName] = useState("");
+  const [pendingVisitorName, setPendingVisitorName] = useState("");
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
+  const [availableVoiceInvite, setAvailableVoiceInvite] = useState<VoiceInvite | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const needsName = !visitorName.trim();
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const initSession = useCallback(async () => {
+  const syncVoiceInvite = useCallback(async (currentSessionId: number) => {
+    try {
+      const res = await fetch(`/api/chat/sessions/${currentSessionId}/voice`, { cache: "no-store" });
+      if (!res.ok) {
+        setAvailableVoiceInvite(null);
+        return;
+      }
+
+      const data = await res.json();
+      const invite = data?.invite as VoiceInvite | null;
+      if (!invite || !["pending", "active"].includes(invite.status)) {
+        setAvailableVoiceInvite(null);
+        if (activeVoiceToken && invite?.token === activeVoiceToken) {
+          setActiveVoiceToken(null);
+        }
+        return;
+      }
+
+      setAvailableVoiceInvite(invite);
+    } catch {
+      // keep current UI state on transient failures
+    }
+  }, [activeVoiceToken]);
+
+  const initSession = useCallback(async (nameOverride?: string) => {
+    const resolvedName = (nameOverride ?? visitorName).trim();
+    if (!resolvedName) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -48,7 +93,7 @@ export function ChatWidget() {
       const res = await fetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visitorId }),
+        body: JSON.stringify({ visitorId, visitorName: resolvedName }),
       });
       if (res.ok) {
         const session = await res.json();
@@ -57,6 +102,7 @@ export function ChatWidget() {
         if (session.messages?.length) {
           lastMsgIdRef.current = session.messages[session.messages.length - 1].id;
         }
+        void syncVoiceInvite(session.id);
       } else {
         setError("Не удалось подключиться к чату. Пожалуйста, попробуйте позже.");
       }
@@ -66,14 +112,23 @@ export function ChatWidget() {
     } finally {
       setLoading(false);
     }
+  }, [syncVoiceInvite, visitorName]);
+
+  useEffect(() => {
+    const storedName = getStoredVisitorName();
+    setVisitorName(storedName);
+    setPendingVisitorName(storedName);
   }, []);
 
   const pollMessages = useCallback(async () => {
     if (!sessionId || !isOpen) return;
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}/messages?after=${lastMsgIdRef.current}`);
-      if (res.ok) {
-        const newMsgs: Message[] = await res.json();
+      const [messagesRes] = await Promise.all([
+        fetch(`/api/chat/sessions/${sessionId}/messages?after=${lastMsgIdRef.current}`),
+        syncVoiceInvite(sessionId),
+      ]);
+      if (messagesRes.ok) {
+        const newMsgs: Message[] = await messagesRes.json();
         if (newMsgs.length > 0) {
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
@@ -91,7 +146,7 @@ export function ChatWidget() {
     } catch {
       // silent fail on polling
     }
-  }, [sessionId, isOpen, scrollToBottom]);
+  }, [isOpen, scrollToBottom, sessionId, syncVoiceInvite]);
 
   useEffect(() => {
     if (sessionId && isOpen) {
@@ -107,9 +162,21 @@ export function ChatWidget() {
   const handleOpen = () => {
     setIsOpen(true);
     setHasUnread(false);
-    if (!sessionId) {
-      initSession();
+    if (!sessionId && visitorName.trim()) {
+      void initSession(visitorName);
     }
+  };
+
+  const handleSaveName = async () => {
+    const normalized = pendingVisitorName.trim();
+    if (!normalized) {
+      return;
+    }
+
+    localStorage.setItem("chat_visitor_name", normalized);
+    setVisitorName(normalized);
+    setPendingVisitorName(normalized);
+    await initSession(normalized);
   };
 
   const handleSend = async () => {
@@ -160,45 +227,17 @@ export function ChatWidget() {
     }
   };
 
+  const voiceExpiresIn = useMemo(() => {
+    if (!availableVoiceInvite) return null;
+    const seconds = Math.max(0, Math.floor((new Date(availableVoiceInvite.expiresAt).getTime() - Date.now()) / 1000));
+    const minutes = Math.floor(seconds / 60);
+    const remSeconds = seconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(remSeconds).padStart(2, "0")}`;
+  }, [availableVoiceInvite]);
+
+  const visibleMessages = messages.filter((msg) => !parseVoiceInviteToken(msg.content));
+
   const renderMessage = (msg: Message) => {
-    const voiceToken = parseVoiceInviteToken(msg.content);
-
-    if (voiceToken) {
-      return (
-        <div key={msg.id} className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="max-w-[92%] rounded-[1.75rem] border border-sage-light/20 bg-white px-5 py-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 h-10 w-10 rounded-2xl bg-forest text-white flex items-center justify-center shadow-lg shadow-forest/15">
-                <Phone className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-forest">Голосовой режим доступен</p>
-                <p className="mt-1 text-xs leading-relaxed text-forest/55">
-                  Администратор отправил одноразовый токен звонка. Нажмите, чтобы запустить аудиозвонок прямо из чата.
-                </p>
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setActiveVoiceToken(voiceToken)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2 text-xs font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Позвонить
-                  </button>
-                  <span className="rounded-full bg-cream px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-forest/45 uppercase">
-                    {voiceToken}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-2 text-[10px] font-medium text-forest/30">
-              {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     const isVisitor = msg.sender === "visitor";
     const isSystem = msg.sender === "system";
 
@@ -255,7 +294,13 @@ export function ChatWidget() {
               token={activeVoiceToken}
               role="visitor"
               title="Поддержка Лад"
-              onClose={() => setActiveVoiceToken(null)}
+              onClose={() => {
+                setActiveVoiceToken(null);
+                setAvailableVoiceInvite(null);
+                if (sessionId) {
+                  void syncVoiceInvite(sessionId);
+                }
+              }}
             />
           ) : null}
 
@@ -288,7 +333,35 @@ export function ChatWidget() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-[url('/bg-pattern.png')] bg-repeat bg-cream/10">
-            {loading ? (
+            {needsName ? (
+              <div className="flex flex-col items-center justify-center h-full gap-5 px-4 text-center">
+                <div className="w-20 h-20 rounded-[2rem] bg-sage/10 flex items-center justify-center">
+                  <User className="h-10 w-10 text-sage" />
+                </div>
+                <div>
+                  <h4 className="text-forest font-bold text-xl mb-2">Как к вам обращаться?</h4>
+                  <p className="text-forest/50 text-sm leading-relaxed max-w-[260px]">
+                    Укажите имя или псевдоним. Так специалист сможет обратиться к вам в чате и при голосовом общении.
+                  </p>
+                </div>
+                <div className="w-full max-w-[280px] space-y-3">
+                  <input
+                    value={pendingVisitorName}
+                    onChange={(e) => setPendingVisitorName(e.target.value)}
+                    placeholder="Имя или псевдоним"
+                    className="w-full rounded-2xl border border-sage-light/20 bg-white px-4 py-3 text-sm text-forest outline-none focus:border-forest/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveName}
+                    disabled={!pendingVisitorName.trim() || loading}
+                    className="w-full rounded-2xl bg-forest px-4 py-3 text-sm font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
+                  >
+                    {loading ? "Подключаем..." : "Продолжить"}
+                  </button>
+                </div>
+              </div>
+            ) : loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-sage" />
                 <p className="text-forest/40 text-sm font-medium">Подключаемся...</p>
@@ -300,25 +373,25 @@ export function ChatWidget() {
                 </div>
                 <p className="text-forest/70 text-sm font-medium mb-4">{error}</p>
                 <button
-                  onClick={initSession}
+                  onClick={() => void initSession()}
                   className="px-6 py-2 rounded-xl bg-forest text-white text-sm font-bold shadow-lg hover:bg-forest/90 transition-all flex items-center gap-2 mx-auto active:scale-95"
                 >
                   <Loader2 className={`h-3.5 w-3.5 animate-spin ${loading ? "block" : "hidden"}`} />
                   Попробовать снова
                 </button>
               </div>
-            ) : messages.length === 0 ? (
+            ) : visibleMessages.length === 0 ? (
               <div className="text-center py-12 px-6 flex flex-col items-center justify-center h-full">
                 <div className="w-20 h-20 rounded-[2rem] bg-sage/10 flex items-center justify-center mb-6 rotate-12 transition-transform hover:rotate-0 duration-500">
                   <MessageCircle className="h-10 w-10 text-sage" />
                 </div>
-                <h4 className="text-forest font-bold text-xl mb-2">Привет!</h4>
+                <h4 className="text-forest font-bold text-xl mb-2">Привет, {visitorName || "друг"}!</h4>
                 <p className="text-forest/50 text-sm leading-relaxed max-w-[240px]">
                   Мы всегда на связи. Опишите вашу ситуацию, и наш специалист ответит вам в ближайшее время.
                 </p>
               </div>
             ) : (
-              messages.map(renderMessage)
+              visibleMessages.map(renderMessage)
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -332,19 +405,39 @@ export function ChatWidget() {
                 </button>
               </div>
             )}
+            {availableVoiceInvite && !activeVoiceToken ? (
+              <button
+                type="button"
+                onClick={() => setActiveVoiceToken(availableVoiceInvite.token)}
+                className="mb-3 w-full rounded-[1.5rem] border border-sage-light/20 bg-forest px-4 py-3 text-left text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-white/12 flex items-center justify-center">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">Голосовое общение</p>
+                      <p className="text-[11px] text-white/70">Кнопка доступна ещё {voiceExpiresIn}</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">voice</span>
+                </div>
+              </button>
+            ) : null}
             <div className="p-2 rounded-[1.75rem] bg-cream/30 border border-sage-light/20 flex items-end gap-2 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={error && !sessionId ? "Чат недоступен..." : "Ваше сообщение..."}
-                disabled={!sessionId && !loading}
+                disabled={needsName || (!sessionId && !loading)}
                 rows={1}
                 className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest placeholder:text-forest/30 outline-none max-h-[120px] disabled:opacity-50"
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim() || sending || (!sessionId && !loading)}
+                disabled={needsName || !input.trim() || sending || (!sessionId && !loading)}
                 className="mb-1 p-3 rounded-2xl bg-forest text-white hover:bg-forest/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-forest/20 active:scale-95"
               >
                 {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -359,4 +452,3 @@ export function ChatWidget() {
     </>
   );
 }
-

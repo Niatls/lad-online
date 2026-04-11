@@ -7,6 +7,9 @@ type VoiceInviteRow = {
   sessionId: number;
   token: string;
   status: string;
+  dataUsageBytes: number | string;
+  durationSeconds: number;
+  closedBy: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   expiresAt: Date | string;
@@ -70,6 +73,9 @@ function mapInvite(row: VoiceInviteRow) {
     sessionId: row.sessionId,
     token: row.token,
     status: row.status,
+    dataUsageBytes: Number(row.dataUsageBytes ?? 0),
+    durationSeconds: row.durationSeconds ?? 0,
+    closedBy: row.closedBy,
     createdAt: new Date(row.createdAt).toISOString(),
     updatedAt: new Date(row.updatedAt).toISOString(),
     expiresAt: new Date(row.expiresAt).toISOString(),
@@ -101,13 +107,16 @@ export async function createVoiceInvite(sessionId: number) {
 
     const token = randomBytes(12).toString("hex");
     const inviteRows = await sql<VoiceInviteRow[]>`
-      insert into "ChatVoiceInvite" ("sessionId", token, status, "createdAt", "updatedAt", "expiresAt")
-      values (${sessionId}, ${token}, 'pending', now(), now(), now() + interval '30 minutes')
+      insert into "ChatVoiceInvite" ("sessionId", token, status, "dataUsageBytes", "durationSeconds", "createdAt", "updatedAt", "expiresAt")
+      values (${sessionId}, ${token}, 'pending', 0, 0, now(), now(), now() + interval '5 minutes')
       returning
         id,
         "sessionId",
         token,
         status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
         "createdAt",
         "updatedAt",
         "expiresAt",
@@ -130,6 +139,42 @@ export async function createVoiceInvite(sessionId: number) {
   });
 }
 
+export async function getSessionActiveVoiceInvite(sessionId: number) {
+  return withRetry(async () => {
+    const rows = await sql<VoiceInviteRow[]>`
+      select
+        id,
+        "sessionId",
+        token,
+        status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "joinedAt",
+        "endedAt"
+      from "ChatVoiceInvite"
+      where "sessionId" = ${sessionId} and status in ('pending', 'active')
+      order by "createdAt" desc
+      limit 1
+    `;
+
+    const invite = rows[0];
+    if (!invite) {
+      return null;
+    }
+
+    if (new Date(invite.expiresAt).getTime() < Date.now() && invite.status !== "expired") {
+      await endVoiceInvite(invite.token, {});
+      return null;
+    }
+
+    return mapInvite(invite);
+  });
+}
+
 export async function getVoiceInviteByToken(token: string) {
   return withRetry(async () => {
     const rows = await sql<VoiceInviteRow[]>`
@@ -138,6 +183,9 @@ export async function getVoiceInviteByToken(token: string) {
         "sessionId",
         token,
         status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
         "createdAt",
         "updatedAt",
         "expiresAt",
@@ -172,6 +220,7 @@ export async function activateVoiceInvite(token: string) {
       update "ChatVoiceInvite"
       set
         status = case when status = 'pending' then 'active' else status end,
+        "expiresAt" = case when status = 'pending' then now() + interval '2 hours' else "expiresAt" end,
         "joinedAt" = case when "joinedAt" is null then now() else "joinedAt" end,
         "updatedAt" = now()
       where token = ${token} and status in ('pending', 'active')
@@ -180,6 +229,9 @@ export async function activateVoiceInvite(token: string) {
         "sessionId",
         token,
         status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
         "createdAt",
         "updatedAt",
         "expiresAt",
@@ -191,17 +243,33 @@ export async function activateVoiceInvite(token: string) {
   });
 }
 
-export async function endVoiceInvite(token: string) {
+export async function endVoiceInvite(
+  token: string,
+  summary: {
+    dataUsageBytes?: number;
+    durationSeconds?: number;
+    closedBy?: string;
+  },
+) {
   return withRetry(async () => {
     const rows = await sql<VoiceInviteRow[]>`
       update "ChatVoiceInvite"
-      set status = 'ended', "endedAt" = now(), "updatedAt" = now()
-      where token = ${token} and status <> 'ended'
+      set
+        status = 'ended',
+        "endedAt" = coalesce("endedAt", now()),
+        "updatedAt" = now(),
+        "dataUsageBytes" = greatest("dataUsageBytes", ${summary.dataUsageBytes ?? 0}),
+        "durationSeconds" = greatest("durationSeconds", ${summary.durationSeconds ?? 0}),
+        "closedBy" = coalesce(${summary.closedBy ?? null}, "closedBy")
+      where token = ${token}
       returning
         id,
         "sessionId",
         token,
         status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
         "createdAt",
         "updatedAt",
         "expiresAt",

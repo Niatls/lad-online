@@ -25,6 +25,11 @@ type SessionSummaryRow = ChatSessionRow & {
   messageCount: number;
 };
 
+type UsageSummaryRow = {
+  totalBytes: number | string | null;
+  inviteCount: number;
+};
+
 const runtimeDatabaseUrl =
   process.env.LADSTORAGE_POSTGRES_URL ||
   process.env.LADSTORAGE_POSTGRES_PRISMA_URL ||
@@ -104,6 +109,22 @@ export async function getOrCreateChatSession(visitorId: string, visitorName?: st
     `;
 
     let session = existing[0];
+
+    if (session && visitorName?.trim() && visitorName.trim() !== session.visitorName) {
+      const updated = await sql<ChatSessionRow[]>`
+        update "ChatSession"
+        set "visitorName" = ${visitorName.trim()}, "updatedAt" = now()
+        where id = ${session.id}
+        returning
+          id,
+          "visitorId",
+          "visitorName",
+          status,
+          "createdAt",
+          "updatedAt"
+      `;
+      session = updated[0];
+    }
 
     if (!session) {
       const created = await sql<ChatSessionRow[]>`
@@ -197,6 +218,18 @@ export async function createChatMessage(sessionId: number, content: string, send
   });
 }
 
+export async function deleteChatSession(sessionId: number) {
+  return withRetry(async () => {
+    const deleted = await sql<{ id: number }[]>`
+      delete from "ChatSession"
+      where id = ${sessionId}
+      returning id
+    `;
+
+    return deleted[0] ?? null;
+  });
+}
+
 export async function getAdminChatSessions() {
   return withRetry(async () => {
     const rows = await sql<SessionSummaryRow[]>`
@@ -232,20 +265,35 @@ export async function getAdminChatSessions() {
       order by s."updatedAt" desc
     `;
 
-    return rows.map((row) => ({
-      ...mapSession(row),
-      messages: row.lastMessageId
-        ? [
-            {
-              id: row.lastMessageId,
-              sessionId: row.id,
-              sender: row.lastMessageSender ?? "visitor",
-              content: row.lastMessageContent ?? "",
-              createdAt: new Date(row.lastMessageCreatedAt ?? row.updatedAt).toISOString(),
-            },
-          ]
-        : [],
-      _count: { messages: row.messageCount },
-    }));
+    const usageRows = await sql<UsageSummaryRow[]>`
+      select
+        coalesce(sum("dataUsageBytes"), 0)::bigint as "totalBytes",
+        count(*)::int as "inviteCount"
+      from "ChatVoiceInvite"
+      where date_trunc('month', "createdAt") = date_trunc('month', now())
+    `;
+
+    return {
+      sessions: rows.map((row) => ({
+        ...mapSession(row),
+        messages: row.lastMessageId
+          ? [
+              {
+                id: row.lastMessageId,
+                sessionId: row.id,
+                sender: row.lastMessageSender ?? "visitor",
+                content: row.lastMessageContent ?? "",
+                createdAt: new Date(row.lastMessageCreatedAt ?? row.updatedAt).toISOString(),
+              },
+            ]
+          : [],
+        _count: { messages: row.messageCount },
+      })),
+      usage: {
+        totalBytes: Number(usageRows[0]?.totalBytes ?? 0),
+        inviteCount: usageRows[0]?.inviteCount ?? 0,
+        monthlyCapBytes: 1000 * 1024 * 1024 * 1024,
+      },
+    };
   });
 }
