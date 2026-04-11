@@ -60,6 +60,18 @@ type VoiceInvite = {
   expiresAt: string;
 };
 
+type VoiceEvent = {
+  id: number;
+  inviteId: number;
+  sessionId: number;
+  token: string;
+  role: string;
+  eventType: string;
+  message: string;
+  details: unknown;
+  createdAt: string;
+};
+
 function formatUsage(value: number) {
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(2)} MB`;
@@ -86,6 +98,7 @@ export function AdminChatPanel() {
   const [deletingSession, setDeletingSession] = useState(false);
   const [deletingMessages, setDeletingMessages] = useState(false);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
+  const [voiceEvents, setVoiceEvents] = useState<VoiceEvent[]>([]);
   const [usage, setUsage] = useState<UsageSummary>({
     totalBytes: 0,
     inviteCount: 0,
@@ -148,6 +161,22 @@ export function AdminChatPanel() {
     }
   }, []);
 
+  const loadVoiceEvents = useCallback(async (sessionId: number) => {
+    try {
+      const res = await fetch(`/api/admin/chat/sessions/${sessionId}/voice-events?limit=12`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        return;
+      }
+
+      const data = await res.json();
+      setVoiceEvents(data.events ?? []);
+    } catch (err) {
+      console.error("Failed to load voice events:", err);
+    }
+  }, []);
+
   const syncAdminVoiceInvite = useCallback(async (sessionId: number) => {
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}/voice`, { cache: "no-store" });
@@ -184,6 +213,7 @@ export function AdminChatPanel() {
       const [res] = await Promise.all([
         fetch(`/api/chat/sessions/${selectedId}/messages?after=${lastMsgIdRef.current}`),
         syncAdminVoiceInvite(selectedId),
+        loadVoiceEvents(selectedId),
       ]);
       if (res.ok) {
         const newMsgs: Message[] = await res.json();
@@ -196,19 +226,20 @@ export function AdminChatPanel() {
     } catch {
       // silent
     }
-  }, [selectedId, scrollToBottom, syncAdminVoiceInvite]);
+  }, [loadVoiceEvents, selectedId, scrollToBottom, syncAdminVoiceInvite]);
 
   useEffect(() => {
     if (selectedId) {
       lastMsgIdRef.current = 0;
       void loadMessages(selectedId);
       void syncAdminVoiceInvite(selectedId);
+      void loadVoiceEvents(selectedId);
       pollRef.current = setInterval(() => {
         void pollMessages();
       }, 2000);
       return () => clearInterval(pollRef.current);
     }
-  }, [selectedId, loadMessages, pollMessages, syncAdminVoiceInvite]);
+  }, [selectedId, loadMessages, loadVoiceEvents, pollMessages, syncAdminVoiceInvite]);
 
   useEffect(() => {
     scrollToBottom();
@@ -340,6 +371,7 @@ export function AdminChatPanel() {
       await loadMessages(selectedId);
       await loadSessions();
       await syncAdminVoiceInvite(selectedId);
+      await loadVoiceEvents(selectedId);
     } catch (err) {
       console.error("Failed to generate voice token:", err);
     } finally {
@@ -351,6 +383,7 @@ export function AdminChatPanel() {
     setSelectedId(null);
     setMessages([]);
     setActiveVoiceToken(null);
+    setVoiceEvents([]);
     setSelectedMessageIds([]);
     setSelectingMessages(false);
     setReplyTarget(null);
@@ -826,6 +859,44 @@ export function AdminChatPanel() {
                     {creatingVoiceToken ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
                     Позвонить пользователю
                   </button>
+                </div>
+
+                <div className="mb-4 rounded-[1.5rem] border border-sage-light/15 bg-white/70 px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-forest">Последние voice-события</p>
+                      <p className="text-xs text-forest/50">Логи текущего и прошлых звонков для этого диалога.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => selectedId && void loadVoiceEvents(selectedId)}
+                      className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
+                    >
+                      Обновить
+                    </button>
+                  </div>
+                  <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
+                    {voiceEvents.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-sage-light/20 px-3 py-4 text-xs text-forest/45">
+                        Пока нет voice-событий для этого пользователя.
+                      </div>
+                    ) : (
+                      voiceEvents.map((event) => (
+                        <div key={event.id} className="rounded-2xl border border-sage-light/15 bg-cream/30 px-3 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-xs font-bold text-forest">
+                              {event.role === "admin" ? "Админ" : event.role === "visitor" ? "Пользователь" : "Система"}
+                              {" · "}
+                              {event.eventType}
+                            </p>
+                            <span className="text-[10px] font-bold text-forest/35">{formatTime(event.createdAt)}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-forest/70">{event.message}</p>
+                          <p className="mt-1 break-all text-[10px] text-forest/35">{event.token}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
                 {replyTarget ? (

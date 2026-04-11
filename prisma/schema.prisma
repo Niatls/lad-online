@@ -102,6 +102,7 @@ model ChatSession {
   updatedAt    DateTime          @updatedAt
   messages     ChatMessage[]
   voiceInvites ChatVoiceInvite[]
+  voiceEvents  ChatVoiceEvent[]
 
   @@index([visitorId])
   @@index([status])
@@ -138,6 +139,7 @@ model ChatVoiceInvite {
   endedAt   DateTime?
   session   ChatSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   signals   ChatVoiceSignal[]
+  events    ChatVoiceEvent[]
 
   @@index([sessionId])
   @@index([status])
@@ -153,5 +155,23 @@ model ChatVoiceSignal {
   invite      ChatVoiceInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
 
   @@index([inviteId, id])
+}
+
+model ChatVoiceEvent {
+  id         Int             @id @default(autoincrement())
+  inviteId    Int
+  sessionId   Int
+  token       String
+  role        String
+  eventType   String
+  message     String
+  details     Json?
+  createdAt   DateTime       @default(now())
+  invite      ChatVoiceInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  session     ChatSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([inviteId, createdAt])
+  @@index([token, createdAt])
 }
 
