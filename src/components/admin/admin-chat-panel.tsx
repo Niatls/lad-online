@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
+import { VoiceCallBoundary } from "@/components/chat/voice-call-boundary";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
 type Message = {
@@ -605,12 +606,23 @@ export function AdminChatPanel() {
 
         <div className={`relative flex-1 flex flex-col bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
           {activeVoiceToken ? (
-            <VoiceCallPanel
-              token={activeVoiceToken}
-              role="admin"
-              title={selectedSession?.visitorName || `Посетитель #${selectedId}`}
+            <VoiceCallBoundary
               onClose={() => setActiveVoiceToken(null)}
-            />
+              onReset={() => {
+                const token = activeVoiceToken;
+                setActiveVoiceToken(null);
+                if (token) {
+                  setTimeout(() => setActiveVoiceToken(token), 0);
+                }
+              }}
+            >
+              <VoiceCallPanel
+                token={activeVoiceToken}
+                role="admin"
+                title={selectedSession?.visitorName || `Посетитель #${selectedId}`}
+                onClose={() => setActiveVoiceToken(null)}
+              />
+            </VoiceCallBoundary>
           ) : null}
 
           {!selectedId ? (

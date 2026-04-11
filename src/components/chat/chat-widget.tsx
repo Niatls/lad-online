@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Loader2, User, Phone, CornerUpLeft, Pencil } from "lucide-react";
+import { VoiceCallBoundary } from "@/components/chat/voice-call-boundary";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
@@ -435,10 +436,7 @@ export function ChatWidget() {
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col w-[400px] max-w-[calc(100vw-48px)] h-[600px] max-h-[calc(100vh-96px)] rounded-[2.5rem] bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-sage-light/20 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 ease-out">
           {activeVoiceToken ? (
-            <VoiceCallPanel
-              token={activeVoiceToken}
-              role="visitor"
-              title="Поддержка Лад"
+            <VoiceCallBoundary
               onClose={() => {
                 setActiveVoiceToken(null);
                 setAvailableVoiceInvite(null);
@@ -446,7 +444,24 @@ export function ChatWidget() {
                   void syncVoiceInvite(sessionId);
                 }
               }}
-            />
+              onReset={() => {
+                setActiveVoiceToken(null);
+                setTimeout(() => setActiveVoiceToken(activeVoiceToken), 0);
+              }}
+            >
+              <VoiceCallPanel
+                token={activeVoiceToken}
+                role="visitor"
+                title="Поддержка Лад"
+                onClose={() => {
+                  setActiveVoiceToken(null);
+                  setAvailableVoiceInvite(null);
+                  if (sessionId) {
+                    void syncVoiceInvite(sessionId);
+                  }
+                }}
+              />
+            </VoiceCallBoundary>
           ) : null}
 
           <div className="relative shrink-0 overflow-hidden bg-forest p-6 text-white">
