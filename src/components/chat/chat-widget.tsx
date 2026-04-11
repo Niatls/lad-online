@@ -46,6 +46,7 @@ export function ChatWidget() {
   const [error, setError] = useState<string | null>(null);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [availableVoiceInvite, setAvailableVoiceInvite] = useState<VoiceInvite | null>(null);
+  const [voiceCountdownNow, setVoiceCountdownNow] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -159,6 +160,19 @@ export function ChatWidget() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  useEffect(() => {
+    if (!availableVoiceInvite) {
+      return;
+    }
+
+    setVoiceCountdownNow(Date.now());
+    const interval = setInterval(() => {
+      setVoiceCountdownNow(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [availableVoiceInvite]);
+
   const handleOpen = () => {
     setIsOpen(true);
     setHasUnread(false);
@@ -229,11 +243,11 @@ export function ChatWidget() {
 
   const voiceExpiresIn = useMemo(() => {
     if (!availableVoiceInvite) return null;
-    const seconds = Math.max(0, Math.floor((new Date(availableVoiceInvite.expiresAt).getTime() - Date.now()) / 1000));
+    const seconds = Math.max(0, Math.floor((new Date(availableVoiceInvite.expiresAt).getTime() - voiceCountdownNow) / 1000));
     const minutes = Math.floor(seconds / 60);
     const remSeconds = seconds % 60;
     return `${String(minutes).padStart(2, "0")}:${String(remSeconds).padStart(2, "0")}`;
-  }, [availableVoiceInvite]);
+  }, [availableVoiceInvite, voiceCountdownNow]);
 
   const visibleMessages = messages.filter((msg) => !parseVoiceInviteToken(msg.content));
 

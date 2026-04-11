@@ -79,6 +79,20 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     return `${(value / (1024 * 1024 * 1024)).toFixed(3)} GB`;
   }, []);
 
+  useEffect(() => {
+    if (!connectedAtRef.current || connecting) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      if (connectedAtRef.current) {
+        setDurationSeconds(Math.max(0, Math.floor((Date.now() - connectedAtRef.current) / 1000)));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [connecting]);
+
   const postSignal = useCallback(
     async (signalType: string, payload: unknown) => {
       await fetch(`/api/chat/voice/${token}/signals`, {
@@ -190,17 +204,6 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       if (notifyRemote) {
         void postSignal("hangup", null);
-        void fetch(`/api/chat/voice/${token}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "end",
-            role,
-            dataUsageBytes: usageBytes,
-            durationSeconds,
-          }),
-        }).catch(() => undefined);
-      } else {
         void fetch(`/api/chat/voice/${token}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
