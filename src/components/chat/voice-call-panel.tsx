@@ -58,6 +58,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const reconnectAttemptsRef = useRef(0);
   const reconnectingRef = useRef(false);
   const endingRef = useRef(false);
+  const initialAdminRejoinSentRef = useRef(false);
   const lastEventAtRef = useRef(0);
   const lastEventValueRef = useRef("Инициализация звонка");
   const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -224,6 +225,24 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
   }, []);
 
+  const invokeCreatePeer = useCallback(async () => {
+    const createPeer = createPeerRef.current;
+    if (typeof createPeer !== "function") {
+      throw new Error("Voice createPeer handler is unavailable");
+    }
+
+    return createPeer();
+  }, []);
+
+  const invokeSendOffer = useCallback(async (iceRestart = false) => {
+    const sendOffer = sendOfferRef.current;
+    if (typeof sendOffer !== "function") {
+      throw new Error("Voice sendOffer handler is unavailable");
+    }
+
+    return sendOffer(iceRestart);
+  }, []);
+
   const destroyPeerConnection = useCallback(() => {
     if (!peerRef.current) {
       return;
@@ -316,10 +335,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     try {
       if (role === "visitor") {
-        await createPeerRef.current?.();
-        await sendOfferRef.current?.(true);
+        await invokeCreatePeer();
+        await invokeSendOffer(true);
       } else {
-        await createPeerRef.current?.();
+        await invokeCreatePeer();
         await postSignal("rejoin-request", { reconnect: true, attempt: reconnectAttemptsRef.current });
       }
     } catch (reconnectError) {
@@ -334,7 +353,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
 
     reconnectingRef.current = false;
-  }, [clearReconnectTimeout, postSignal, postVoiceEvent, role, updateLastEvent]);
+  }, [clearReconnectTimeout, invokeCreatePeer, invokeSendOffer, postSignal, postVoiceEvent, role, updateLastEvent]);
 
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
@@ -405,7 +424,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.signalingState !== "stable";
 
         if (needsFreshPeer) {
-          pc = await createPeerRef.current?.();
+          pc = await invokeCreatePeer();
         }
 
         if (!pc) {
@@ -458,8 +477,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       if (signal.signalType === "rejoin-request" && role === "visitor") {
         setStatus("Переподключаем звонок...");
         updateLastEvent("Получен запрос на переподключение", true);
-        await createPeerRef.current?.();
-        await sendOfferRef.current?.(true);
+        await invokeCreatePeer();
+        await invokeSendOffer(true);
         return;
       }
 
@@ -472,7 +491,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         onClose();
       }
     },
-    [cleanup, flushPendingCandidates, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
+    [cleanup, flushPendingCandidates, invokeCreatePeer, invokeSendOffer, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
   );
 
   const pollSignals = useCallback(async () => {
@@ -506,16 +525,26 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     async function start() {
       try {
+        closedRef.current = false;
+        endingRef.current = false;
+        joinedRef.current = false;
+        reconnectingRef.current = false;
+        reconnectAttemptsRef.current = 0;
+        initialAdminRejoinSentRef.current = false;
+        lastSignalIdRef.current = 0;
+
         const inviteRes = await fetch(`/api/chat/voice/${token}`);
         if (!inviteRes.ok) {
           throw new Error("Приглашение на звонок больше недоступно.");
         }
 
-        await fetch(`/api/chat/voice/${token}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "join", role }),
-        });
+        if (role === "visitor") {
+          await fetch(`/api/chat/voice/${token}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "join", role }),
+          });
+        }
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (!mounted) {
@@ -630,18 +659,19 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           );
         };
 
-        await createPeerRef.current();
+        await invokeCreatePeer();
 
         pollRef.current = setInterval(pollSignals, 1200);
 
         if (role === "visitor" && !joinedRef.current) {
           joinedRef.current = true;
-          await sendOfferRef.current(false);
+          await invokeSendOffer(false);
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
           updateLastEvent(`Ожидаем ${counterpartLabel}`, true);
           joinedRef.current = true;
-          if (role === "admin" && inviteRes.ok) {
+          if (role === "admin" && inviteRes.ok && !initialAdminRejoinSentRef.current) {
+            initialAdminRejoinSentRef.current = true;
             void postSignal("rejoin-request", null);
           }
         }
@@ -664,7 +694,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
+  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
