@@ -189,6 +189,31 @@ export function ChatWidget() {
     return () => clearInterval(interval);
   }, [availableVoiceInvite]);
 
+  useEffect(() => {
+    if (!availableVoiceInvite) {
+      return;
+    }
+
+    if (new Date(availableVoiceInvite.expiresAt).getTime() <= voiceCountdownNow) {
+      setAvailableVoiceInvite(null);
+      if (activeVoiceToken === availableVoiceInvite.token) {
+        setActiveVoiceToken(null);
+      }
+    }
+  }, [activeVoiceToken, availableVoiceInvite, voiceCountdownNow]);
+
+  useEffect(() => {
+    if (!sessionId || !isOpen || activeVoiceToken || !availableVoiceInvite) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void syncVoiceInvite(sessionId);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);
+
   const handleOpen = () => {
     setIsOpen(true);
     setHasUnread(false);
