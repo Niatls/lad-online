@@ -152,7 +152,7 @@ export function AdminChatPanel() {
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}/voice`, { cache: "no-store" });
       if (!res.ok) {
-        if (activeVoiceToken) {
+        if ([404, 410].includes(res.status) && activeVoiceToken) {
           setActiveVoiceToken(null);
         }
         return null;
