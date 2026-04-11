@@ -46,6 +46,10 @@ function getStoredVisitorName(): string {
   return localStorage.getItem("chat_visitor_name") ?? "";
 }
 
+function getVoiceSessionStorageKey(sessionId: number) {
+  return `chat_active_voice_token_${sessionId}`;
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -96,6 +100,20 @@ export function ChatWidget() {
       // keep current UI state on transient failures
     }
   }, [activeVoiceToken]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !sessionId) {
+      return;
+    }
+
+    const storageKey = getVoiceSessionStorageKey(sessionId);
+    if (activeVoiceToken) {
+      sessionStorage.setItem(storageKey, activeVoiceToken);
+      return;
+    }
+
+    sessionStorage.removeItem(storageKey);
+  }, [activeVoiceToken, sessionId]);
 
   const initSession = useCallback(async (nameOverride?: string) => {
     const resolvedName = (nameOverride ?? visitorName).trim();
@@ -213,6 +231,19 @@ export function ChatWidget() {
 
     return () => clearInterval(interval);
   }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !sessionId || activeVoiceToken) {
+      return;
+    }
+
+    const storedToken = sessionStorage.getItem(getVoiceSessionStorageKey(sessionId));
+    if (!storedToken) {
+      return;
+    }
+
+    setActiveVoiceToken(storedToken);
+  }, [activeVoiceToken, sessionId]);
 
   const handleOpen = () => {
     setIsOpen(true);

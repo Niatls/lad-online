@@ -50,6 +50,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const connectedAtRef = useRef<number | null>(null);
   const closedRef = useRef(false);
   const callEstablishedRef = useRef(false);
+  const createPeerRef = useRef<(() => Promise<RTCPeerConnection | null>) | null>(null);
+  const sendOfferRef = useRef<(() => Promise<void>) | null>(null);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -167,6 +169,19 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
   }, []);
 
+  const destroyPeerConnection = useCallback(() => {
+    if (!peerRef.current) {
+      return;
+    }
+
+    peerRef.current.onicecandidate = null;
+    peerRef.current.ontrack = null;
+    peerRef.current.onconnectionstatechange = null;
+    peerRef.current.oniceconnectionstatechange = null;
+    peerRef.current.close();
+    peerRef.current = null;
+  }, []);
+
   const markCallActive = useCallback(() => {
     if (callEstablishedRef.current) {
       return;
@@ -235,14 +250,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }).catch(() => undefined);
       }
 
-      if (peerRef.current) {
-        peerRef.current.onicecandidate = null;
-        peerRef.current.ontrack = null;
-        peerRef.current.onconnectionstatechange = null;
-        peerRef.current.oniceconnectionstatechange = null;
-        peerRef.current.close();
-        peerRef.current = null;
-      }
+      destroyPeerConnection();
 
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -255,13 +263,22 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       setUsageBytes(0);
       setIceRoute("Ищем маршрут...");
     },
-    [durationSeconds, postSignal, role, token, usageBytes],
+    [destroyPeerConnection, durationSeconds, postSignal, role, token, usageBytes],
   );
 
   const handleSignal = useCallback(
     async (signal: VoiceSignal) => {
       if (signal.signalType === "offer" && role === "admin") {
-        const pc = peerRef.current;
+        let pc = peerRef.current;
+        const needsFreshPeer =
+          !pc ||
+          ["closed", "failed", "disconnected"].includes(pc.connectionState) ||
+          pc.signalingState !== "stable";
+
+        if (needsFreshPeer) {
+          pc = await createPeerRef.current?.();
+        }
+
         if (!pc) {
           return;
         }
@@ -279,6 +296,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       if (signal.signalType === "answer" && role === "visitor") {
         const pc = peerRef.current;
         if (!pc) {
+          return;
+        }
+
+        if (pc.signalingState !== "have-local-offer") {
           return;
         }
 
@@ -300,6 +321,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         } else {
           pendingCandidatesRef.current.push(candidate);
         }
+        return;
+      }
+
+      if (signal.signalType === "rejoin-request" && role === "visitor") {
+        setStatus("Переподключаем звонок...");
+        await createPeerRef.current?.();
+        await sendOfferRef.current?.();
         return;
       }
 
@@ -362,73 +390,106 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         localStreamRef.current = stream;
 
-        const iceConfigRes = await fetch("/api/chat/voice/ice-servers", { cache: "no-store" }).catch(() => null);
-        const iceConfigJson = iceConfigRes && iceConfigRes.ok ? await iceConfigRes.json() : null;
-        const iceServers = Array.isArray(iceConfigJson?.iceServers) && iceConfigJson.iceServers.length > 0
-          ? iceConfigJson.iceServers
-          : defaultIceServers;
-
-        const pc = new RTCPeerConnection({
-          iceServers,
-          iceCandidatePoolSize: 4,
-        });
-        peerRef.current = pc;
-
-        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            void postSignal("candidate", event.candidate.toJSON());
+        createPeerRef.current = async () => {
+          const currentStream = localStreamRef.current;
+          if (!currentStream) {
+            return null;
           }
+
+          destroyPeerConnection();
+          pendingCandidatesRef.current = [];
+          callEstablishedRef.current = false;
+          connectedAtRef.current = null;
+          setDurationSeconds(0);
+          setUsageBytes(0);
+          setIceRoute("Ищем маршрут...");
+          setConnecting(true);
+          setError(null);
+
+          const iceConfigRes = await fetch("/api/chat/voice/ice-servers", { cache: "no-store" }).catch(() => null);
+          const iceConfigJson = iceConfigRes && iceConfigRes.ok ? await iceConfigRes.json() : null;
+          const iceServers = Array.isArray(iceConfigJson?.iceServers) && iceConfigJson.iceServers.length > 0
+            ? iceConfigJson.iceServers
+            : defaultIceServers;
+
+          const pc = new RTCPeerConnection({
+            iceServers,
+            iceCandidatePoolSize: 4,
+          });
+          peerRef.current = pc;
+
+          currentStream.getTracks().forEach((track) => pc.addTrack(track, currentStream));
+
+          pc.onicecandidate = (event) => {
+            if (event.candidate) {
+              void postSignal("candidate", event.candidate.toJSON());
+            }
+          };
+
+          pc.ontrack = (event) => {
+            const [remoteStream] = event.streams;
+            if (remoteAudioRef.current && remoteStream) {
+              remoteAudioRef.current.srcObject = remoteStream;
+              void remoteAudioRef.current.play().catch(() => undefined);
+            }
+            markCallActive();
+          };
+
+          pc.onconnectionstatechange = () => {
+            if (pc.connectionState === "connected") {
+              setStatus("Аудиоканал готов. Подключаем собеседника...");
+            } else if (pc.connectionState === "connecting") {
+              setStatus("Соединяем аудиоканал...");
+            } else if (pc.connectionState === "failed") {
+              setStatus("Не удалось установить аудиосоединение");
+              setError("Похоже, прямое WebRTC-соединение недоступно. Попробуйте ещё раз.");
+              setConnecting(false);
+            } else if (["disconnected", "closed"].includes(pc.connectionState)) {
+              setStatus("Соединение прервано. Пытаемся восстановить...");
+              setConnecting(true);
+            }
+          };
+
+          pc.oniceconnectionstatechange = () => {
+            if (pc.iceConnectionState === "checking") {
+              setStatus("Проверяем маршрут для звонка...");
+            } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+              setStatus("Маршрут найден. Ждём аудио...");
+            } else if (pc.iceConnectionState === "failed") {
+              setStatus("ICE-маршрут не поднялся");
+              setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
+              setConnecting(false);
+            }
+          };
+
+          return pc;
         };
 
-        pc.ontrack = (event) => {
-          const [remoteStream] = event.streams;
-          if (remoteAudioRef.current && remoteStream) {
-            remoteAudioRef.current.srcObject = remoteStream;
-            void remoteAudioRef.current.play().catch(() => undefined);
+        sendOfferRef.current = async () => {
+          const pc = peerRef.current ?? await createPeerRef.current?.();
+          if (!pc) {
+            return;
           }
-          markCallActive();
+
+          const offer = await pc.createOffer({ offerToReceiveAudio: true });
+          await pc.setLocalDescription(offer);
+          await postSignal("offer", offer);
+          setStatus("Вызываем специалиста...");
         };
 
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === "connected") {
-            setStatus("Аудиоканал готов. Подключаем собеседника...");
-          } else if (pc.connectionState === "connecting") {
-            setStatus("Соединяем аудиоканал...");
-          } else if (pc.connectionState === "failed") {
-            setStatus("Не удалось установить аудиосоединение");
-            setError("Похоже, прямое WebRTC-соединение недоступно. Попробуйте ещё раз.");
-            setConnecting(false);
-          } else if (["disconnected", "closed"].includes(pc.connectionState)) {
-            setStatus("Соединение завершено");
-            setConnecting(false);
-          }
-        };
-
-        pc.oniceconnectionstatechange = () => {
-          if (pc.iceConnectionState === "checking") {
-            setStatus("Проверяем маршрут для звонка...");
-          } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-            setStatus("Маршрут найден. Ждём аудио...");
-          } else if (pc.iceConnectionState === "failed") {
-            setStatus("ICE-маршрут не поднялся");
-            setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
-            setConnecting(false);
-          }
-        };
+        await createPeerRef.current();
 
         pollRef.current = setInterval(pollSignals, 1200);
 
         if (role === "visitor" && !joinedRef.current) {
           joinedRef.current = true;
-          const offer = await pc.createOffer({ offerToReceiveAudio: true });
-          await pc.setLocalDescription(offer);
-          await postSignal("offer", offer);
-          setStatus("Вызываем специалиста...");
+          await sendOfferRef.current();
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
           joinedRef.current = true;
+          if (role === "admin" && inviteRes.ok) {
+            void postSignal("rejoin-request", null);
+          }
         }
       } catch (startError) {
         console.error("Voice call init failed:", startError);
@@ -441,9 +502,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     return () => {
       mounted = false;
+      createPeerRef.current = null;
+      sendOfferRef.current = null;
       cleanup(false);
     };
-  }, [cleanup, counterpartLabel, markCallActive, pollSignals, postSignal, role, token]);
+  }, [cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, role, token]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];

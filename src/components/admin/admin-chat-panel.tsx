@@ -60,6 +60,10 @@ function formatUsage(value: number) {
   return `${(value / (1024 * 1024 * 1024)).toFixed(3)} GB`;
 }
 
+function getAdminVoiceSessionStorageKey(sessionId: number) {
+  return `admin_active_voice_token_${sessionId}`;
+}
+
 export function AdminChatPanel() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -169,6 +173,33 @@ export function AdminChatPanel() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !selectedId) {
+      return;
+    }
+
+    const storageKey = getAdminVoiceSessionStorageKey(selectedId);
+    if (activeVoiceToken) {
+      sessionStorage.setItem(storageKey, activeVoiceToken);
+      return;
+    }
+
+    sessionStorage.removeItem(storageKey);
+  }, [activeVoiceToken, selectedId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !selectedId || activeVoiceToken) {
+      return;
+    }
+
+    const storedToken = sessionStorage.getItem(getAdminVoiceSessionStorageKey(selectedId));
+    if (!storedToken) {
+      return;
+    }
+
+    setActiveVoiceToken(storedToken);
+  }, [activeVoiceToken, selectedId]);
 
   const handleSend = async () => {
     if (!input.trim() || !selectedId || sending) return;
