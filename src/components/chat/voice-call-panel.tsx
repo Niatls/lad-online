@@ -48,6 +48,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const joinedRef = useRef(false);
   const connectedAtRef = useRef<number | null>(null);
+  const closedRef = useRef(false);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -171,6 +172,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
   const cleanup = useCallback(
     (notifyRemote: boolean) => {
+      if (closedRef.current && !notifyRemote) {
+        return;
+      }
+
+      closedRef.current = true;
+
       if (pollRef.current) {
         clearInterval(pollRef.current);
         pollRef.current = undefined;
@@ -211,12 +218,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
   const handleSignal = useCallback(
     async (signal: VoiceSignal) => {
-      const pc = peerRef.current;
-      if (!pc) {
-        return;
-      }
-
       if (signal.signalType === "offer" && role === "admin") {
+        const pc = peerRef.current;
+        if (!pc) {
+          return;
+        }
+
         setStatus("Входящий звонок. Подключаем аудио...");
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
         await flushPendingCandidates();
@@ -228,6 +235,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       }
 
       if (signal.signalType === "answer" && role === "visitor") {
+        const pc = peerRef.current;
+        if (!pc) {
+          return;
+        }
+
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
         await flushPendingCandidates();
         setStatus("Соединяемся...");
@@ -235,6 +247,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       }
 
       if (signal.signalType === "candidate") {
+        const pc = peerRef.current;
+        if (!pc) {
+          return;
+        }
+
         const candidate = signal.payload as RTCIceCandidateInit;
         if (pc.remoteDescription) {
           await pc.addIceCandidate(candidate);
@@ -248,9 +265,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         setStatus("Звонок завершён");
         setConnecting(false);
         cleanup(false);
+        onClose();
       }
     },
-    [cleanup, flushPendingCandidates, postSignal, role],
+    [cleanup, flushPendingCandidates, onClose, postSignal, role],
   );
 
   const pollSignals = useCallback(async () => {
@@ -265,10 +283,18 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         lastSignalIdRef.current = Math.max(lastSignalIdRef.current, signal.id);
         await handleSignal(signal);
       }
+
+      const inviteRes = await fetch(`/api/chat/voice/${token}`, { cache: "no-store" });
+      if (inviteRes.status === 410 || inviteRes.status === 404) {
+        setStatus("Звонок завершён");
+        setConnecting(false);
+        cleanup(false);
+        onClose();
+      }
     } catch (pollError) {
       console.error("Voice signal polling failed:", pollError);
     }
-  }, [handleSignal, role, token]);
+  }, [cleanup, handleSignal, onClose, role, token]);
 
   useEffect(() => {
     let mounted = true;
