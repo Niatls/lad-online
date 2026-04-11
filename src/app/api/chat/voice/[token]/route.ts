@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const { token } = await context.params;
     const body = await req.json().catch(() => ({}));
     const action = typeof body?.action === "string" ? body.action : "join";
+    const role = body?.role === "admin" ? "admin" : "visitor";
 
     if (action === "end") {
       const invite = await endVoiceInvite(token, {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json(invite);
     }
 
-    const invite = await activateVoiceInvite(token);
+    const invite = await activateVoiceInvite(token, role);
     if (!invite) {
       return NextResponse.json({ error: "Invite unavailable" }, { status: 404 });
     }

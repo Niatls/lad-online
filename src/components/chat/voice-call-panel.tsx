@@ -328,7 +328,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         await fetch(`/api/chat/voice/${token}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "join" }),
+          body: JSON.stringify({ action: "join", role }),
         });
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

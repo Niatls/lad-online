@@ -214,14 +214,20 @@ export async function getVoiceInviteByToken(token: string) {
   });
 }
 
-export async function activateVoiceInvite(token: string) {
+export async function activateVoiceInvite(token: string, role: "admin" | "visitor" = "visitor") {
   return withRetry(async () => {
     const rows = await sql<VoiceInviteRow[]>`
       update "ChatVoiceInvite"
       set
         status = case when status = 'pending' then 'active' else status end,
-        "expiresAt" = case when status = 'pending' then now() + interval '2 hours' else "expiresAt" end,
-        "joinedAt" = case when "joinedAt" is null then now() else "joinedAt" end,
+        "expiresAt" = case
+          when status = 'pending' and ${role} = 'visitor' then now() + interval '2 hours'
+          else "expiresAt"
+        end,
+        "joinedAt" = case
+          when ${role} = 'visitor' and "joinedAt" is null then now()
+          else "joinedAt"
+        end,
         "updatedAt" = now()
       where token = ${token} and status in ('pending', 'active')
       returning
