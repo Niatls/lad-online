@@ -95,7 +95,7 @@ function mapMessage(row: ChatMessageRow) {
       ? {
           id: row.replyPreviewId,
           sender: row.replyPreviewSender ?? "system",
-          content: row.replyPreviewDeletedAt ? "РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ" : (row.replyPreviewContent ?? ""),
+          content: row.replyPreviewDeletedAt ? "Сообщение удалено" : (row.replyPreviewContent ?? ""),
           isDeleted: Boolean(row.replyPreviewDeletedAt),
         }
       : null,
@@ -436,7 +436,7 @@ export async function getAdminChatSessions() {
           m.id,
           m.sender,
           case
-            when m."deletedAt" is not null then 'РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ'
+            when m."deletedAt" is not null then 'Сообщение удалено'
             when m.content like '[[VOICE_CALL_TOKEN:%' then null
             else m.content
           end as content,

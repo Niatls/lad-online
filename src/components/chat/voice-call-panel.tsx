@@ -49,6 +49,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const joinedRef = useRef(false);
   const connectedAtRef = useRef<number | null>(null);
   const closedRef = useRef(false);
+  const callEstablishedRef = useRef(false);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -78,6 +79,24 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     return `${(value / (1024 * 1024 * 1024)).toFixed(3)} GB`;
   }, []);
+
+  const markCallActive = useCallback(() => {
+    if (callEstablishedRef.current) {
+      return;
+    }
+
+    callEstablishedRef.current = true;
+    connectedAtRef.current = Date.now();
+    setStatus("Звонок активен");
+    setConnecting(false);
+
+    if (!statsRef.current) {
+      void refreshConnectionStats();
+      statsRef.current = setInterval(() => {
+        void refreshConnectionStats();
+      }, 1000);
+    }
+  }, [refreshConnectionStats]);
 
   useEffect(() => {
     if (!connectedAtRef.current || connecting) {
@@ -231,6 +250,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       }
 
       connectedAtRef.current = null;
+      callEstablishedRef.current = false;
+      setDurationSeconds(0);
+      setUsageBytes(0);
+      setIceRoute("Ищем маршрут...");
     },
     [durationSeconds, postSignal, role, token, usageBytes],
   );
@@ -361,26 +384,19 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         pc.ontrack = (event) => {
           const [remoteStream] = event.streams;
-          if (remoteAudioRef.current && remoteStream) {
-            remoteAudioRef.current.srcObject = remoteStream;
-            void remoteAudioRef.current.play().catch(() => undefined);
-          }
-        };
+        if (remoteAudioRef.current && remoteStream) {
+          remoteAudioRef.current.srcObject = remoteStream;
+          void remoteAudioRef.current.play().catch(() => undefined);
+        }
+        markCallActive();
+      };
 
-        pc.onconnectionstatechange = () => {
-          if (pc.connectionState === "connected") {
-            setStatus("Звонок активен");
-            setConnecting(false);
-            connectedAtRef.current ??= Date.now();
-            if (!statsRef.current) {
-              void refreshConnectionStats();
-              statsRef.current = setInterval(() => {
-                void refreshConnectionStats();
-              }, 1000);
-            }
-          } else if (pc.connectionState === "connecting") {
-            setStatus("Соединяем аудиоканал...");
-          } else if (pc.connectionState === "failed") {
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "connected") {
+          setStatus("Аудиоканал готов. Подключаем собеседника...");
+        } else if (pc.connectionState === "connecting") {
+          setStatus("Соединяем аудиоканал...");
+        } else if (pc.connectionState === "failed") {
             setStatus("Не удалось установить аудиосоединение");
             setError("Похоже, прямое WebRTC-соединение недоступно. Попробуйте ещё раз.");
             setConnecting(false);
@@ -390,22 +406,14 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           }
         };
 
-        pc.oniceconnectionstatechange = () => {
-          if (pc.iceConnectionState === "checking") {
-            setStatus("Проверяем маршрут для звонка...");
-          } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-            setStatus("Звонок активен");
-            setConnecting(false);
-            connectedAtRef.current ??= Date.now();
-            if (!statsRef.current) {
-              void refreshConnectionStats();
-              statsRef.current = setInterval(() => {
-                void refreshConnectionStats();
-              }, 1000);
-            }
-          } else if (pc.iceConnectionState === "failed") {
-            setStatus("ICE-маршрут не поднялся");
-            setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
+      pc.oniceconnectionstatechange = () => {
+        if (pc.iceConnectionState === "checking") {
+          setStatus("Проверяем маршрут для звонка...");
+        } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+          setStatus("Маршрут найден. Ждём аудио...");
+        } else if (pc.iceConnectionState === "failed") {
+          setStatus("ICE-маршрут не поднялся");
+          setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
             setConnecting(false);
           }
         };
@@ -435,7 +443,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       mounted = false;
       cleanup(false);
     };
-  }, [cleanup, counterpartLabel, pollSignals, postSignal, refreshConnectionStats, role, token]);
+  }, [cleanup, counterpartLabel, markCallActive, pollSignals, postSignal, role, token]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];

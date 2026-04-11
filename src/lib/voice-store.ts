@@ -335,7 +335,7 @@ export async function endVoiceInvite(
       values (
         ${invite.sessionId},
         'system',
-        ${`Р“РѕР»РѕСЃРѕРІРѕР№ Р·РІРѕРЅРѕРє Р·Р°РІРµСЂС€С‘РЅ. Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ: ${formatCallDuration(durationSeconds)}.`},
+        ${`Голосовой звонок завершён. Длительность: ${formatCallDuration(durationSeconds)}.`},
         now()
       )
     `;
