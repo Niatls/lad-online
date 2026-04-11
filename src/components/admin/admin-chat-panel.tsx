@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { MessageCircle, Send, Loader2, ArrowLeft, User, Clock, Phone, Trash2 } from "lucide-react";
+import { MessageCircle, Send, Loader2, ArrowLeft, User, Clock, Phone, Trash2, Archive } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
@@ -43,6 +43,7 @@ export function AdminChatPanel() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [creatingVoiceToken, setCreatingVoiceToken] = useState(false);
+  const [archivingSession, setArchivingSession] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [usage, setUsage] = useState<UsageSummary>({ totalBytes: 0, inviteCount: 0, monthlyCapBytes: 1000 * 1024 * 1024 * 1024 });
@@ -190,6 +191,39 @@ export function AdminChatPanel() {
     }
   };
 
+  const resetSelectedSession = async () => {
+    setSelectedId(null);
+    setMessages([]);
+    setActiveVoiceToken(null);
+    await loadSessions();
+  };
+
+  const handleArchiveSession = async () => {
+    if (!selectedId || archivingSession) return;
+    const name = selectedSession?.visitorName || `посетителя #${selectedId}`;
+    if (!window.confirm(`Скрыть ${name} из активных диалогов, но сохранить всю историю?`)) {
+      return;
+    }
+
+    setArchivingSession(true);
+    try {
+      const res = await fetch(`/api/admin/chat/sessions/${selectedId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "soft" }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to archive session");
+      }
+
+      await resetSelectedSession();
+    } catch (err) {
+      console.error("Failed to archive session:", err);
+    } finally {
+      setArchivingSession(false);
+    }
+  };
+
   const handleDeleteSession = async () => {
     if (!selectedId || deletingSession) return;
     const name = selectedSession?.visitorName || `посетителя #${selectedId}`;
@@ -199,15 +233,16 @@ export function AdminChatPanel() {
 
     setDeletingSession(true);
     try {
-      const res = await fetch(`/api/admin/chat/sessions/${selectedId}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/chat/sessions/${selectedId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "hard" }),
+      });
       if (!res.ok) {
         throw new Error("Failed to delete session");
       }
 
-      setSelectedId(null);
-      setMessages([]);
-      setActiveVoiceToken(null);
-      await loadSessions();
+      await resetSelectedSession();
     } catch (err) {
       console.error("Failed to delete session:", err);
     } finally {
@@ -435,15 +470,26 @@ export function AdminChatPanel() {
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleDeleteSession}
-                  disabled={deletingSession}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-                >
-                  {deletingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Удалить пользователя
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleArchiveSession}
+                    disabled={archivingSession}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    {archivingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                    Скрыть
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSession}
+                    disabled={deletingSession}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {deletingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Удалить навсегда
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto px-8 py-8 space-y-6 bg-cream/10">

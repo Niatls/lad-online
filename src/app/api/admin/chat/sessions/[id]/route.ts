@@ -5,7 +5,7 @@ import { deleteChatSession } from "@/lib/chat-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function DELETE(_: Request, context: RouteContext) {
+export async function DELETE(req: Request, context: RouteContext) {
   const cookieStore = await cookies();
   if (!isAdminAuthenticated(cookieStore)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,12 +18,14 @@ export async function DELETE(_: Request, context: RouteContext) {
   }
 
   try {
-    const deleted = await deleteChatSession(sessionId);
+    const body = await req.json().catch(() => ({}));
+    const mode = body?.mode === "soft" ? "soft" : "hard";
+    const deleted = await deleteChatSession(sessionId, mode);
     if (!deleted) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, mode });
   } catch (error) {
     console.error("Delete chat session error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

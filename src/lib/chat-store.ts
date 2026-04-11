@@ -193,7 +193,7 @@ export async function createChatMessage(sessionId: number, content: string, send
       limit 1
     `;
 
-    if (!session[0]) {
+    if (!session[0] || session[0].status !== "active") {
       return null;
     }
 
@@ -218,8 +218,19 @@ export async function createChatMessage(sessionId: number, content: string, send
   });
 }
 
-export async function deleteChatSession(sessionId: number) {
+export async function deleteChatSession(sessionId: number, mode: "soft" | "hard" = "hard") {
   return withRetry(async () => {
+    if (mode === "soft") {
+      const archived = await sql<{ id: number }[]>`
+        update "ChatSession"
+        set status = 'archived', "updatedAt" = now()
+        where id = ${sessionId} and status <> 'archived'
+        returning id
+      `;
+
+      return archived[0] ?? null;
+    }
+
     const deleted = await sql<{ id: number }[]>`
       delete from "ChatSession"
       where id = ${sessionId}
@@ -262,6 +273,7 @@ export async function getAdminChatSessions() {
         from "ChatMessage"
         group by "sessionId"
       ) mc on mc."sessionId" = s.id
+      where s.status = 'active'
       order by s."updatedAt" desc
     `;
 
