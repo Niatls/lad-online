@@ -54,6 +54,12 @@ type UsageSummary = {
   monthlyCapBytes: number;
 };
 
+type VoiceInvite = {
+  token: string;
+  status: string;
+  expiresAt: string;
+};
+
 function formatUsage(value: number) {
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(2)} MB`;
@@ -142,10 +148,43 @@ export function AdminChatPanel() {
     }
   }, []);
 
+  const syncAdminVoiceInvite = useCallback(async (sessionId: number) => {
+    try {
+      const res = await fetch(`/api/chat/sessions/${sessionId}/voice`, { cache: "no-store" });
+      if (!res.ok) {
+        if (activeVoiceToken) {
+          setActiveVoiceToken(null);
+        }
+        return null;
+      }
+
+      const data = await res.json();
+      const invite = data?.invite as VoiceInvite | null;
+      if (!invite || !["pending", "active"].includes(invite.status)) {
+        if (activeVoiceToken) {
+          setActiveVoiceToken(null);
+        }
+        return null;
+      }
+
+      if (!activeVoiceToken || activeVoiceToken !== invite.token) {
+        setActiveVoiceToken(invite.token);
+      }
+
+      return invite;
+    } catch (err) {
+      console.error("Failed to sync admin voice invite:", err);
+      return null;
+    }
+  }, [activeVoiceToken]);
+
   const pollMessages = useCallback(async () => {
     if (!selectedId) return;
     try {
-      const res = await fetch(`/api/chat/sessions/${selectedId}/messages?after=${lastMsgIdRef.current}`);
+      const [res] = await Promise.all([
+        fetch(`/api/chat/sessions/${selectedId}/messages?after=${lastMsgIdRef.current}`),
+        syncAdminVoiceInvite(selectedId),
+      ]);
       if (res.ok) {
         const newMsgs: Message[] = await res.json();
         if (newMsgs.length > 0) {
@@ -157,18 +196,19 @@ export function AdminChatPanel() {
     } catch {
       // silent
     }
-  }, [selectedId, scrollToBottom]);
+  }, [selectedId, scrollToBottom, syncAdminVoiceInvite]);
 
   useEffect(() => {
     if (selectedId) {
       lastMsgIdRef.current = 0;
       void loadMessages(selectedId);
+      void syncAdminVoiceInvite(selectedId);
       pollRef.current = setInterval(() => {
         void pollMessages();
       }, 2000);
       return () => clearInterval(pollRef.current);
     }
-  }, [selectedId, loadMessages, pollMessages]);
+  }, [selectedId, loadMessages, pollMessages, syncAdminVoiceInvite]);
 
   useEffect(() => {
     scrollToBottom();
@@ -299,6 +339,7 @@ export function AdminChatPanel() {
 
       await loadMessages(selectedId);
       await loadSessions();
+      await syncAdminVoiceInvite(selectedId);
     } catch (err) {
       console.error("Failed to generate voice token:", err);
     } finally {
