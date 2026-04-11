@@ -18,6 +18,7 @@ function buildExpressTurnServers(): IceServer[] {
   }
 
   const turnHost = server.replace(/^(turns?:|stuns?:)/, "");
+  const hostOnly = turnHost.replace(/:\d+$/, "");
 
   return [
     { urls: googleStun },
@@ -25,6 +26,8 @@ function buildExpressTurnServers(): IceServer[] {
       urls: [
         `turn:${turnHost}?transport=udp`,
         `turn:${turnHost}?transport=tcp`,
+        `turn:${hostOnly}:80?transport=tcp`,
+        `turn:${hostOnly}:443?transport=tcp`,
       ],
       username,
       credential,

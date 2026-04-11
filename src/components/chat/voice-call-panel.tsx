@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Mic, MicOff, Phone, PhoneOff, Radio } from "lucide-react";
@@ -29,23 +29,54 @@ const defaultIceServers: IceServer[] = [
   { urls: "stun:stun1.l.google.com:19302" },
 ];
 
+const MONTHLY_CAP_BYTES = 1000 * 1024 * 1024 * 1024;
+
 export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelProps) {
   const [status, setStatus] = useState("Готовим аудио...");
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(true);
   const [muted, setMuted] = useState(false);
+  const [durationSeconds, setDurationSeconds] = useState(0);
+  const [usageBytes, setUsageBytes] = useState(0);
+  const [iceRoute, setIceRoute] = useState("Ищем маршрут...");
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const lastSignalIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const statsRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const joinedRef = useRef(false);
+  const connectedAtRef = useRef<number | null>(null);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
     [role],
   );
+
+  const formatDuration = useCallback((value: number) => {
+    const hours = Math.floor(value / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
+    const seconds = value % 60;
+
+    if (hours > 0) {
+      return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
+    }
+
+    return [minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
+  }, []);
+
+  const formatUsage = useCallback((value: number) => {
+    if (value < 1024 * 1024) {
+      return `${(value / 1024).toFixed(1)} KB`;
+    }
+
+    if (value < 1024 * 1024 * 1024) {
+      return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    return `${(value / (1024 * 1024 * 1024)).toFixed(3)} GB`;
+  }, []);
 
   const postSignal = useCallback(
     async (signalType: string, payload: unknown) => {
@@ -57,6 +88,68 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     },
     [role, token],
   );
+
+  const refreshConnectionStats = useCallback(async () => {
+    const pc = peerRef.current;
+    if (!pc) {
+      return;
+    }
+
+    try {
+      const stats = await pc.getStats();
+      let bytesSent = 0;
+      let bytesReceived = 0;
+      let selectedPair: RTCStats | null = null;
+
+      stats.forEach((report) => {
+        if (report.type === "outbound-rtp" && "bytesSent" in report && !report.isRemote) {
+          bytesSent += report.bytesSent ?? 0;
+        }
+
+        if (report.type === "inbound-rtp" && "bytesReceived" in report && !report.isRemote) {
+          bytesReceived += report.bytesReceived ?? 0;
+        }
+
+        if (report.type === "transport" && "selectedCandidatePairId" in report && report.selectedCandidatePairId) {
+          selectedPair = stats.get(report.selectedCandidatePairId) ?? selectedPair;
+        }
+
+        if (
+          report.type === "candidate-pair" &&
+          (("selected" in report && report.selected) ||
+            ("nominated" in report && report.nominated && report.state === "succeeded"))
+        ) {
+          selectedPair = report;
+        }
+      });
+
+      setUsageBytes(bytesSent + bytesReceived);
+
+      if (selectedPair && "localCandidateId" in selectedPair && "remoteCandidateId" in selectedPair) {
+        const local = stats.get(selectedPair.localCandidateId);
+        const remote = stats.get(selectedPair.remoteCandidateId);
+        const protocol =
+          (local && "protocol" in local ? local.protocol : undefined) ||
+          ("protocol" in selectedPair ? selectedPair.protocol : undefined) ||
+          "udp";
+        const candidateType =
+          (local && "candidateType" in local ? local.candidateType : undefined) ||
+          "unknown";
+        const remoteAddress =
+          (remote && "address" in remote ? remote.address : undefined) ||
+          (remote && "ip" in remote ? remote.ip : undefined) ||
+          "unknown";
+        const remotePort = remote && "port" in remote ? remote.port : "";
+        setIceRoute(`${candidateType}/${protocol} -> ${remoteAddress}${remotePort ? `:${remotePort}` : ""}`);
+      }
+
+      if (connectedAtRef.current) {
+        setDurationSeconds(Math.max(0, Math.floor((Date.now() - connectedAtRef.current) / 1000)));
+      }
+    } catch (statsError) {
+      console.error("Failed to refresh WebRTC stats:", statsError);
+    }
+  }, []);
 
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
@@ -75,6 +168,46 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       }
     }
   }, []);
+
+  const cleanup = useCallback(
+    (notifyRemote: boolean) => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = undefined;
+      }
+
+      if (statsRef.current) {
+        clearInterval(statsRef.current);
+        statsRef.current = undefined;
+      }
+
+      if (notifyRemote) {
+        void postSignal("hangup", null);
+        void fetch(`/api/chat/voice/${token}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "end" }),
+        }).catch(() => undefined);
+      }
+
+      if (peerRef.current) {
+        peerRef.current.onicecandidate = null;
+        peerRef.current.ontrack = null;
+        peerRef.current.onconnectionstatechange = null;
+        peerRef.current.oniceconnectionstatechange = null;
+        peerRef.current.close();
+        peerRef.current = null;
+      }
+
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((track) => track.stop());
+        localStreamRef.current = null;
+      }
+
+      connectedAtRef.current = null;
+    },
+    [postSignal, token],
+  );
 
   const handleSignal = useCallback(
     async (signal: VoiceSignal) => {
@@ -117,7 +250,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         cleanup(false);
       }
     },
-    [flushPendingCandidates, postSignal, role],
+    [cleanup, flushPendingCandidates, postSignal, role],
   );
 
   const pollSignals = useCallback(async () => {
@@ -136,38 +269,6 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       console.error("Voice signal polling failed:", pollError);
     }
   }, [handleSignal, role, token]);
-
-  const cleanup = useCallback(
-    (notifyRemote: boolean) => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = undefined;
-      }
-
-      if (notifyRemote) {
-        void postSignal("hangup", null);
-        void fetch(`/api/chat/voice/${token}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "end" }),
-        }).catch(() => undefined);
-      }
-
-      if (peerRef.current) {
-        peerRef.current.onicecandidate = null;
-        peerRef.current.ontrack = null;
-        peerRef.current.onconnectionstatechange = null;
-        peerRef.current.close();
-        peerRef.current = null;
-      }
-
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((track) => track.stop());
-        localStreamRef.current = null;
-      }
-    },
-    [postSignal, token],
-  );
 
   useEffect(() => {
     let mounted = true;
@@ -225,6 +326,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           if (pc.connectionState === "connected") {
             setStatus("Звонок активен");
             setConnecting(false);
+            connectedAtRef.current ??= Date.now();
+            if (!statsRef.current) {
+              void refreshConnectionStats();
+              statsRef.current = setInterval(() => {
+                void refreshConnectionStats();
+              }, 1000);
+            }
           } else if (pc.connectionState === "connecting") {
             setStatus("Соединяем аудиоканал...");
           } else if (pc.connectionState === "failed") {
@@ -243,6 +351,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
             setStatus("Звонок активен");
             setConnecting(false);
+            connectedAtRef.current ??= Date.now();
+            if (!statsRef.current) {
+              void refreshConnectionStats();
+              statsRef.current = setInterval(() => {
+                void refreshConnectionStats();
+              }, 1000);
+            }
           } else if (pc.iceConnectionState === "failed") {
             setStatus("ICE-маршрут не поднялся");
             setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
@@ -254,9 +369,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         if (role === "visitor" && !joinedRef.current) {
           joinedRef.current = true;
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-          });
+          const offer = await pc.createOffer({ offerToReceiveAudio: true });
           await pc.setLocalDescription(offer);
           await postSignal("offer", offer);
           setStatus("Вызываем специалиста...");
@@ -277,7 +390,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       mounted = false;
       cleanup(false);
     };
-  }, [cleanup, counterpartLabel, pollSignals, postSignal, role, token]);
+  }, [cleanup, counterpartLabel, pollSignals, postSignal, refreshConnectionStats, role, token]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -303,9 +416,25 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         </div>
         <p className="text-xs font-bold uppercase tracking-[0.35em] text-forest/35 mb-3">Voice Mode</p>
         <h4 className="text-2xl font-bold text-forest tracking-tight mb-2">{title}</h4>
-        <p className="text-sm text-forest/55 max-w-xs leading-relaxed">
-          {error ?? status}
-        </p>
+        <p className="text-sm text-forest/55 max-w-xs leading-relaxed">{error ?? status}</p>
+
+        <div className="mt-8 w-full max-w-sm rounded-[2rem] border border-sage-light/20 bg-cream/35 p-4 text-left shadow-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Длительность</p>
+              <p className="mt-1 text-base font-bold text-forest">{formatDuration(durationSeconds)}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Трафик</p>
+              <p className="mt-1 text-base font-bold text-forest">{formatUsage(usageBytes)}</p>
+              <p className="mt-1 text-[11px] text-forest/45">{((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">ICE Route</p>
+            <p className="mt-1 text-sm font-medium text-forest break-all">{iceRoute}</p>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-[2rem] border border-sage-light/20 bg-cream/40 p-4 flex items-center justify-center gap-4">
