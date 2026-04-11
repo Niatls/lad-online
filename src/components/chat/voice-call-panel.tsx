@@ -35,10 +35,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const [status, setStatus] = useState("Готовим аудио...");
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(true);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [muted, setMuted] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [usageBytes, setUsageBytes] = useState(0);
   const [iceRoute, setIceRoute] = useState("Ищем маршрут...");
+  const [lastEvent, setLastEvent] = useState("Инициализация звонка");
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -202,8 +204,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     reconnectAttemptsRef.current = 0;
     reconnectingRef.current = false;
     clearReconnectTimeout();
+    setIsReconnecting(false);
     connectedAtRef.current = Date.now();
     setStatus("Звонок активен");
+    setLastEvent("Аудиоканал подключён");
     setConnecting(false);
 
     if (!statsRef.current) {
@@ -243,7 +247,9 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     if (reconnectAttemptsRef.current >= 3) {
       setStatus("Не удалось восстановить звонок");
+      setLastEvent("Автовосстановление не удалось");
       setError("Соединение оборвалось и не восстановилось. Попробуйте начать звонок заново.");
+      setIsReconnecting(false);
       setConnecting(false);
       return;
     }
@@ -251,8 +257,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     reconnectingRef.current = true;
     reconnectAttemptsRef.current += 1;
     setError(null);
+    setIsReconnecting(true);
     setConnecting(true);
-    setStatus(`Пробуем восстановить соединение (${reconnectAttemptsRef.current}/3)...`);
+    setStatus(`Восстанавливаем соединение (${reconnectAttemptsRef.current}/3)...`);
+    setLastEvent(`Обрыв связи: попытка восстановления ${reconnectAttemptsRef.current}/3`);
 
     try {
       if (role === "visitor") {
@@ -265,6 +273,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     } catch (reconnectError) {
       console.error("Voice reconnect failed:", reconnectError);
       reconnectingRef.current = false;
+      setLastEvent("Попытка восстановления не удалась");
       clearReconnectTimeout();
       reconnectTimeoutRef.current = setTimeout(() => {
         void attemptReconnect();
@@ -312,6 +321,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         statsRef.current = undefined;
       }
 
+      reconnectingRef.current = false;
+      setIsReconnecting(false);
       destroyPeerConnection();
 
       if (localStreamRef.current) {
@@ -346,6 +357,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         setStatus("Входящий звонок. Подключаем аудио...");
+        setLastEvent("Получен offer от посетителя");
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
         await flushPendingCandidates();
         const answer = await pc.createAnswer();
@@ -366,6 +378,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
+        setLastEvent("Получен answer от специалиста");
         await flushPendingCandidates();
         setStatus("Соединяемся...");
         return;
@@ -383,11 +396,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         } else {
           pendingCandidatesRef.current.push(candidate);
         }
+        setLastEvent("Получен ICE candidate");
         return;
       }
 
       if (signal.signalType === "rejoin-request" && role === "visitor") {
         setStatus("Переподключаем звонок...");
+        setLastEvent("Получен запрос на переподключение");
         await createPeerRef.current?.();
         await sendOfferRef.current?.(true);
         return;
@@ -395,6 +410,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       if (signal.signalType === "hangup") {
         setStatus("Звонок завершён");
+        setLastEvent("Собеседник завершил звонок");
         setConnecting(false);
         cleanup();
         onClose();
@@ -419,6 +435,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       const inviteRes = await fetch(`/api/chat/voice/${token}`, { cache: "no-store" });
       if (inviteRes.status === 410 || inviteRes.status === 404) {
         setStatus("Звонок завершён");
+        setLastEvent("Invite завершён или истёк");
         setConnecting(false);
         cleanup();
         onClose();
@@ -467,6 +484,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           setIceRoute("Ищем маршрут...");
           setConnecting(true);
           setError(null);
+          setIsReconnecting(reconnectingRef.current);
 
           const iceConfigRes = await fetch("/api/chat/voice/ice-servers", { cache: "no-store" }).catch(() => null);
           const iceConfigJson = iceConfigRes && iceConfigRes.ok ? await iceConfigRes.json() : null;
@@ -500,11 +518,15 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.onconnectionstatechange = () => {
             if (pc.connectionState === "connected") {
               setStatus("Аудиоканал готов. Подключаем собеседника...");
+              setLastEvent("WebRTC connectionState: connected");
             } else if (pc.connectionState === "connecting") {
               setStatus("Соединяем аудиоканал...");
+              setLastEvent("WebRTC connectionState: connecting");
             } else if (pc.connectionState === "failed") {
+              setLastEvent("WebRTC connectionState: failed");
               void attemptReconnect();
             } else if (["disconnected", "closed"].includes(pc.connectionState)) {
+              setLastEvent(`WebRTC connectionState: ${pc.connectionState}`);
               if (!closedRef.current && !endingRef.current) {
                 void attemptReconnect();
               }
@@ -514,9 +536,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.oniceconnectionstatechange = () => {
             if (pc.iceConnectionState === "checking") {
               setStatus("Проверяем маршрут для звонка...");
+              setLastEvent("ICE: checking");
             } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
               setStatus("Маршрут найден. Ждём аудио...");
+              setLastEvent(`ICE: ${pc.iceConnectionState}`);
             } else if (pc.iceConnectionState === "failed") {
+              setLastEvent("ICE: failed");
               void attemptReconnect();
             }
           };
@@ -538,6 +563,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           await pc.setLocalDescription(offer);
           await postSignal("offer", offer);
           setStatus(iceRestart ? "Переподключаем специалиста..." : "Вызываем специалиста...");
+          setLastEvent(iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer");
         };
 
         await createPeerRef.current();
@@ -549,6 +575,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           await sendOfferRef.current(false);
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
+          setLastEvent(`Ожидаем ${counterpartLabel}`);
           joinedRef.current = true;
           if (role === "admin" && inviteRes.ok) {
             void postSignal("rejoin-request", null);
@@ -556,6 +583,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
       } catch (startError) {
         console.error("Voice call init failed:", startError);
+        setLastEvent("Ошибка инициализации voice");
         setError(startError instanceof Error ? startError.message : "Не удалось запустить звонок.");
         setConnecting(false);
       }
@@ -597,6 +625,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         <p className="text-xs font-bold uppercase tracking-[0.35em] text-forest/35 mb-3">Voice Mode</p>
         <h4 className="text-2xl font-bold text-forest tracking-tight mb-2">{title}</h4>
         <p className="text-sm text-forest/55 max-w-xs leading-relaxed">{error ?? status}</p>
+        {isReconnecting ? (
+          <div className="mt-3 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700">
+            Восстанавливаем соединение...
+          </div>
+        ) : null}
 
         <div className="mt-8 w-full max-w-sm rounded-[2rem] border border-sage-light/20 bg-cream/35 p-4 text-left shadow-sm">
           <div className="grid grid-cols-2 gap-3">
@@ -613,6 +646,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">ICE Route</p>
             <p className="mt-1 text-sm font-medium text-forest break-all">{iceRoute}</p>
+          </div>
+          <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Последний статус</p>
+            <p className="mt-1 text-sm font-medium text-forest">{lastEvent}</p>
           </div>
         </div>
       </div>
