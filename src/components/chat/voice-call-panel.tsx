@@ -51,7 +51,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const closedRef = useRef(false);
   const callEstablishedRef = useRef(false);
   const createPeerRef = useRef<(() => Promise<RTCPeerConnection | null>) | null>(null);
-  const sendOfferRef = useRef<(() => Promise<void>) | null>(null);
+  const sendOfferRef = useRef<((iceRestart?: boolean) => Promise<void>) | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectingRef = useRef(false);
+  const endingRef = useRef(false);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -182,12 +186,22 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     peerRef.current = null;
   }, []);
 
+  const clearReconnectTimeout = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = undefined;
+    }
+  }, []);
+
   const markCallActive = useCallback(() => {
     if (callEstablishedRef.current) {
       return;
     }
 
     callEstablishedRef.current = true;
+    reconnectAttemptsRef.current = 0;
+    reconnectingRef.current = false;
+    clearReconnectTimeout();
     connectedAtRef.current = Date.now();
     setStatus("Звонок активен");
     setConnecting(false);
@@ -198,7 +212,68 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void refreshConnectionStats();
       }, 1000);
     }
-  }, [refreshConnectionStats]);
+  }, [clearReconnectTimeout, refreshConnectionStats]);
+
+  const endInviteRemotely = useCallback(async () => {
+    if (endingRef.current) {
+      return;
+    }
+
+    endingRef.current = true;
+
+    await Promise.allSettled([
+      postSignal("hangup", null),
+      fetch(`/api/chat/voice/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "end",
+          role,
+          dataUsageBytes: usageBytes,
+          durationSeconds,
+        }),
+      }),
+    ]);
+  }, [durationSeconds, postSignal, role, token, usageBytes]);
+
+  const attemptReconnect = useCallback(async () => {
+    if (closedRef.current || endingRef.current || reconnectingRef.current) {
+      return;
+    }
+
+    if (reconnectAttemptsRef.current >= 3) {
+      setStatus("Не удалось восстановить звонок");
+      setError("Соединение оборвалось и не восстановилось. Попробуйте начать звонок заново.");
+      setConnecting(false);
+      return;
+    }
+
+    reconnectingRef.current = true;
+    reconnectAttemptsRef.current += 1;
+    setError(null);
+    setConnecting(true);
+    setStatus(`Пробуем восстановить соединение (${reconnectAttemptsRef.current}/3)...`);
+
+    try {
+      if (role === "visitor") {
+        await createPeerRef.current?.();
+        await sendOfferRef.current?.(true);
+      } else {
+        await createPeerRef.current?.();
+        await postSignal("rejoin-request", { reconnect: true, attempt: reconnectAttemptsRef.current });
+      }
+    } catch (reconnectError) {
+      console.error("Voice reconnect failed:", reconnectError);
+      reconnectingRef.current = false;
+      clearReconnectTimeout();
+      reconnectTimeoutRef.current = setTimeout(() => {
+        void attemptReconnect();
+      }, 1500);
+      return;
+    }
+
+    reconnectingRef.current = false;
+  }, [clearReconnectTimeout, postSignal, role]);
 
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
@@ -219,12 +294,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   }, []);
 
   const cleanup = useCallback(
-    (notifyRemote: boolean) => {
-      if (closedRef.current && !notifyRemote) {
+    () => {
+      if (closedRef.current) {
         return;
       }
 
       closedRef.current = true;
+      clearReconnectTimeout();
 
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -234,20 +310,6 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       if (statsRef.current) {
         clearInterval(statsRef.current);
         statsRef.current = undefined;
-      }
-
-      if (notifyRemote) {
-        void postSignal("hangup", null);
-        void fetch(`/api/chat/voice/${token}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "end",
-            role,
-            dataUsageBytes: usageBytes,
-            durationSeconds,
-          }),
-        }).catch(() => undefined);
       }
 
       destroyPeerConnection();
@@ -263,7 +325,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       setUsageBytes(0);
       setIceRoute("Ищем маршрут...");
     },
-    [destroyPeerConnection, durationSeconds, postSignal, role, token, usageBytes],
+    [clearReconnectTimeout, destroyPeerConnection],
   );
 
   const handleSignal = useCallback(
@@ -327,14 +389,14 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       if (signal.signalType === "rejoin-request" && role === "visitor") {
         setStatus("Переподключаем звонок...");
         await createPeerRef.current?.();
-        await sendOfferRef.current?.();
+        await sendOfferRef.current?.(true);
         return;
       }
 
       if (signal.signalType === "hangup") {
         setStatus("Звонок завершён");
         setConnecting(false);
-        cleanup(false);
+        cleanup();
         onClose();
       }
     },
@@ -358,7 +420,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       if (inviteRes.status === 410 || inviteRes.status === 404) {
         setStatus("Звонок завершён");
         setConnecting(false);
-        cleanup(false);
+        cleanup();
         onClose();
       }
     } catch (pollError) {
@@ -441,12 +503,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
             } else if (pc.connectionState === "connecting") {
               setStatus("Соединяем аудиоканал...");
             } else if (pc.connectionState === "failed") {
-              setStatus("Не удалось установить аудиосоединение");
-              setError("Похоже, прямое WebRTC-соединение недоступно. Попробуйте ещё раз.");
-              setConnecting(false);
+              void attemptReconnect();
             } else if (["disconnected", "closed"].includes(pc.connectionState)) {
-              setStatus("Соединение прервано. Пытаемся восстановить...");
-              setConnecting(true);
+              if (!closedRef.current && !endingRef.current) {
+                void attemptReconnect();
+              }
             }
           };
 
@@ -456,25 +517,27 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
             } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
               setStatus("Маршрут найден. Ждём аудио...");
             } else if (pc.iceConnectionState === "failed") {
-              setStatus("ICE-маршрут не поднялся");
-              setError("Маршрут для аудиозвонка не установился. Попробуйте начать звонок заново.");
-              setConnecting(false);
+              void attemptReconnect();
             }
           };
 
           return pc;
         };
 
-        sendOfferRef.current = async () => {
+        sendOfferRef.current = async (iceRestart = false) => {
           const pc = peerRef.current ?? await createPeerRef.current?.();
           if (!pc) {
             return;
           }
 
-          const offer = await pc.createOffer({ offerToReceiveAudio: true });
+          if (pc.signalingState !== "stable") {
+            return;
+          }
+
+          const offer = await pc.createOffer({ offerToReceiveAudio: true, iceRestart });
           await pc.setLocalDescription(offer);
           await postSignal("offer", offer);
-          setStatus("Вызываем специалиста...");
+          setStatus(iceRestart ? "Переподключаем специалиста..." : "Вызываем специалиста...");
         };
 
         await createPeerRef.current();
@@ -483,7 +546,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         if (role === "visitor" && !joinedRef.current) {
           joinedRef.current = true;
-          await sendOfferRef.current();
+          await sendOfferRef.current(false);
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
           joinedRef.current = true;
@@ -504,9 +567,9 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       mounted = false;
       createPeerRef.current = null;
       sendOfferRef.current = null;
-      cleanup(false);
+      cleanup();
     };
-  }, [cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, role, token]);
+  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, role, token]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -518,8 +581,9 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     setMuted(!track.enabled);
   };
 
-  const handleEnd = () => {
-    cleanup(true);
+  const handleEnd = async () => {
+    await endInviteRemotely();
+    cleanup();
     onClose();
   };
 

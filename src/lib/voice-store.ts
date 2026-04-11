@@ -118,6 +118,16 @@ export async function createVoiceInvite(sessionId: number) {
       return null;
     }
 
+    await sql`
+      update "ChatVoiceInvite"
+      set
+        status = 'ended',
+        "endedAt" = coalesce("endedAt", now()),
+        "updatedAt" = now(),
+        "closedBy" = coalesce("closedBy", 'system_replaced')
+      where "sessionId" = ${sessionId} and status in ('pending', 'active')
+    `;
+
     const token = randomBytes(12).toString("hex");
     const inviteRows = await sql<VoiceInviteRow[]>`
       insert into "ChatVoiceInvite" ("sessionId", token, status, "dataUsageBytes", "durationSeconds", "createdAt", "updatedAt", "expiresAt")
