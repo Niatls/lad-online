@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+﻿import { randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { buildVoiceInviteMessage } from "@/lib/chat-message-format";
 
@@ -93,6 +93,19 @@ function mapSignal(row: VoiceSignalRow) {
     payload: row.payload,
     createdAt: new Date(row.createdAt).toISOString(),
   };
+}
+
+function formatCallDuration(seconds: number) {
+  const safeSeconds = Math.max(0, seconds);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const remSeconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return [hours, minutes, remSeconds].map((part) => String(part).padStart(2, "0")).join(":");
+  }
+
+  return [minutes, remSeconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 export async function createVoiceInvite(sessionId: number) {
@@ -258,6 +271,34 @@ export async function endVoiceInvite(
   },
 ) {
   return withRetry(async () => {
+    const existing = await sql<VoiceInviteRow[]>`
+      select
+        id,
+        "sessionId",
+        token,
+        status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "joinedAt",
+        "endedAt"
+      from "ChatVoiceInvite"
+      where token = ${token}
+      limit 1
+    `;
+
+    const currentInvite = existing[0];
+    if (!currentInvite) {
+      return null;
+    }
+
+    if (currentInvite.status === "ended") {
+      return mapInvite(currentInvite);
+    }
+
     const rows = await sql<VoiceInviteRow[]>`
       update "ChatVoiceInvite"
       set
@@ -267,7 +308,7 @@ export async function endVoiceInvite(
         "dataUsageBytes" = greatest("dataUsageBytes", ${summary.dataUsageBytes ?? 0}),
         "durationSeconds" = greatest("durationSeconds", ${summary.durationSeconds ?? 0}),
         "closedBy" = coalesce(${summary.closedBy ?? null}, "closedBy")
-      where token = ${token}
+      where token = ${token} and status <> 'ended'
       returning
         id,
         "sessionId",
@@ -283,7 +324,29 @@ export async function endVoiceInvite(
         "endedAt"
     `;
 
-    return rows[0] ? mapInvite(rows[0]) : null;
+    const invite = rows[0];
+    if (!invite) {
+      return mapInvite(currentInvite);
+    }
+
+    const durationSeconds = Math.max(summary.durationSeconds ?? 0, invite.durationSeconds ?? 0);
+    await sql`
+      insert into "ChatMessage" ("sessionId", sender, content, "createdAt")
+      values (
+        ${invite.sessionId},
+        'system',
+        ${`Р“РѕР»РѕСЃРѕРІРѕР№ Р·РІРѕРЅРѕРє Р·Р°РІРµСЂС€С‘РЅ. Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ: ${formatCallDuration(durationSeconds)}.`},
+        now()
+      )
+    `;
+
+    await sql`
+      update "ChatSession"
+      set "updatedAt" = now()
+      where id = ${invite.sessionId}
+    `;
+
+    return mapInvite(invite);
   });
 }
 
@@ -356,3 +419,4 @@ export async function getVoiceSignals(token: string, afterId: number, viewerRole
     return rows.map(mapSignal);
   });
 }
+

@@ -1,7 +1,19 @@
 ﻿"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { MessageCircle, Send, Loader2, ArrowLeft, User, Clock, Phone, Trash2, Archive } from "lucide-react";
+import {
+  MessageCircle,
+  Send,
+  Loader2,
+  ArrowLeft,
+  User,
+  Clock,
+  Phone,
+  Trash2,
+  Archive,
+  CheckSquare,
+  X,
+} from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
@@ -9,6 +21,16 @@ type Message = {
   id: number;
   sender: string;
   content: string;
+  replyToId: number | null;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  isDeleted: boolean;
+  replyTo: {
+    id: number;
+    sender: string;
+    content: string;
+    isDeleted: boolean;
+  } | null;
   createdAt: string;
 };
 
@@ -42,12 +64,21 @@ export function AdminChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [selectingMessages, setSelectingMessages] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null);
   const [creatingVoiceToken, setCreatingVoiceToken] = useState(false);
   const [archivingSession, setArchivingSession] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [deletingMessages, setDeletingMessages] = useState(false);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
-  const [usage, setUsage] = useState<UsageSummary>({ totalBytes: 0, inviteCount: 0, monthlyCapBytes: 1000 * 1024 * 1024 * 1024 });
+  const [usage, setUsage] = useState<UsageSummary>({
+    totalBytes: 0,
+    inviteCount: 0,
+    monthlyCapBytes: 1000 * 1024 * 1024 * 1024,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef(new Map<number, HTMLDivElement | null>());
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
@@ -91,6 +122,8 @@ export function AdminChatPanel() {
       if (res.ok) {
         const msgs = await res.json();
         setMessages(msgs);
+        setSelectedMessageIds([]);
+        setReplyTarget(null);
         if (msgs.length) {
           lastMsgIdRef.current = msgs[msgs.length - 1].id;
         }
@@ -135,6 +168,7 @@ export function AdminChatPanel() {
   const handleSend = async () => {
     if (!input.trim() || !selectedId || sending) return;
     const text = input.trim();
+    const currentReplyTarget = replyTarget;
     setInput("");
     setSending(true);
 
@@ -142,23 +176,41 @@ export function AdminChatPanel() {
       id: Date.now(),
       sender: "admin",
       content: text,
+      replyToId: currentReplyTarget?.id ?? null,
+      deletedAt: null,
+      deletedBy: null,
+      isDeleted: false,
+      replyTo: currentReplyTarget
+        ? {
+            id: currentReplyTarget.id,
+            sender: currentReplyTarget.sender,
+            content: currentReplyTarget.isDeleted ? "Сообщение удалено" : currentReplyTarget.content,
+            isDeleted: currentReplyTarget.isDeleted,
+          }
+        : null,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
+    setReplyTarget(null);
 
     try {
       const res = await fetch(`/api/chat/sessions/${selectedId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, sender: "admin" }),
+        body: JSON.stringify({ content: text, sender: "admin", replyToId: currentReplyTarget?.id ?? null }),
       });
       if (res.ok) {
         const msg = await res.json();
         setMessages((prev) => prev.map((m) => (m.id === optimistic.id ? msg : m)));
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, msg.id);
+      } else {
+        throw new Error("Failed to send");
       }
     } catch (err) {
       console.error("Failed to send:", err);
+      setReplyTarget(currentReplyTarget);
+      setInput(text);
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
     } finally {
       setSending(false);
     }
@@ -195,6 +247,9 @@ export function AdminChatPanel() {
     setSelectedId(null);
     setMessages([]);
     setActiveVoiceToken(null);
+    setSelectedMessageIds([]);
+    setSelectingMessages(false);
+    setReplyTarget(null);
     await loadSessions();
   };
 
@@ -250,6 +305,52 @@ export function AdminChatPanel() {
     }
   };
 
+  const toggleMessageSelection = (messageId: number) => {
+    setSelectedMessageIds((prev) =>
+      prev.includes(messageId) ? prev.filter((id) => id !== messageId) : [...prev, messageId],
+    );
+  };
+
+  const handleDeleteMessages = async () => {
+    if (!selectedId || selectedMessageIds.length === 0 || deletingMessages) {
+      return;
+    }
+
+    const name = selectedSession?.visitorName || `пользователя #${selectedId}`;
+    if (!window.confirm(`Удалить ${selectedMessageIds.length} сообщ. и для ${name}?`)) {
+      return;
+    }
+
+    setDeletingMessages(true);
+    try {
+      const res = await fetch(`/api/admin/chat/sessions/${selectedId}/messages`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageIds: selectedMessageIds }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete messages");
+      }
+
+      const data = await res.json();
+      const deletedIds = new Set<number>(data.deletedIds ?? []);
+      setMessages((prev) =>
+        prev.map((message) =>
+          deletedIds.has(message.id)
+            ? { ...message, content: "", deletedAt: new Date().toISOString(), deletedBy: "admin", isDeleted: true }
+            : message,
+        ),
+      );
+      setSelectedMessageIds([]);
+      setSelectingMessages(false);
+    } catch (err) {
+      console.error("Failed to delete messages:", err);
+    } finally {
+      setDeletingMessages(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -269,55 +370,59 @@ export function AdminChatPanel() {
     );
   };
 
+  const jumpToMessage = useCallback((messageId: number) => {
+    const element = messageRefs.current.get(messageId);
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.classList.add("ring-2", "ring-sage");
+    setTimeout(() => {
+      element.classList.remove("ring-2", "ring-sage");
+    }, 1800);
+  }, []);
+
+  const getMessagePreview = useCallback((message: Message) => {
+    if (message.isDeleted) {
+      return "Сообщение удалено";
+    }
+
+    return message.content;
+  }, []);
+
   const renderMessage = (msg: Message) => {
     const voiceToken = parseVoiceInviteToken(msg.content);
-
     if (voiceToken) {
-      return (
-        <div key={msg.id} className="flex justify-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="w-full max-w-[78%] rounded-[1.75rem] border border-sage-light/20 bg-white px-5 py-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 h-11 w-11 rounded-2xl bg-forest text-white flex items-center justify-center shadow-lg shadow-forest/15">
-                <Phone className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-forest">Голосовое общение готово</p>
-                <p className="mt-1 text-xs leading-relaxed text-forest/55">
-                  Пользователь увидит кнопку голосового общения под полем ввода и сможет подключиться в течение 5 минут.
-                </p>
-                <div className="mt-3 flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => setActiveVoiceToken(voiceToken)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-forest px-4 py-2 text-xs font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Позвонить
-                  </button>
-                  <span className="rounded-full bg-cream px-3 py-1 text-[10px] font-bold tracking-[0.2em] text-forest/45 uppercase">
-                    {voiceToken}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-2 text-[10px] font-bold text-forest/30 uppercase tracking-[0.2em]">
-              {formatTime(msg.createdAt)}
-            </div>
-          </div>
-        </div>
-      );
+      return null;
     }
 
     const isAdmin = msg.sender === "admin";
     const isSystem = msg.sender === "system";
+    const isSelected = selectedMessageIds.includes(msg.id);
+    const canSelect = !isSystem;
 
     return (
       <div
         key={msg.id}
+        ref={(node) => {
+          messageRefs.current.set(msg.id, node);
+        }}
         className={`flex animate-in fade-in slide-in-from-bottom-2 duration-300 ${
           isSystem ? "justify-center" : isAdmin ? "justify-end" : "justify-start"
         }`}
       >
+        {selectingMessages && canSelect ? (
+          <button
+            type="button"
+            onClick={() => toggleMessageSelection(msg.id)}
+            className={`mr-3 mt-2 h-6 w-6 shrink-0 rounded-full border text-[11px] font-bold transition ${
+              isSelected ? "border-forest bg-forest text-white" : "border-sage-light/30 bg-white text-forest/45"
+            }`}
+          >
+            {isSelected ? "OK" : ""}
+          </button>
+        ) : null}
         <div className={`flex flex-col ${isSystem ? "items-center" : isAdmin ? "items-end" : "items-start"} max-w-[70%]`}>
           <div
             className={`rounded-[1.75rem] px-5 py-4 text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${
@@ -328,18 +433,49 @@ export function AdminChatPanel() {
                   : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
             }`}
           >
-            {msg.content}
+            {msg.replyTo ? (
+              <button
+                type="button"
+                onClick={() => jumpToMessage(msg.replyTo!.id)}
+                className={`mb-2 w-full rounded-2xl border px-3 py-2 text-left text-xs transition ${
+                  isSystem
+                    ? "border-forest/10 bg-white/60 text-forest/70"
+                    : isAdmin
+                      ? "border-white/10 bg-white/10 text-white/80"
+                      : "border-sage-light/20 bg-cream/40 text-forest/60"
+                }`}
+              >
+                <p className="mb-0.5 font-bold">
+                  {msg.replyTo.sender === "admin"
+                    ? "Вы"
+                    : msg.replyTo.sender === "visitor"
+                      ? (selectedSession?.visitorName || "Пользователь")
+                      : "Система"}
+                </p>
+                <p className="truncate">{msg.replyTo.isDeleted ? "Сообщение удалено" : msg.replyTo.content}</p>
+              </button>
+            ) : null}
+            <p className={msg.isDeleted ? "italic opacity-70" : ""}>{msg.isDeleted ? "Сообщение удалено" : msg.content}</p>
           </div>
-          <span className="text-[10px] font-bold text-forest/20 mt-2 uppercase tracking-tighter">
-            {formatTime(msg.createdAt)}
-          </span>
+          <div className={`mt-2 flex items-center gap-2 ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
+            <span className="text-[10px] font-bold text-forest/20 uppercase tracking-tighter">{formatTime(msg.createdAt)}</span>
+            {!isSystem && !selectingMessages ? (
+              <button
+                type="button"
+                onClick={() => setReplyTarget(msg)}
+                className="rounded-full border border-sage-light/20 bg-white px-2 py-1 text-[10px] font-bold text-forest/45 transition hover:text-forest"
+              >
+                Reply
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="rounded-[2.5rem] border border-sage-light/20 bg-white/80 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden border border-white/40">
+    <div className="rounded-[2.5rem] border border-sage-light/20 border-white/40 bg-white/80 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden">
       <div className="flex h-[calc(100vh-220px)] min-h-[600px]">
         <div className={`w-96 border-r border-sage-light/10 flex flex-col shrink-0 ${selectedId ? "hidden md:flex" : "flex w-full md:w-96"}`}>
           <div className="p-6 border-b border-sage-light/10 bg-white/40">
@@ -377,7 +513,6 @@ export function AdminChatPanel() {
               sessions.map((s) => {
                 const lastMsg = s.messages?.[0];
                 const isActive = s.id === selectedId;
-                const lastVoiceToken = lastMsg ? parseVoiceInviteToken(lastMsg.content) : null;
                 return (
                   <button
                     key={s.id}
@@ -402,11 +537,7 @@ export function AdminChatPanel() {
                           </span>
                         </div>
                         <p className={`text-xs truncate ${isActive ? "text-white/70" : "text-forest/50"}`}>
-                          {lastMsg
-                            ? lastVoiceToken
-                              ? "Voice доступен"
-                              : (lastMsg.sender === "admin" ? "Вы: " : "") + lastMsg.content
-                            : "Новый диалог"}
+                          {lastMsg ? (lastMsg.sender === "admin" ? "Вы: " : "") + lastMsg.content : "Новый диалог"}
                         </p>
                       </div>
                       {s._count.messages > 0 && !isActive && (
@@ -464,13 +595,28 @@ export function AdminChatPanel() {
                       </p>
                       <div className="h-1 w-1 rounded-full bg-forest/10" />
                       <p className="text-[10px] uppercase font-bold tracking-widest text-green-500 flex items-center gap-1">
-                        <div className="h-1 w-1 rounded-full bg-green-500 animate-ping" />
+                        <span className="h-1 w-1 rounded-full bg-green-500 animate-ping" />
                         Активен
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectingMessages((prev) => !prev);
+                      setSelectedMessageIds([]);
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-bold transition ${
+                      selectingMessages
+                        ? "border-forest/20 bg-forest text-white"
+                        : "border-sage-light/20 bg-white text-forest"
+                    }`}
+                  >
+                    <CheckSquare className="h-4 w-4" />
+                    Выбрать
+                  </button>
                   <button
                     type="button"
                     onClick={handleArchiveSession}
@@ -498,6 +644,36 @@ export function AdminChatPanel() {
               </div>
 
               <div className="shrink-0 p-6 bg-white/60 backdrop-blur-md border-t border-sage-light/10">
+                {selectedMessageIds.length > 0 ? (
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-red-700">Выбрано сообщений: {selectedMessageIds.length}</p>
+                      <p className="text-xs text-red-600/80">Удаление скроет их и для клиента тоже.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedMessageIds([]);
+                          setSelectingMessages(false);
+                        }}
+                        className="rounded-2xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100"
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteMessages}
+                        disabled={deletingMessages}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                      >
+                        {deletingMessages ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="mb-4 flex items-center justify-between gap-3 rounded-[1.5rem] border border-sage-light/15 bg-cream/35 px-4 py-3">
                   <div>
                     <p className="text-sm font-bold text-forest">Voice-режим</p>
@@ -515,6 +691,27 @@ export function AdminChatPanel() {
                     Позвонить пользователю
                   </button>
                 </div>
+
+                {replyTarget ? (
+                  <div className="mb-4 rounded-[1.5rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Ответ</p>
+                        <p className="mt-1 text-xs font-bold text-forest">
+                          {replyTarget.sender === "admin"
+                            ? "Вы"
+                            : replyTarget.sender === "visitor"
+                              ? (selectedSession?.visitorName || "Пользователь")
+                              : "Система"}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-forest/55">{getMessagePreview(replyTarget)}</p>
+                      </div>
+                      <button type="button" onClick={() => setReplyTarget(null)} className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="flex items-end gap-3 p-2 rounded-[2rem] bg-cream/30 border border-sage-light/20 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
                   <textarea
@@ -541,3 +738,5 @@ export function AdminChatPanel() {
     </div>
   );
 }
+
+

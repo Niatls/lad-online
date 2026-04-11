@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, X, Send, Loader2, User, Phone } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, User, Phone, CornerUpLeft } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
@@ -9,6 +9,16 @@ type Message = {
   id: number;
   sender: string;
   content: string;
+  replyToId: number | null;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  isDeleted: boolean;
+  replyTo: {
+    id: number;
+    sender: string;
+    content: string;
+    isDeleted: boolean;
+  } | null;
   createdAt: string;
 };
 
@@ -48,8 +58,10 @@ export function ChatWidget() {
   const [availableVoiceInvite, setAvailableVoiceInvite] = useState<VoiceInvite | null>(null);
   const [voiceCountdownNow, setVoiceCountdownNow] = useState(Date.now());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef(new Map<number, HTMLDivElement | null>());
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null);
 
   const needsName = !visitorName.trim();
 
@@ -198,6 +210,7 @@ export function ChatWidget() {
     if (error) setError(null);
 
     const text = input.trim();
+    const currentReplyTarget = replyTarget;
     setInput("");
     setSending(true);
 
@@ -206,15 +219,28 @@ export function ChatWidget() {
       id: tempId,
       sender: "visitor",
       content: text,
+      replyToId: currentReplyTarget?.id ?? null,
+      deletedAt: null,
+      deletedBy: null,
+      isDeleted: false,
+      replyTo: currentReplyTarget
+        ? {
+            id: currentReplyTarget.id,
+            sender: currentReplyTarget.sender,
+            content: currentReplyTarget.isDeleted ? "Сообщение удалено" : currentReplyTarget.content,
+            isDeleted: currentReplyTarget.isDeleted,
+          }
+        : null,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
+    setReplyTarget(null);
 
     try {
       const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, sender: "visitor" }),
+        body: JSON.stringify({ content: text, sender: "visitor", replyToId: optimistic.replyToId }),
       });
 
       if (res.ok) {
@@ -229,6 +255,7 @@ export function ChatWidget() {
       setError("Не удалось отправить сообщение.");
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       setInput(text);
+      setReplyTarget(currentReplyTarget);
     } finally {
       setSending(false);
     }
@@ -251,6 +278,27 @@ export function ChatWidget() {
 
   const visibleMessages = messages.filter((msg) => !parseVoiceInviteToken(msg.content));
 
+  const jumpToMessage = useCallback((messageId: number) => {
+    const element = messageRefs.current.get(messageId);
+    if (!element) {
+      return;
+    }
+
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    element.classList.add("ring-2", "ring-sage");
+    setTimeout(() => {
+      element.classList.remove("ring-2", "ring-sage");
+    }, 1800);
+  }, []);
+
+  const getMessagePreview = useCallback((message: Message) => {
+    if (message.isDeleted) {
+      return "Сообщение удалено";
+    }
+
+    return message.content;
+  }, []);
+
   const renderMessage = (msg: Message) => {
     const isVisitor = msg.sender === "visitor";
     const isSystem = msg.sender === "system";
@@ -258,6 +306,9 @@ export function ChatWidget() {
     return (
       <div
         key={msg.id}
+        ref={(node) => {
+          messageRefs.current.set(msg.id, node);
+        }}
         className={`flex animate-in fade-in slide-in-from-bottom-2 duration-300 ${
           isSystem ? "justify-center" : isVisitor ? "justify-end" : "justify-start"
         }`}
@@ -271,7 +322,25 @@ export function ChatWidget() {
                 : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
           }`}
         >
-          {msg.content}
+          {msg.replyTo ? (
+            <button
+              type="button"
+              onClick={() => jumpToMessage(msg.replyTo!.id)}
+              className={`mb-2 w-full rounded-2xl border px-3 py-2 text-left text-xs transition ${
+                isSystem
+                  ? "border-forest/10 bg-white/60 text-forest/70"
+                  : isVisitor
+                    ? "border-white/10 bg-white/10 text-white/80"
+                    : "border-sage-light/20 bg-cream/40 text-forest/60"
+              }`}
+            >
+              <p className="font-bold mb-0.5">{msg.replyTo.sender === "visitor" ? "Вы" : msg.replyTo.sender === "admin" ? "Поддержка" : "Система"}</p>
+              <p className="truncate">{msg.replyTo.isDeleted ? "Сообщение удалено" : msg.replyTo.content}</p>
+            </button>
+          ) : null}
+          <p className={msg.isDeleted ? "italic opacity-70" : ""}>
+            {msg.isDeleted ? "Сообщение удалено" : msg.content}
+          </p>
           <div
             className={`text-[10px] mt-1.5 font-medium ${
               isSystem ? "text-forest/35" : isVisitor ? "text-white/40" : "text-forest/30"
@@ -280,6 +349,16 @@ export function ChatWidget() {
             {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
+        {!isSystem ? (
+          <button
+            type="button"
+            onClick={() => setReplyTarget(msg)}
+            className="self-end mb-1 ml-2 mr-2 rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:text-forest hover:bg-white"
+            aria-label="Ответить"
+          >
+            <CornerUpLeft className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
       </div>
     );
   };
@@ -439,6 +518,22 @@ export function ChatWidget() {
                 </div>
               </button>
             ) : null}
+            {replyTarget ? (
+              <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Ответ</p>
+                    <p className="mt-1 text-xs font-bold text-forest">
+                      {replyTarget.sender === "visitor" ? "Вы" : replyTarget.sender === "admin" ? "Поддержка" : "Система"}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-forest/55">{getMessagePreview(replyTarget)}</p>
+                  </div>
+                  <button type="button" onClick={() => setReplyTarget(null)} className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="p-2 rounded-[1.75rem] bg-cream/30 border border-sage-light/20 flex items-end gap-2 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
               <textarea
                 value={input}
@@ -466,3 +561,4 @@ export function ChatWidget() {
     </>
   );
 }
+

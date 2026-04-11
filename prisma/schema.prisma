@@ -1,4 +1,4 @@
-// This is your Prisma schema file,
+﻿// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
@@ -112,10 +112,14 @@ model ChatMessage {
   sessionId Int
   sender    String      // "visitor" or "admin"
   content   String
+  replyToId Int?
+  deletedAt DateTime?
+  deletedBy String?
   createdAt DateTime    @default(now())
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+  @@index([replyToId])
 }
 
 model ChatVoiceInvite {
@@ -149,3 +153,4 @@ model ChatVoiceSignal {
 
   @@index([inviteId, id])
 }
+

@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createChatMessage, getChatMessages } from "@/lib/chat-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// GET /api/chat/sessions/[id]/messages — poll for messages
+// GET /api/chat/sessions/[id]/messages вЂ” poll for messages
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   }
 }
 
-// POST /api/chat/sessions/[id]/messages — send a message
+// POST /api/chat/sessions/[id]/messages вЂ” send a message
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const body = await req.json();
-    const { content, sender } = body;
+    const { content, sender, replyToId } = body;
     console.log(`[Chat API] Message from ${sender} in session ${sessionId}`);
 
     if (!content || typeof content !== "string" || !sender) {
@@ -43,7 +43,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // Ensure session exists
-    const message = await createChatMessage(sessionId, content, sender);
+    const message = await createChatMessage(
+      sessionId,
+      content,
+      sender,
+      typeof replyToId === "number" ? replyToId : null,
+    );
     if (!message) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -54,3 +59,4 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
+

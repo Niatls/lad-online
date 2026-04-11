@@ -1,11 +1,18 @@
-import { neon } from "@neondatabase/serverless";
+﻿import { neon } from "@neondatabase/serverless";
 
 type ChatMessageRow = {
   id: number;
   sessionId: number;
   sender: string;
   content: string;
+  replyToId: number | null;
+  deletedAt: Date | string | null;
+  deletedBy: string | null;
   createdAt: Date | string;
+  replyPreviewId: number | null;
+  replyPreviewSender: string | null;
+  replyPreviewContent: string | null;
+  replyPreviewDeletedAt: Date | string | null;
 };
 
 type ChatSessionRow = {
@@ -77,6 +84,18 @@ function mapMessage(row: ChatMessageRow) {
     sessionId: row.sessionId,
     sender: row.sender,
     content: row.content,
+    replyToId: row.replyToId,
+    deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
+    deletedBy: row.deletedBy,
+    isDeleted: Boolean(row.deletedAt),
+    replyTo: row.replyPreviewId
+      ? {
+          id: row.replyPreviewId,
+          sender: row.replyPreviewSender ?? "system",
+          content: row.replyPreviewDeletedAt ? "РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ" : (row.replyPreviewContent ?? ""),
+          isDeleted: Boolean(row.replyPreviewDeletedAt),
+        }
+      : null,
     createdAt: new Date(row.createdAt).toISOString(),
   };
 }
@@ -143,14 +162,23 @@ export async function getOrCreateChatSession(visitorId: string, visitorName?: st
 
     const messages = await sql<ChatMessageRow[]>`
       select
-        id,
-        "sessionId",
-        sender,
-        content,
-        "createdAt"
+        m.id,
+        m."sessionId",
+        m.sender,
+        m.content,
+        m."replyToId",
+        m."deletedAt",
+        m."deletedBy",
+        m."createdAt",
+        rp.id as "replyPreviewId",
+        rp.sender as "replyPreviewSender",
+        rp.content as "replyPreviewContent",
+        rp."deletedAt" as "replyPreviewDeletedAt"
       from "ChatMessage"
-      where "sessionId" = ${session.id}
-      order by "createdAt" asc
+      m
+      left join "ChatMessage" rp on rp.id = m."replyToId"
+      where m."sessionId" = ${session.id}
+      order by m."createdAt" asc
     `;
 
     return {
@@ -164,21 +192,29 @@ export async function getChatMessages(sessionId: number, afterId = 0) {
   return withRetry(async () => {
     const rows = await sql<ChatMessageRow[]>`
       select
-        id,
-        "sessionId",
-        sender,
-        content,
-        "createdAt"
-      from "ChatMessage"
-      where "sessionId" = ${sessionId} and id > ${afterId}
-      order by "createdAt" asc
+        m.id,
+        m."sessionId",
+        m.sender,
+        m.content,
+        m."replyToId",
+        m."deletedAt",
+        m."deletedBy",
+        m."createdAt",
+        rp.id as "replyPreviewId",
+        rp.sender as "replyPreviewSender",
+        rp.content as "replyPreviewContent",
+        rp."deletedAt" as "replyPreviewDeletedAt"
+      from "ChatMessage" m
+      left join "ChatMessage" rp on rp.id = m."replyToId"
+      where m."sessionId" = ${sessionId} and m.id > ${afterId}
+      order by m."createdAt" asc
     `;
 
     return rows.map(mapMessage);
   });
 }
 
-export async function createChatMessage(sessionId: number, content: string, sender: string) {
+export async function createChatMessage(sessionId: number, content: string, sender: string, replyToId?: number | null) {
   return withRetry(async () => {
     const session = await sql<ChatSessionRow[]>`
       select
@@ -197,15 +233,50 @@ export async function createChatMessage(sessionId: number, content: string, send
       return null;
     }
 
+    let normalizedReplyId: number | null = null;
+    if (replyToId && Number.isInteger(replyToId)) {
+      const replyRow = await sql<{ id: number }[]>`
+        select id
+        from "ChatMessage"
+        where id = ${replyToId} and "sessionId" = ${sessionId}
+        limit 1
+      `;
+      normalizedReplyId = replyRow[0]?.id ?? null;
+    }
+
     const inserted = await sql<ChatMessageRow[]>`
-      insert into "ChatMessage" ("sessionId", sender, content, "createdAt")
-      values (${sessionId}, ${sender}, ${content.trim()}, now())
+      insert into "ChatMessage" ("sessionId", sender, content, "replyToId", "createdAt")
+      values (${sessionId}, ${sender}, ${content.trim()}, ${normalizedReplyId}, now())
       returning
         id,
         "sessionId",
         sender,
         content,
+        "replyToId",
+        "deletedAt",
+        "deletedBy",
         "createdAt"
+    `;
+
+    const messageId = inserted[0]?.id;
+    const rows = await sql<ChatMessageRow[]>`
+      select
+        m.id,
+        m."sessionId",
+        m.sender,
+        m.content,
+        m."replyToId",
+        m."deletedAt",
+        m."deletedBy",
+        m."createdAt",
+        rp.id as "replyPreviewId",
+        rp.sender as "replyPreviewSender",
+        rp.content as "replyPreviewContent",
+        rp."deletedAt" as "replyPreviewDeletedAt"
+      from "ChatMessage" m
+      left join "ChatMessage" rp on rp.id = m."replyToId"
+      where m.id = ${messageId}
+      limit 1
     `;
 
     await sql`
@@ -214,7 +285,38 @@ export async function createChatMessage(sessionId: number, content: string, send
       where id = ${sessionId}
     `;
 
-    return mapMessage(inserted[0]);
+    return rows[0] ? mapMessage(rows[0]) : null;
+  });
+}
+
+export async function deleteChatMessages(sessionId: number, messageIds: number[], deletedBy: string) {
+  return withRetry(async () => {
+    if (messageIds.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = [...new Set(messageIds.filter((id) => Number.isInteger(id) && id > 0))];
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const deleted = await sql<{ id: number }[]>`
+      update "ChatMessage"
+      set
+        content = '',
+        "deletedAt" = now(),
+        "deletedBy" = ${deletedBy}
+      where "sessionId" = ${sessionId} and id = any(${uniqueIds}) and "deletedAt" is null
+      returning id
+    `;
+
+    await sql`
+      update "ChatSession"
+      set "updatedAt" = now()
+      where id = ${sessionId}
+    `;
+
+    return deleted.map((row) => row.id);
   });
 }
 
@@ -261,10 +363,15 @@ export async function getAdminChatSessions() {
         select
           m.id,
           m.sender,
-          m.content,
+          case
+            when m."deletedAt" is not null then 'РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ'
+            when m.content like '[[VOICE_CALL_TOKEN:%' then null
+            else m.content
+          end as content,
           m."createdAt"
         from "ChatMessage" m
         where m."sessionId" = s.id
+          and m.content not like '[[VOICE_CALL_TOKEN:%'
         order by m."createdAt" desc
         limit 1
       ) lm on true
@@ -309,3 +416,4 @@ export async function getAdminChatSessions() {
     };
   });
 }
+
