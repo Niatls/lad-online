@@ -1,6 +1,7 @@
 ﻿import { randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { buildVoiceInviteMessage } from "@/lib/chat-message-format";
+import { appendVoiceLog } from "@/lib/voice-log";
 
 type VoiceInviteRow = {
   id: number;
@@ -158,6 +159,15 @@ export async function createVoiceInvite(sessionId: number) {
       where id = ${sessionId}
     `;
 
+    await appendVoiceLog({
+      token,
+      sessionId,
+      role: "system",
+      eventType: "invite-created",
+      message: "Создан новый voice invite",
+      details: { expiresInMinutes: 5 },
+    });
+
     return mapInvite(inviteRows[0]);
   });
 }
@@ -268,7 +278,20 @@ export async function activateVoiceInvite(token: string, role: "admin" | "visito
         "endedAt"
     `;
 
-    return rows[0] ? mapInvite(rows[0]) : null;
+    const invite = rows[0] ? mapInvite(rows[0]) : null;
+
+    if (invite) {
+      await appendVoiceLog({
+        token,
+        sessionId: invite.sessionId,
+        role,
+        eventType: "invite-joined",
+        message: role === "visitor" ? "Пользователь вошёл в звонок" : "Администратор открыл звонок",
+        details: { status: invite.status },
+      });
+    }
+
+    return invite;
   });
 }
 
@@ -356,6 +379,19 @@ export async function endVoiceInvite(
       where id = ${invite.sessionId}
     `;
 
+    await appendVoiceLog({
+      token,
+      sessionId: invite.sessionId,
+      role: summary.closedBy === "admin" || summary.closedBy === "visitor" ? summary.closedBy : "system",
+      eventType: "invite-ended",
+      message: "Звонок завершён",
+      details: {
+        durationSeconds,
+        dataUsageBytes: Number(invite.dataUsageBytes ?? 0),
+        closedBy: summary.closedBy ?? invite.closedBy ?? "system",
+      },
+    });
+
     return mapInvite(invite);
   });
 }
@@ -367,8 +403,8 @@ export async function createVoiceSignal(
   payload: unknown,
 ) {
   return withRetry(async () => {
-    const invite = await sql<{ id: number; status: string; expiresAt: Date | string }[]>`
-      select id, status, "expiresAt"
+    const invite = await sql<{ id: number; status: string; expiresAt: Date | string; sessionId: number }[]>`
+      select id, status, "expiresAt", "sessionId"
       from "ChatVoiceInvite"
       where token = ${token}
       limit 1
@@ -380,7 +416,7 @@ export async function createVoiceSignal(
     }
 
     if (new Date(row.expiresAt).getTime() < Date.now()) {
-      await endVoiceInvite(token);
+      await endVoiceInvite(token, {});
       return null;
     }
 
@@ -396,7 +432,18 @@ export async function createVoiceSignal(
         "createdAt"
     `;
 
-    return mapSignal(inserted[0]);
+    const signal = mapSignal(inserted[0]);
+
+    await appendVoiceLog({
+      token,
+      sessionId: row.sessionId,
+      role: senderRole === "admin" || senderRole === "visitor" ? senderRole : "system",
+      eventType: `signal-${signalType}`,
+      message: `Отправлен сигнал ${signalType}`,
+      details: payload,
+    });
+
+    return signal;
   });
 }
 

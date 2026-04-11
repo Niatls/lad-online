@@ -58,6 +58,9 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const reconnectAttemptsRef = useRef(0);
   const reconnectingRef = useRef(false);
   const endingRef = useRef(false);
+  const lastEventAtRef = useRef(0);
+  const lastEventValueRef = useRef("Инициализация звонка");
+  const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const counterpartLabel = useMemo(
     () => (role === "admin" ? "посетителя" : "специалиста"),
@@ -112,6 +115,52 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     },
     [role, token],
   );
+
+  const postVoiceEvent = useCallback(
+    async (eventType: string, message: string, details?: unknown) => {
+      try {
+        await fetch(`/api/chat/voice/${token}/events`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role, eventType, message, details }),
+        });
+      } catch {
+        // best effort logging only
+      }
+    },
+    [role, token],
+  );
+
+  const updateLastEvent = useCallback((message: string, force = false) => {
+    if (lastEventValueRef.current === message) {
+      return;
+    }
+
+    const now = Date.now();
+    const elapsed = now - lastEventAtRef.current;
+
+    if (!force && elapsed < 900) {
+      if (lastEventTimeoutRef.current) {
+        clearTimeout(lastEventTimeoutRef.current);
+      }
+
+      lastEventTimeoutRef.current = setTimeout(() => {
+        lastEventValueRef.current = message;
+        lastEventAtRef.current = Date.now();
+        setLastEvent(message);
+      }, 900 - elapsed);
+      return;
+    }
+
+    if (lastEventTimeoutRef.current) {
+      clearTimeout(lastEventTimeoutRef.current);
+      lastEventTimeoutRef.current = undefined;
+    }
+
+    lastEventValueRef.current = message;
+    lastEventAtRef.current = now;
+    setLastEvent(message);
+  }, []);
 
   const refreshConnectionStats = useCallback(async () => {
     const pc = peerRef.current;
@@ -207,7 +256,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     setIsReconnecting(false);
     connectedAtRef.current = Date.now();
     setStatus("Звонок активен");
-    setLastEvent("Аудиоканал подключён");
+    updateLastEvent("Аудиоканал подключён", true);
+    void postVoiceEvent("call-active", "Аудиоканал подключён");
     setConnecting(false);
 
     if (!statsRef.current) {
@@ -216,7 +266,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void refreshConnectionStats();
       }, 1000);
     }
-  }, [clearReconnectTimeout, refreshConnectionStats]);
+  }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, updateLastEvent]);
 
   const endInviteRemotely = useCallback(async () => {
     if (endingRef.current) {
@@ -247,7 +297,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     if (reconnectAttemptsRef.current >= 3) {
       setStatus("Не удалось восстановить звонок");
-      setLastEvent("Автовосстановление не удалось");
+      updateLastEvent("Автовосстановление не удалось", true);
+      void postVoiceEvent("reconnect-failed", "Автовосстановление не удалось", { attempts: reconnectAttemptsRef.current });
       setError("Соединение оборвалось и не восстановилось. Попробуйте начать звонок заново.");
       setIsReconnecting(false);
       setConnecting(false);
@@ -260,7 +311,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     setIsReconnecting(true);
     setConnecting(true);
     setStatus(`Восстанавливаем соединение (${reconnectAttemptsRef.current}/3)...`);
-    setLastEvent(`Обрыв связи: попытка восстановления ${reconnectAttemptsRef.current}/3`);
+    updateLastEvent(`Обрыв связи: попытка восстановления ${reconnectAttemptsRef.current}/3`, true);
+    void postVoiceEvent("reconnect-attempt", "Попытка восстановления соединения", { attempt: reconnectAttemptsRef.current });
 
     try {
       if (role === "visitor") {
@@ -273,7 +325,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     } catch (reconnectError) {
       console.error("Voice reconnect failed:", reconnectError);
       reconnectingRef.current = false;
-      setLastEvent("Попытка восстановления не удалась");
+      updateLastEvent("Попытка восстановления не удалась", true);
       clearReconnectTimeout();
       reconnectTimeoutRef.current = setTimeout(() => {
         void attemptReconnect();
@@ -282,7 +334,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
 
     reconnectingRef.current = false;
-  }, [clearReconnectTimeout, postSignal, role]);
+  }, [clearReconnectTimeout, postSignal, postVoiceEvent, role, updateLastEvent]);
 
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
@@ -310,6 +362,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       closedRef.current = true;
       clearReconnectTimeout();
+      if (lastEventTimeoutRef.current) {
+        clearTimeout(lastEventTimeoutRef.current);
+        lastEventTimeoutRef.current = undefined;
+      }
 
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -357,7 +413,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         setStatus("Входящий звонок. Подключаем аудио...");
-        setLastEvent("Получен offer от посетителя");
+        updateLastEvent("Получен offer от посетителя", true);
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
         await flushPendingCandidates();
         const answer = await pc.createAnswer();
@@ -378,7 +434,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
-        setLastEvent("Получен answer от специалиста");
+        updateLastEvent("Получен answer от специалиста", true);
         await flushPendingCandidates();
         setStatus("Соединяемся...");
         return;
@@ -396,13 +452,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         } else {
           pendingCandidatesRef.current.push(candidate);
         }
-        setLastEvent("Получен ICE candidate");
         return;
       }
 
       if (signal.signalType === "rejoin-request" && role === "visitor") {
         setStatus("Переподключаем звонок...");
-        setLastEvent("Получен запрос на переподключение");
+        updateLastEvent("Получен запрос на переподключение", true);
         await createPeerRef.current?.();
         await sendOfferRef.current?.(true);
         return;
@@ -410,13 +465,14 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       if (signal.signalType === "hangup") {
         setStatus("Звонок завершён");
-        setLastEvent("Собеседник завершил звонок");
+        updateLastEvent("Собеседник завершил звонок", true);
+        void postVoiceEvent("remote-hangup", "Собеседник завершил звонок");
         setConnecting(false);
         cleanup();
         onClose();
       }
     },
-    [cleanup, flushPendingCandidates, onClose, postSignal, role],
+    [cleanup, flushPendingCandidates, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
   );
 
   const pollSignals = useCallback(async () => {
@@ -435,7 +491,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       const inviteRes = await fetch(`/api/chat/voice/${token}`, { cache: "no-store" });
       if (inviteRes.status === 410 || inviteRes.status === 404) {
         setStatus("Звонок завершён");
-        setLastEvent("Invite завершён или истёк");
+        updateLastEvent("Invite завершён или истёк", true);
         setConnecting(false);
         cleanup();
         onClose();
@@ -443,7 +499,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     } catch (pollError) {
       console.error("Voice signal polling failed:", pollError);
     }
-  }, [cleanup, handleSignal, onClose, role, token]);
+  }, [cleanup, handleSignal, onClose, role, token, updateLastEvent]);
 
   useEffect(() => {
     let mounted = true;
@@ -518,15 +574,18 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.onconnectionstatechange = () => {
             if (pc.connectionState === "connected") {
               setStatus("Аудиоканал готов. Подключаем собеседника...");
-              setLastEvent("WebRTC connectionState: connected");
+              updateLastEvent("WebRTC connectionState: connected");
+              void postVoiceEvent("connection-state", "WebRTC connectionState: connected");
             } else if (pc.connectionState === "connecting") {
               setStatus("Соединяем аудиоканал...");
-              setLastEvent("WebRTC connectionState: connecting");
+              updateLastEvent("WebRTC connectionState: connecting");
             } else if (pc.connectionState === "failed") {
-              setLastEvent("WebRTC connectionState: failed");
+              updateLastEvent("WebRTC connectionState: failed", true);
+              void postVoiceEvent("connection-state", "WebRTC connectionState: failed");
               void attemptReconnect();
             } else if (["disconnected", "closed"].includes(pc.connectionState)) {
-              setLastEvent(`WebRTC connectionState: ${pc.connectionState}`);
+              updateLastEvent(`WebRTC connectionState: ${pc.connectionState}`, true);
+              void postVoiceEvent("connection-state", `WebRTC connectionState: ${pc.connectionState}`);
               if (!closedRef.current && !endingRef.current) {
                 void attemptReconnect();
               }
@@ -536,12 +595,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.oniceconnectionstatechange = () => {
             if (pc.iceConnectionState === "checking") {
               setStatus("Проверяем маршрут для звонка...");
-              setLastEvent("ICE: checking");
+              updateLastEvent("ICE: checking");
             } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
               setStatus("Маршрут найден. Ждём аудио...");
-              setLastEvent(`ICE: ${pc.iceConnectionState}`);
+              updateLastEvent(`ICE: ${pc.iceConnectionState}`);
             } else if (pc.iceConnectionState === "failed") {
-              setLastEvent("ICE: failed");
+              updateLastEvent("ICE: failed", true);
+              void postVoiceEvent("ice-state", "ICE: failed");
               void attemptReconnect();
             }
           };
@@ -563,7 +623,11 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           await pc.setLocalDescription(offer);
           await postSignal("offer", offer);
           setStatus(iceRestart ? "Переподключаем специалиста..." : "Вызываем специалиста...");
-          setLastEvent(iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer");
+          updateLastEvent(iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer", true);
+          void postVoiceEvent(
+            iceRestart ? "offer-restart" : "offer-created",
+            iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer",
+          );
         };
 
         await createPeerRef.current();
@@ -575,7 +639,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           await sendOfferRef.current(false);
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
-          setLastEvent(`Ожидаем ${counterpartLabel}`);
+          updateLastEvent(`Ожидаем ${counterpartLabel}`, true);
           joinedRef.current = true;
           if (role === "admin" && inviteRes.ok) {
             void postSignal("rejoin-request", null);
@@ -583,7 +647,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
       } catch (startError) {
         console.error("Voice call init failed:", startError);
-        setLastEvent("Ошибка инициализации voice");
+        updateLastEvent("Ошибка инициализации voice", true);
+        void postVoiceEvent("init-error", "Ошибка инициализации voice", {
+          error: startError instanceof Error ? startError.message : String(startError),
+        });
         setError(startError instanceof Error ? startError.message : "Не удалось запустить звонок.");
         setConnecting(false);
       }
@@ -597,7 +664,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, role, token]);
+  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -610,6 +677,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   };
 
   const handleEnd = async () => {
+    updateLastEvent("Вы завершили звонок", true);
+    void postVoiceEvent("local-hangup", "Пользователь завершил звонок");
     await endInviteRemotely();
     cleanup();
     onClose();
