@@ -58,7 +58,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const reconnectAttemptsRef = useRef(0);
   const reconnectingRef = useRef(false);
   const endingRef = useRef(false);
-  const initialAdminRejoinSentRef = useRef(false);
+  const pendingVisitorRejoinRef = useRef(false);
+  const rejoinHandledAtRef = useRef(0);
   const lastEventAtRef = useRef(0);
   const lastEventValueRef = useRef("Инициализация звонка");
   const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -414,6 +415,28 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     [clearReconnectTimeout, destroyPeerConnection],
   );
 
+  const handleVisitorRejoinRequest = useCallback(async () => {
+    const now = Date.now();
+    if (now - rejoinHandledAtRef.current < 1800) {
+      return;
+    }
+
+    const hasCreatePeer = typeof createPeerRef.current === "function";
+    const hasSendOffer = typeof sendOfferRef.current === "function";
+
+    if (!hasCreatePeer || !hasSendOffer) {
+      pendingVisitorRejoinRef.current = true;
+      return;
+    }
+
+    pendingVisitorRejoinRef.current = false;
+    rejoinHandledAtRef.current = now;
+    setStatus("Переподключаем звонок...");
+    updateLastEvent("Получен запрос на переподключение", true);
+    await invokeCreatePeer();
+    await invokeSendOffer(true);
+  }, [invokeCreatePeer, invokeSendOffer, updateLastEvent]);
+
   const handleSignal = useCallback(
     async (signal: VoiceSignal) => {
       if (signal.signalType === "offer" && role === "admin") {
@@ -475,10 +498,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       }
 
       if (signal.signalType === "rejoin-request" && role === "visitor") {
-        setStatus("Переподключаем звонок...");
-        updateLastEvent("Получен запрос на переподключение", true);
-        await invokeCreatePeer();
-        await invokeSendOffer(true);
+        await handleVisitorRejoinRequest();
         return;
       }
 
@@ -491,7 +511,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         onClose();
       }
     },
-    [cleanup, flushPendingCandidates, invokeCreatePeer, invokeSendOffer, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
+    [cleanup, flushPendingCandidates, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, onClose, postSignal, postVoiceEvent, role, updateLastEvent],
   );
 
   const pollSignals = useCallback(async () => {
@@ -530,7 +550,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         joinedRef.current = false;
         reconnectingRef.current = false;
         reconnectAttemptsRef.current = 0;
-        initialAdminRejoinSentRef.current = false;
+        pendingVisitorRejoinRef.current = false;
+        rejoinHandledAtRef.current = 0;
         lastSignalIdRef.current = 0;
 
         const inviteRes = await fetch(`/api/chat/voice/${token}`);
@@ -661,6 +682,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         await invokeCreatePeer();
 
+        if (role === "visitor" && pendingVisitorRejoinRef.current) {
+          await handleVisitorRejoinRequest();
+        }
+
         pollRef.current = setInterval(pollSignals, 1200);
 
         if (role === "visitor" && !joinedRef.current) {
@@ -670,10 +695,6 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
           updateLastEvent(`Ожидаем ${counterpartLabel}`, true);
           joinedRef.current = true;
-          if (role === "admin" && inviteRes.ok && !initialAdminRejoinSentRef.current) {
-            initialAdminRejoinSentRef.current = true;
-            void postSignal("rejoin-request", null);
-          }
         }
       } catch (startError) {
         console.error("Voice call init failed:", startError);
@@ -694,7 +715,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
+  }, [attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
