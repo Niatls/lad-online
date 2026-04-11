@@ -24,6 +24,8 @@ type Message = {
   replyToId: number | null;
   deletedAt: string | null;
   deletedBy: string | null;
+  editedAt: string | null;
+  isEdited: boolean;
   isDeleted: boolean;
   replyTo: {
     id: number;
@@ -67,6 +69,7 @@ export function AdminChatPanel() {
   const [selectingMessages, setSelectingMessages] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
   const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [creatingVoiceToken, setCreatingVoiceToken] = useState(false);
   const [archivingSession, setArchivingSession] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
@@ -124,6 +127,7 @@ export function AdminChatPanel() {
         setMessages(msgs);
         setSelectedMessageIds([]);
         setReplyTarget(null);
+        setEditingMessageId(null);
         if (msgs.length) {
           lastMsgIdRef.current = msgs[msgs.length - 1].id;
         }
@@ -168,6 +172,31 @@ export function AdminChatPanel() {
   const handleSend = async () => {
     if (!input.trim() || !selectedId || sending) return;
     const text = input.trim();
+    if (editingMessageId) {
+      setSending(true);
+      try {
+        const res = await fetch(`/api/chat/sessions/${selectedId}/messages`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: editingMessageId, content: text, sender: "admin" }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to edit");
+        }
+
+        const updated = await res.json();
+        setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
+        setEditingMessageId(null);
+        setInput("");
+      } catch (err) {
+        console.error("Failed to edit:", err);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     const currentReplyTarget = replyTarget;
     setInput("");
     setSending(true);
@@ -179,6 +208,8 @@ export function AdminChatPanel() {
       replyToId: currentReplyTarget?.id ?? null,
       deletedAt: null,
       deletedBy: null,
+      editedAt: null,
+      isEdited: false,
       isDeleted: false,
       replyTo: currentReplyTarget
         ? {
@@ -250,6 +281,7 @@ export function AdminChatPanel() {
     setSelectedMessageIds([]);
     setSelectingMessages(false);
     setReplyTarget(null);
+    setEditingMessageId(null);
     await loadSessions();
   };
 
@@ -401,6 +433,7 @@ export function AdminChatPanel() {
     const isSystem = msg.sender === "system";
     const isSelected = selectedMessageIds.includes(msg.id);
     const canSelect = !isSystem;
+    const canEdit = isAdmin && !isSystem && !msg.isDeleted && !selectingMessages;
 
     return (
       <div
@@ -458,14 +491,33 @@ export function AdminChatPanel() {
             <p className={msg.isDeleted ? "italic opacity-70" : ""}>{msg.isDeleted ? "Сообщение удалено" : msg.content}</p>
           </div>
           <div className={`mt-2 flex items-center gap-2 ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
-            <span className="text-[10px] font-bold text-forest/20 uppercase tracking-tighter">{formatTime(msg.createdAt)}</span>
+            <span className="text-[10px] font-bold text-forest/20 uppercase tracking-tighter">
+              {formatTime(msg.createdAt)}
+              {msg.isEdited ? " · изменено" : ""}
+            </span>
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMessageId(msg.id);
+                  setReplyTarget(null);
+                  setInput(msg.content);
+                }}
+                className="rounded-full border border-sage-light/20 bg-white px-2 py-1 text-[10px] font-bold text-forest/45 transition hover:text-forest"
+              >
+                Ред.
+              </button>
+            ) : null}
             {!isSystem && !selectingMessages ? (
               <button
                 type="button"
-                onClick={() => setReplyTarget(msg)}
+                onClick={() => {
+                  setEditingMessageId(null);
+                  setReplyTarget(msg);
+                }}
                 className="rounded-full border border-sage-light/20 bg-white px-2 py-1 text-[10px] font-bold text-forest/45 transition hover:text-forest"
               >
-                Reply
+                Ответ
               </button>
             ) : null}
           </div>
@@ -707,6 +759,26 @@ export function AdminChatPanel() {
                         <p className="mt-1 truncate text-xs text-forest/55">{getMessagePreview(replyTarget)}</p>
                       </div>
                       <button type="button" onClick={() => setReplyTarget(null)} className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {editingMessageId ? (
+                  <div className="mb-4 rounded-[1.5rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Редактирование</p>
+                        <p className="mt-1 text-xs text-forest/55">Измените текст и отправьте сообщение ещё раз.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMessageId(null);
+                          setInput("");
+                        }}
+                        className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest"
+                      >
                         <X className="h-4 w-4" />
                       </button>
                     </div>

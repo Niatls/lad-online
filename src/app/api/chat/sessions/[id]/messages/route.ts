@@ -1,5 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { createChatMessage, getChatMessages } from "@/lib/chat-store";
+import { createChatMessage, getChatMessages, updateChatMessage } from "@/lib/chat-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -56,6 +56,33 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json(message);
   } catch (error) {
     console.error("Chat messages POST error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  try {
+    const { id } = await context.params;
+    const sessionId = parseInt(id);
+    if (isNaN(sessionId)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+
+    const body = await req.json();
+    const { messageId, content, sender } = body;
+
+    if (typeof messageId !== "number" || !content || typeof content !== "string" || !sender) {
+      return NextResponse.json({ error: "messageId, content and sender required" }, { status: 400 });
+    }
+
+    const message = await updateChatMessage(sessionId, messageId, sender, content);
+    if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(message);
+  } catch (error) {
+    console.error("Chat messages PATCH error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

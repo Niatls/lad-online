@@ -8,6 +8,7 @@ type ChatMessageRow = {
   replyToId: number | null;
   deletedAt: Date | string | null;
   deletedBy: string | null;
+  editedAt: Date | string | null;
   createdAt: Date | string;
   replyPreviewId: number | null;
   replyPreviewSender: string | null;
@@ -87,6 +88,8 @@ function mapMessage(row: ChatMessageRow) {
     replyToId: row.replyToId,
     deletedAt: row.deletedAt ? new Date(row.deletedAt).toISOString() : null,
     deletedBy: row.deletedBy,
+    editedAt: row.editedAt ? new Date(row.editedAt).toISOString() : null,
+    isEdited: Boolean(row.editedAt),
     isDeleted: Boolean(row.deletedAt),
     replyTo: row.replyPreviewId
       ? {
@@ -169,6 +172,7 @@ export async function getOrCreateChatSession(visitorId: string, visitorName?: st
         m."replyToId",
         m."deletedAt",
         m."deletedBy",
+        m."editedAt",
         m."createdAt",
         rp.id as "replyPreviewId",
         rp.sender as "replyPreviewSender",
@@ -199,6 +203,7 @@ export async function getChatMessages(sessionId: number, afterId = 0) {
         m."replyToId",
         m."deletedAt",
         m."deletedBy",
+        m."editedAt",
         m."createdAt",
         rp.id as "replyPreviewId",
         rp.sender as "replyPreviewSender",
@@ -255,6 +260,7 @@ export async function createChatMessage(sessionId: number, content: string, send
         "replyToId",
         "deletedAt",
         "deletedBy",
+        "editedAt",
         "createdAt"
     `;
 
@@ -268,6 +274,7 @@ export async function createChatMessage(sessionId: number, content: string, send
         m."replyToId",
         m."deletedAt",
         m."deletedBy",
+        m."editedAt",
         m."createdAt",
         rp.id as "replyPreviewId",
         rp.sender as "replyPreviewSender",
@@ -317,6 +324,71 @@ export async function deleteChatMessages(sessionId: number, messageIds: number[]
     `;
 
     return deleted.map((row) => row.id);
+  });
+}
+
+export async function updateChatMessage(sessionId: number, messageId: number, sender: string, content: string) {
+  return withRetry(async () => {
+    const normalized = content.trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const updated = await sql<ChatMessageRow[]>`
+      update "ChatMessage"
+      set
+        content = ${normalized},
+        "editedAt" = now()
+      where
+        id = ${messageId}
+        and "sessionId" = ${sessionId}
+        and sender = ${sender}
+        and "deletedAt" is null
+      returning
+        id,
+        "sessionId",
+        sender,
+        content,
+        "replyToId",
+        "deletedAt",
+        "deletedBy",
+        "editedAt",
+        "createdAt"
+    `;
+
+    const row = updated[0];
+    if (!row) {
+      return null;
+    }
+
+    const hydrated = await sql<ChatMessageRow[]>`
+      select
+        m.id,
+        m."sessionId",
+        m.sender,
+        m.content,
+        m."replyToId",
+        m."deletedAt",
+        m."deletedBy",
+        m."editedAt",
+        m."createdAt",
+        rp.id as "replyPreviewId",
+        rp.sender as "replyPreviewSender",
+        rp.content as "replyPreviewContent",
+        rp."deletedAt" as "replyPreviewDeletedAt"
+      from "ChatMessage" m
+      left join "ChatMessage" rp on rp.id = m."replyToId"
+      where m.id = ${messageId}
+      limit 1
+    `;
+
+    await sql`
+      update "ChatSession"
+      set "updatedAt" = now()
+      where id = ${sessionId}
+    `;
+
+    return hydrated[0] ? mapMessage(hydrated[0]) : null;
   });
 }
 

@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MessageCircle, X, Send, Loader2, User, Phone, CornerUpLeft } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, User, Phone, CornerUpLeft, Pencil } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { parseVoiceInviteToken } from "@/lib/chat-message-format";
 
@@ -12,6 +12,8 @@ type Message = {
   replyToId: number | null;
   deletedAt: string | null;
   deletedBy: string | null;
+  editedAt: string | null;
+  isEdited: boolean;
   isDeleted: boolean;
   replyTo: {
     id: number;
@@ -62,6 +64,7 @@ export function ChatWidget() {
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const [replyTarget, setReplyTarget] = useState<Message | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
 
   const needsName = !visitorName.trim();
 
@@ -210,6 +213,32 @@ export function ChatWidget() {
     if (error) setError(null);
 
     const text = input.trim();
+    if (editingMessageId) {
+      setSending(true);
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: editingMessageId, content: text, sender: "visitor" }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to edit");
+        }
+
+        const updated = await res.json();
+        setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
+        setEditingMessageId(null);
+        setInput("");
+      } catch (err) {
+        console.error("Failed to edit:", err);
+        setError("Не удалось сохранить изменения.");
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     const currentReplyTarget = replyTarget;
     setInput("");
     setSending(true);
@@ -222,6 +251,8 @@ export function ChatWidget() {
       replyToId: currentReplyTarget?.id ?? null,
       deletedAt: null,
       deletedBy: null,
+      editedAt: null,
+      isEdited: false,
       isDeleted: false,
       replyTo: currentReplyTarget
         ? {
@@ -302,6 +333,7 @@ export function ChatWidget() {
   const renderMessage = (msg: Message) => {
     const isVisitor = msg.sender === "visitor";
     const isSystem = msg.sender === "system";
+    const canEdit = isVisitor && !isSystem && !msg.isDeleted;
 
     return (
       <div
@@ -347,17 +379,37 @@ export function ChatWidget() {
             }`}
           >
             {new Date(msg.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+            {msg.isEdited ? " · изменено" : ""}
           </div>
         </div>
         {!isSystem ? (
-          <button
-            type="button"
-            onClick={() => setReplyTarget(msg)}
-            className="self-end mb-1 ml-2 mr-2 rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:text-forest hover:bg-white"
-            aria-label="Ответить"
-          >
-            <CornerUpLeft className="h-3.5 w-3.5" />
-          </button>
+          <div className="self-end mb-1 ml-2 mr-2 flex flex-col gap-2">
+            {canEdit ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingMessageId(msg.id);
+                  setReplyTarget(null);
+                  setInput(msg.content);
+                }}
+                className="rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:text-forest hover:bg-white"
+                aria-label="Редактировать"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setEditingMessageId(null);
+                setReplyTarget(msg);
+              }}
+              className="rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:text-forest hover:bg-white"
+              aria-label="Ответить"
+            >
+              <CornerUpLeft className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ) : null}
       </div>
     );
@@ -529,6 +581,26 @@ export function ChatWidget() {
                     <p className="mt-1 truncate text-xs text-forest/55">{getMessagePreview(replyTarget)}</p>
                   </div>
                   <button type="button" onClick={() => setReplyTarget(null)} className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {editingMessageId ? (
+              <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Редактирование</p>
+                    <p className="mt-1 text-xs text-forest/55">Измените текст и отправьте повторно.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingMessageId(null);
+                      setInput("");
+                    }}
+                    className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest"
+                  >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
