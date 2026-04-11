@@ -249,6 +249,30 @@ export async function getVoiceInviteByToken(token: string) {
 
 export async function activateVoiceInvite(token: string, role: "admin" | "visitor" = "visitor") {
   return withRetry(async () => {
+    const existingRows = await sql<VoiceInviteRow[]>`
+      select
+        id,
+        "sessionId",
+        token,
+        status,
+        "dataUsageBytes",
+        "durationSeconds",
+        "closedBy",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "joinedAt",
+        "endedAt"
+      from "ChatVoiceInvite"
+      where token = ${token}
+      limit 1
+    `;
+
+    const existingInvite = existingRows[0];
+    if (!existingInvite || ["ended", "expired"].includes(existingInvite.status)) {
+      return null;
+    }
+
     const rows = await sql<VoiceInviteRow[]>`
       update "ChatVoiceInvite"
       set
@@ -279,8 +303,10 @@ export async function activateVoiceInvite(token: string, role: "admin" | "visito
     `;
 
     const invite = rows[0] ? mapInvite(rows[0]) : null;
+    const isFirstVisitorJoin = role === "visitor" && !existingInvite.joinedAt;
+    const shouldLogJoin = role === "admin" || isFirstVisitorJoin;
 
-    if (invite) {
+    if (invite && shouldLogJoin) {
       await appendVoiceLog({
         token,
         sessionId: invite.sessionId,

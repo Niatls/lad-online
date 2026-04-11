@@ -60,6 +60,9 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const endingRef = useRef(false);
   const pendingVisitorRejoinRef = useRef(false);
   const rejoinHandledAtRef = useRef(0);
+  const startupJoinSentRef = useRef(false);
+  const initialOfferSentRef = useRef(false);
+  const reconnectAllowedRef = useRef(false);
   const lastEventAtRef = useRef(0);
   const lastEventValueRef = useRef("Инициализация звонка");
   const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -106,6 +109,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     return () => clearInterval(interval);
   }, [connecting]);
+
+  useEffect(() => {
+    startupJoinSentRef.current = false;
+    initialOfferSentRef.current = false;
+    reconnectAllowedRef.current = false;
+  }, [role, token]);
 
   const postSignal = useCallback(
     async (signalType: string, payload: unknown) => {
@@ -271,6 +280,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     callEstablishedRef.current = true;
     reconnectAttemptsRef.current = 0;
+    reconnectAllowedRef.current = true;
     reconnectingRef.current = false;
     clearReconnectTimeout();
     setIsReconnecting(false);
@@ -312,6 +322,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
   const attemptReconnect = useCallback(async () => {
     if (closedRef.current || endingRef.current || reconnectingRef.current) {
+      return;
+    }
+
+    if (!reconnectAllowedRef.current) {
       return;
     }
 
@@ -457,6 +471,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         setStatus("Входящий звонок. Подключаем аудио...");
         updateLastEvent("Получен offer от посетителя", true);
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
+        reconnectAllowedRef.current = true;
         await flushPendingCandidates();
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -476,6 +491,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
+        reconnectAllowedRef.current = true;
         updateLastEvent("Получен answer от специалиста", true);
         await flushPendingCandidates();
         setStatus("Соединяемся...");
@@ -552,6 +568,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         reconnectAttemptsRef.current = 0;
         pendingVisitorRejoinRef.current = false;
         rejoinHandledAtRef.current = 0;
+        reconnectAllowedRef.current = false;
         lastSignalIdRef.current = 0;
 
         const inviteRes = await fetch(`/api/chat/voice/${token}`);
@@ -560,11 +577,14 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         if (role === "visitor") {
-          await fetch(`/api/chat/voice/${token}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "join", role }),
-          });
+          if (!startupJoinSentRef.current) {
+            startupJoinSentRef.current = true;
+            await fetch(`/api/chat/voice/${token}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "join", role }),
+            });
+          }
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -690,7 +710,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
         if (role === "visitor" && !joinedRef.current) {
           joinedRef.current = true;
-          await invokeSendOffer(false);
+          if (!initialOfferSentRef.current) {
+            initialOfferSentRef.current = true;
+            await invokeSendOffer(false);
+          }
         } else {
           setStatus(`Ждём звонок от ${counterpartLabel}...`);
           updateLastEvent(`Ожидаем ${counterpartLabel}`, true);
