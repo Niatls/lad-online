@@ -72,6 +72,15 @@ type VoiceEvent = {
   createdAt: string;
 };
 
+type VoiceLiveStats = {
+  durationSeconds: number;
+  usageBytes: number;
+  liveServerBytes: number;
+  trafficRouteLabel: string;
+  iceRoute: string;
+  connected: boolean;
+};
+
 function formatUsage(value: number) {
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   if (value < 1024 * 1024 * 1024) return `${(value / (1024 * 1024)).toFixed(2)} MB`;
@@ -99,6 +108,8 @@ export function AdminChatPanel() {
   const [deletingMessages, setDeletingMessages] = useState(false);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [voiceEvents, setVoiceEvents] = useState<VoiceEvent[]>([]);
+  const [activeVoiceStats, setActiveVoiceStats] = useState<VoiceLiveStats | null>(null);
+  const [voiceLogsOpen, setVoiceLogsOpen] = useState(false);
   const [usage, setUsage] = useState<UsageSummary>({
     totalBytes: 0,
     inviteCount: 0,
@@ -112,6 +123,14 @@ export function AdminChatPanel() {
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedId) ?? null,
     [selectedId, sessions],
+  );
+  const displayedUsageBytes = useMemo(
+    () => usage.totalBytes + (activeVoiceStats?.liveServerBytes ?? 0),
+    [activeVoiceStats?.liveServerBytes, usage.totalBytes],
+  );
+  const displayedUsagePercent = useMemo(
+    () => ((displayedUsageBytes / usage.monthlyCapBytes) * 100 || 0).toFixed(4),
+    [displayedUsageBytes, usage.monthlyCapBytes],
   );
 
   const scrollToBottom = useCallback(() => {
@@ -383,7 +402,9 @@ export function AdminChatPanel() {
     setSelectedId(null);
     setMessages([]);
     setActiveVoiceToken(null);
+    setActiveVoiceStats(null);
     setVoiceEvents([]);
+    setVoiceLogsOpen(false);
     setSelectedMessageIds([]);
     setSelectingMessages(false);
     setReplyTarget(null);
@@ -649,8 +670,13 @@ export function AdminChatPanel() {
             </div>
             <div className="mt-3 rounded-[1.25rem] border border-sage-light/15 bg-cream/35 px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Лимит voice за месяц</p>
-              <p className="mt-1 text-base font-bold text-forest">{formatUsage(usage.totalBytes)} / {formatUsage(usage.monthlyCapBytes)}</p>
-              <p className="mt-1 text-[11px] text-forest/45">{((usage.totalBytes / usage.monthlyCapBytes) * 100 || 0).toFixed(4)}% от лимита · {usage.inviteCount} звонков</p>
+              <p className="mt-1 text-base font-bold text-forest">{formatUsage(displayedUsageBytes)} / {formatUsage(usage.monthlyCapBytes)}</p>
+              <p className="mt-1 text-[11px] text-forest/45">{displayedUsagePercent}% от лимита · {usage.inviteCount} звонков</p>
+              {activeVoiceStats?.liveServerBytes ? (
+                <p className="mt-1 text-[11px] font-medium text-sage">
+                  +{formatUsage(activeVoiceStats.liveServerBytes)} в лайве · {activeVoiceStats.trafficRouteLabel}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -725,6 +751,7 @@ export function AdminChatPanel() {
                 token={activeVoiceToken}
                 role="admin"
                 title={selectedSession?.visitorName || `Посетитель #${selectedId}`}
+                onStatsChange={setActiveVoiceStats}
                 onClose={() => setActiveVoiceToken(null)}
               />
             </VoiceCallBoundary>
@@ -864,38 +891,25 @@ export function AdminChatPanel() {
                 <div className="mb-4 rounded-[1.5rem] border border-sage-light/15 bg-white/70 px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-forest">Последние voice-события</p>
-                      <p className="text-xs text-forest/50">Логи текущего и прошлых звонков для этого диалога.</p>
+                      <p className="text-sm font-bold text-forest">Логи voice</p>
+                      <p className="text-xs text-forest/50">Откройте отдельное окно с событиями текущего и прошлых звонков.</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => selectedId && void loadVoiceEvents(selectedId)}
-                      className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
-                    >
-                      Обновить
-                    </button>
-                  </div>
-                  <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
-                    {voiceEvents.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-sage-light/20 px-3 py-4 text-xs text-forest/45">
-                        Пока нет voice-событий для этого пользователя.
-                      </div>
-                    ) : (
-                      voiceEvents.map((event) => (
-                        <div key={event.id} className="rounded-2xl border border-sage-light/15 bg-cream/30 px-3 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-xs font-bold text-forest">
-                              {event.role === "admin" ? "Админ" : event.role === "visitor" ? "Пользователь" : "Система"}
-                              {" · "}
-                              {event.eventType}
-                            </p>
-                            <span className="text-[10px] font-bold text-forest/35">{formatTime(event.createdAt)}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-forest/70">{event.message}</p>
-                          <p className="mt-1 break-all text-[10px] text-forest/35">{event.token}</p>
-                        </div>
-                      ))
-                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => selectedId && void loadVoiceEvents(selectedId)}
+                        className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
+                      >
+                        Обновить
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVoiceLogsOpen(true)}
+                        className="rounded-2xl bg-forest px-3 py-2 text-[11px] font-bold text-white transition hover:bg-forest/90"
+                      >
+                        Открыть окно логов
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -962,6 +976,65 @@ export function AdminChatPanel() {
           )}
         </div>
       </div>
+
+      {voiceLogsOpen && selectedId ? (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-forest/25 p-6 backdrop-blur-sm">
+          <div className="flex h-[min(720px,90vh)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] border border-sage-light/20 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.18)]">
+            <div className="flex items-center justify-between gap-4 border-b border-sage-light/10 px-6 py-5">
+              <div>
+                <p className="text-lg font-bold text-forest">Voice-логи</p>
+                <p className="text-xs text-forest/45">
+                  {selectedSession?.visitorName || `Посетитель #${selectedId}`} · последние события по звонкам
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => selectedId && void loadVoiceEvents(selectedId)}
+                  className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
+                >
+                  Обновить
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVoiceLogsOpen(false)}
+                  className="rounded-full border border-sage-light/20 bg-white p-2 text-forest/50 transition hover:text-forest"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-3 overflow-y-auto bg-cream/10 px-6 py-5">
+              {voiceEvents.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-dashed border-sage-light/20 bg-white/70 px-4 py-5 text-sm text-forest/45">
+                  Пока нет voice-событий для этого пользователя.
+                </div>
+              ) : (
+                voiceEvents.map((event) => (
+                  <div key={event.id} className="rounded-[1.5rem] border border-sage-light/15 bg-white/80 px-4 py-4 shadow-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-bold text-forest">
+                        {event.role === "admin" ? "Админ" : event.role === "visitor" ? "Пользователь" : "Система"}
+                        {" · "}
+                        {event.eventType}
+                      </p>
+                      <span className="text-[10px] font-bold text-forest/35">{formatTime(event.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-sm text-forest/75">{event.message}</p>
+                    <p className="mt-2 break-all text-[10px] font-medium text-forest/35">{event.token}</p>
+                    {event.details ? (
+                      <pre className="mt-3 overflow-x-auto rounded-2xl bg-cream/50 px-3 py-3 text-[11px] leading-relaxed text-forest/65">
+                        {JSON.stringify(event.details, null, 2)}
+                      </pre>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

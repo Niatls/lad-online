@@ -8,6 +8,14 @@ type VoiceCallPanelProps = {
   role: "admin" | "visitor";
   title: string;
   onClose: () => void;
+  onStatsChange?: (stats: {
+    durationSeconds: number;
+    usageBytes: number;
+    liveServerBytes: number;
+    trafficRouteLabel: string;
+    iceRoute: string;
+    connected: boolean;
+  } | null) => void;
 };
 
 type VoiceSignal = {
@@ -38,7 +46,7 @@ const MONTHLY_CAP_BYTES = 1000 * 1024 * 1024 * 1024;
 const SILENT_KEEPALIVE_AUDIO =
   "data:audio/mp3;base64,SUQzAwAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjMyLjEwMQAAAAAAAAAAAAAA//uQxAADBzQABpAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAAP/7kMQAAgc0AAaQAAACQAAAABBMQU1FMy45OC4yAAAAAAAAAAAAAAD/+5DEAAIHNAAGkAAAAkAAAAAQTEFNRTMuOTguMgAAAAAAAAAAAAAA//uQxAADBzQABpAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAAP/7kMQAAgc0AAaQAAACQAAAABBMQU1FMy45OC4yAAAAAAAAAAAAAAD/+5DEAAIHNAAGkAAAAkAAAAAQTEFNRTMuOTguMgAAAAAAAAAAAAAA";
 
-export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelProps) {
+export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: VoiceCallPanelProps) {
   const [status, setStatus] = useState("Готовим аудио...");
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(true);
@@ -47,6 +55,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [usageBytes, setUsageBytes] = useState(0);
   const [iceRoute, setIceRoute] = useState("Ищем маршрут...");
+  const [trafficRouteLabel, setTrafficRouteLabel] = useState("Определяем маршрут трафика...");
   const [lastEvent, setLastEvent] = useState("Инициализация звонка");
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -57,6 +66,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const pendingCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const joinedRef = useRef(false);
   const connectedAtRef = useRef<number | null>(null);
+  const connectedSegmentStartedAtRef = useRef<number | null>(null);
+  const accumulatedConnectedMsRef = useRef(0);
   const closedRef = useRef(false);
   const callEstablishedRef = useRef(false);
   const createPeerRef = useRef<(() => Promise<RTCPeerConnection | null>) | null>(null);
@@ -112,18 +123,15 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   }, []);
 
   useEffect(() => {
-    if (!connectedAtRef.current || connecting) {
-      return;
-    }
-
     const interval = setInterval(() => {
-      if (connectedAtRef.current) {
-        setDurationSeconds(Math.max(0, Math.floor((Date.now() - connectedAtRef.current) / 1000)));
-      }
+      const activeSegmentMs = connectedSegmentStartedAtRef.current
+        ? Date.now() - connectedSegmentStartedAtRef.current
+        : 0;
+      setDurationSeconds(Math.max(0, Math.floor((accumulatedConnectedMsRef.current + activeSegmentMs) / 1000)));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [connecting]);
+  }, []);
 
   useEffect(() => {
     startupJoinSentRef.current = false;
@@ -395,6 +403,43 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     setLastEvent(message);
   }, []);
 
+  const getCurrentDurationSeconds = useCallback(() => {
+    const activeSegmentMs = connectedSegmentStartedAtRef.current
+      ? Date.now() - connectedSegmentStartedAtRef.current
+      : 0;
+    return Math.max(0, Math.floor((accumulatedConnectedMsRef.current + activeSegmentMs) / 1000));
+  }, []);
+
+  const pauseDurationTracking = useCallback(() => {
+    if (!connectedSegmentStartedAtRef.current) {
+      return;
+    }
+
+    accumulatedConnectedMsRef.current += Date.now() - connectedSegmentStartedAtRef.current;
+    connectedSegmentStartedAtRef.current = null;
+    setDurationSeconds(Math.max(0, Math.floor(accumulatedConnectedMsRef.current / 1000)));
+  }, []);
+
+  const resumeDurationTracking = useCallback(() => {
+    if (connectedSegmentStartedAtRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    connectedSegmentStartedAtRef.current = now;
+    if (!connectedAtRef.current) {
+      connectedAtRef.current = now;
+    }
+    setDurationSeconds(getCurrentDurationSeconds());
+  }, [getCurrentDurationSeconds]);
+
+  const resetDurationTracking = useCallback(() => {
+    connectedAtRef.current = null;
+    connectedSegmentStartedAtRef.current = null;
+    accumulatedConnectedMsRef.current = 0;
+    setDurationSeconds(0);
+  }, []);
+
   const refreshConnectionStats = useCallback(async () => {
     const pc = peerRef.current;
     if (!pc) {
@@ -446,11 +491,20 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           (remote && "ip" in remote ? remote.ip : undefined) ||
           "unknown";
         const remotePort = remote && "port" in remote ? remote.port : "";
-        setIceRoute(`${candidateType}/${protocol} -> ${remoteAddress}${remotePort ? `:${remotePort}` : ""}`);
-      }
+        const localUrl = local && "url" in local ? local.url : undefined;
+        const remoteUrl = remote && "url" in remote ? remote.url : undefined;
+        const routeHint = [localUrl, remoteUrl, remoteAddress].filter(Boolean).join(" ").toLowerCase();
+        const routeLabel =
+          candidateType === "relay" && routeHint.includes("expressturn")
+            ? "ExpressTURN relay"
+            : candidateType === "relay"
+              ? "TURN relay"
+              : routeHint.includes("google")
+                ? "Google STUN / direct"
+                : "Google STUN / direct";
 
-      if (connectedAtRef.current) {
-        setDurationSeconds(Math.max(0, Math.floor((Date.now() - connectedAtRef.current) / 1000)));
+        setIceRoute(`${candidateType}/${protocol} -> ${remoteAddress}${remotePort ? `:${remotePort}` : ""}`);
+        setTrafficRouteLabel(routeLabel);
       }
     } catch (statsError) {
       console.error("Failed to refresh WebRTC stats:", statsError);
@@ -497,6 +551,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
   const markCallActive = useCallback(() => {
     if (callEstablishedRef.current) {
+      resumeDurationTracking();
       return;
     }
 
@@ -506,7 +561,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     reconnectingRef.current = false;
     clearReconnectTimeout();
     setIsReconnecting(false);
-    connectedAtRef.current = Date.now();
+    resumeDurationTracking();
     setStatus("Звонок активен");
     void startKeepAliveAudio();
     syncMediaSession("active");
@@ -520,7 +575,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void refreshConnectionStats();
       }, 1000);
     }
-  }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, startKeepAliveAudio, syncMediaSession, updateLastEvent]);
+  }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, resumeDurationTracking, startKeepAliveAudio, syncMediaSession, updateLastEvent]);
 
   const restoreAudioAfterInterruption = useCallback(
     async (reason: string) => {
@@ -618,15 +673,15 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       fetch(`/api/chat/voice/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+          body: JSON.stringify({
           action: "end",
           role,
           dataUsageBytes: usageBytes,
-          durationSeconds,
+          durationSeconds: getCurrentDurationSeconds(),
         }),
       }),
     ]);
-  }, [durationSeconds, postSignal, role, token, usageBytes]);
+  }, [getCurrentDurationSeconds, postSignal, role, token, usageBytes]);
 
   const attemptReconnect = useCallback(async () => {
     if (closedRef.current || endingRef.current || reconnectingRef.current) {
@@ -649,6 +704,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     reconnectingRef.current = true;
     reconnectAttemptsRef.current += 1;
+    pauseDurationTracking();
     setError(null);
     setIsReconnecting(true);
     setConnecting(true);
@@ -676,7 +732,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
 
     reconnectingRef.current = false;
-  }, [clearReconnectTimeout, invokeCreatePeer, invokeSendOffer, postSignal, postVoiceEvent, role, updateLastEvent]);
+  }, [clearReconnectTimeout, invokeCreatePeer, invokeSendOffer, pauseDurationTracking, postSignal, postVoiceEvent, role, updateLastEvent]);
 
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
@@ -731,13 +787,13 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         localStreamRef.current = null;
       }
 
-      connectedAtRef.current = null;
       callEstablishedRef.current = false;
-      setDurationSeconds(0);
+      resetDurationTracking();
       setUsageBytes(0);
       setIceRoute("Ищем маршрут...");
+      setTrafficRouteLabel("Определяем маршрут трафика...");
     },
-    [clearReconnectTimeout, destroyPeerConnection, releaseWakeLock, stopKeepAliveAudio, syncMediaSession],
+    [clearReconnectTimeout, destroyPeerConnection, releaseWakeLock, resetDurationTracking, stopKeepAliveAudio, syncMediaSession],
   );
 
   const handleVisitorRejoinRequest = useCallback(async () => {
@@ -834,11 +890,12 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         updateLastEvent("Собеседник завершил звонок", true);
         void postVoiceEvent("remote-hangup", "Собеседник завершил звонок");
         setConnecting(false);
+        pauseDurationTracking();
         cleanup();
         onCloseRef.current();
       }
     },
-    [cleanup, flushPendingCandidates, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, postSignal, postVoiceEvent, role, updateLastEvent],
+    [cleanup, flushPendingCandidates, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, pauseDurationTracking, postSignal, postVoiceEvent, role, updateLastEvent],
   );
 
   const pollSignals = useCallback(async () => {
@@ -859,13 +916,14 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         setStatus("Звонок завершён");
         updateLastEvent("Invite завершён или истёк", true);
         setConnecting(false);
+        pauseDurationTracking();
         cleanup();
         onCloseRef.current();
       }
     } catch (pollError) {
       console.error("Voice signal polling failed:", pollError);
     }
-  }, [cleanup, handleSignal, role, token, updateLastEvent]);
+  }, [cleanup, handleSignal, pauseDurationTracking, role, token, updateLastEvent]);
 
   useEffect(() => {
     if (!token) {
@@ -906,6 +964,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     const handleOffline = () => {
       setStatus("Соединение потеряно. Ждём сеть...");
+      pauseDurationTracking();
       updateLastEvent("Соединение потеряно", true);
       void postVoiceEvent("network-offline", "Устройство потеряло сеть");
     };
@@ -923,7 +982,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       window.removeEventListener("pageshow", handleForegroundRecovery);
       document.removeEventListener("visibilitychange", handleForegroundRecovery);
     };
-  }, [attemptReconnect, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
+  }, [attemptReconnect, pauseDurationTracking, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
 
   useEffect(() => {
     let mounted = true;
@@ -977,10 +1036,10 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           destroyPeerConnection();
           pendingCandidatesRef.current = [];
           callEstablishedRef.current = false;
-          connectedAtRef.current = null;
-          setDurationSeconds(0);
+          resetDurationTracking();
           setUsageBytes(0);
           setIceRoute("Ищем маршрут...");
+          setTrafficRouteLabel("Определяем маршрут трафика...");
           setConnecting(true);
           setError(null);
           setIsReconnecting(reconnectingRef.current);
@@ -1017,16 +1076,21 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
           pc.onconnectionstatechange = () => {
             if (pc.connectionState === "connected") {
               setStatus("Аудиоканал готов. Подключаем собеседника...");
+              if (callEstablishedRef.current) {
+                resumeDurationTracking();
+              }
               updateLastEvent("WebRTC connectionState: connected");
               void postVoiceEvent("connection-state", "WebRTC connectionState: connected");
             } else if (pc.connectionState === "connecting") {
               setStatus("Соединяем аудиоканал...");
               updateLastEvent("WebRTC connectionState: connecting");
             } else if (pc.connectionState === "failed") {
+              pauseDurationTracking();
               updateLastEvent("WebRTC connectionState: failed", true);
               void postVoiceEvent("connection-state", "WebRTC connectionState: failed");
               void attemptReconnect();
             } else if (["disconnected", "closed"].includes(pc.connectionState)) {
+              pauseDurationTracking();
               updateLastEvent(`WebRTC connectionState: ${pc.connectionState}`, true);
               void postVoiceEvent("connection-state", `WebRTC connectionState: ${pc.connectionState}`);
               if (!closedRef.current && !endingRef.current) {
@@ -1037,12 +1101,19 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
           pc.oniceconnectionstatechange = () => {
             if (pc.iceConnectionState === "checking") {
+              if (callEstablishedRef.current) {
+                pauseDurationTracking();
+              }
               setStatus("Проверяем маршрут для звонка...");
               updateLastEvent("ICE: checking");
             } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
               setStatus("Маршрут найден. Ждём аудио...");
+              if (callEstablishedRef.current) {
+                resumeDurationTracking();
+              }
               updateLastEvent(`ICE: ${pc.iceConnectionState}`);
             } else if (pc.iceConnectionState === "failed") {
+              pauseDurationTracking();
               updateLastEvent("ICE: failed", true);
               void postVoiceEvent("ice-state", "ICE: failed");
               void attemptReconnect();
@@ -1111,7 +1182,31 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [acquireLocalAudioStream, attemptReconnect, bindLocalTrackLifecycle, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, requestWakeLock, role, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
+  }, [acquireLocalAudioStream, attemptReconnect, bindLocalTrackLifecycle, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pauseDurationTracking, pollSignals, postSignal, postVoiceEvent, requestWakeLock, resetDurationTracking, resumeDurationTracking, role, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
+
+  useEffect(() => {
+    if (!onStatsChange) {
+      return;
+    }
+
+    const isRelay = trafficRouteLabel.toLowerCase().includes("relay");
+    onStatsChange({
+      durationSeconds,
+      usageBytes,
+      liveServerBytes: isRelay ? usageBytes * 2 : 0,
+      trafficRouteLabel,
+      iceRoute,
+      connected: callEstablishedRef.current && !connecting,
+    });
+  }, [connecting, durationSeconds, iceRoute, onStatsChange, trafficRouteLabel, usageBytes]);
+
+  useEffect(() => {
+    return () => {
+      if (onStatsChange) {
+        onStatsChange(null);
+      }
+    };
+  }, [onStatsChange]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -1160,11 +1255,25 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
                 <p className="mt-1 text-[11px] text-forest/45">{((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB</p>
               </div>
             </div>
+          ) : (
+            <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Общая длительность</p>
+              <p className="mt-1 text-base font-bold text-forest">{formatDuration(durationSeconds)}</p>
+              <p className="mt-1 text-[11px] text-forest/45">Пауза ставится автоматически, если связь временно прерывается.</p>
+            </div>
+          )}
+          {role === "admin" ? (
+            <>
+              <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Маршрут трафика</p>
+                <p className="mt-1 text-sm font-medium text-forest">{trafficRouteLabel}</p>
+              </div>
+              <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">ICE Route</p>
+                <p className="mt-1 text-sm font-medium text-forest break-all">{iceRoute}</p>
+              </div>
+            </>
           ) : null}
-          <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">ICE Route</p>
-            <p className="mt-1 text-sm font-medium text-forest break-all">{iceRoute}</p>
-          </div>
           <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Последний статус</p>
             <p className="mt-1 text-sm font-medium text-forest">{lastEvent}</p>
