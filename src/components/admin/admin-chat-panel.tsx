@@ -109,7 +109,6 @@ export function AdminChatPanel() {
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [voiceEvents, setVoiceEvents] = useState<VoiceEvent[]>([]);
   const [activeVoiceStats, setActiveVoiceStats] = useState<VoiceLiveStats | null>(null);
-  const [voiceLogsOpen, setVoiceLogsOpen] = useState(false);
   const [usage, setUsage] = useState<UsageSummary>({
     totalBytes: 0,
     inviteCount: 0,
@@ -404,7 +403,6 @@ export function AdminChatPanel() {
     setActiveVoiceToken(null);
     setActiveVoiceStats(null);
     setVoiceEvents([]);
-    setVoiceLogsOpen(false);
     setSelectedMessageIds([]);
     setSelectingMessages(false);
     setReplyTarget(null);
@@ -735,7 +733,9 @@ export function AdminChatPanel() {
           </div>
         </div>
 
-        <div className={`relative flex-1 flex flex-col bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
+        <div className={`relative flex-1 bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
+          <div className="flex h-full min-w-0">
+            <div className="relative flex min-w-0 flex-1 flex-col">
           {activeVoiceToken ? (
             <VoiceCallBoundary
               onClose={() => setActiveVoiceToken(null)}
@@ -892,24 +892,15 @@ export function AdminChatPanel() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-forest">Логи voice</p>
-                      <p className="text-xs text-forest/50">Откройте отдельное окно с событиями текущего и прошлых звонков.</p>
+                      <p className="text-xs text-forest/50">Лента событий закреплена справа от чата и обновляется вместе с диалогом.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => selectedId && void loadVoiceEvents(selectedId)}
-                        className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
-                      >
-                        Обновить
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setVoiceLogsOpen(true)}
-                        className="rounded-2xl bg-forest px-3 py-2 text-[11px] font-bold text-white transition hover:bg-forest/90"
-                      >
-                        Открыть окно логов
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => selectedId && void loadVoiceEvents(selectedId)}
+                      className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
+                    >
+                      Обновить
+                    </button>
                   </div>
                 </div>
 
@@ -974,67 +965,58 @@ export function AdminChatPanel() {
               </div>
             </>
           )}
-        </div>
-      </div>
-
-      {voiceLogsOpen && selectedId ? (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-forest/25 p-6 backdrop-blur-sm">
-          <div className="flex h-[min(720px,90vh)] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] border border-sage-light/20 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.18)]">
-            <div className="flex items-center justify-between gap-4 border-b border-sage-light/10 px-6 py-5">
-              <div>
-                <p className="text-lg font-bold text-forest">Voice-логи</p>
-                <p className="text-xs text-forest/45">
-                  {selectedSession?.visitorName || `Посетитель #${selectedId}`} · последние события по звонкам
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => selectedId && void loadVoiceEvents(selectedId)}
-                  className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
-                >
-                  Обновить
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVoiceLogsOpen(false)}
-                  className="rounded-full border border-sage-light/20 bg-white p-2 text-forest/50 transition hover:text-forest"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-cream/10 px-6 py-5">
-              {voiceEvents.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-sage-light/20 bg-white/70 px-4 py-5 text-sm text-forest/45">
-                  Пока нет voice-событий для этого пользователя.
-                </div>
-              ) : (
-                voiceEvents.map((event) => (
-                  <div key={event.id} className="rounded-[1.5rem] border border-sage-light/15 bg-white/80 px-4 py-4 shadow-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-bold text-forest">
-                        {event.role === "admin" ? "Админ" : event.role === "visitor" ? "Пользователь" : "Система"}
-                        {" · "}
-                        {event.eventType}
-                      </p>
-                      <span className="text-[10px] font-bold text-forest/35">{formatTime(event.createdAt)}</span>
-                    </div>
-                    <p className="mt-1 text-sm text-forest/75">{event.message}</p>
-                    <p className="mt-2 break-all text-[10px] font-medium text-forest/35">{event.token}</p>
-                    {event.details ? (
-                      <pre className="mt-3 overflow-x-auto rounded-2xl bg-cream/50 px-3 py-3 text-[11px] leading-relaxed text-forest/65">
-                        {JSON.stringify(event.details, null, 2)}
-                      </pre>
-                    ) : null}
+            {selectedId ? (
+              <aside className="hidden w-[360px] shrink-0 border-l border-sage-light/10 bg-white/70 xl:flex xl:flex-col">
+                <div className="flex items-center justify-between gap-3 border-b border-sage-light/10 px-5 py-5">
+                  <div>
+                    <p className="text-sm font-bold text-forest">Voice-логи</p>
+                    <p className="text-xs text-forest/45">
+                      {selectedSession?.visitorName || `Посетитель #${selectedId}`} · последние события звонков
+                    </p>
                   </div>
-                ))
-              )}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => selectedId && void loadVoiceEvents(selectedId)}
+                    className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
+                  >
+                    Обновить
+                  </button>
+                </div>
+
+                <div className="flex-1 space-y-3 overflow-y-auto bg-cream/10 px-5 py-5">
+                  {voiceEvents.length === 0 ? (
+                    <div className="rounded-[1.5rem] border border-dashed border-sage-light/20 bg-white/70 px-4 py-5 text-sm text-forest/45">
+                      Пока нет voice-событий для этого пользователя.
+                    </div>
+                  ) : (
+                    voiceEvents.map((event) => (
+                      <div key={event.id} className="rounded-[1.5rem] border border-sage-light/15 bg-white/80 px-4 py-4 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-bold text-forest">
+                            {event.role === "admin" ? "Админ" : event.role === "visitor" ? "Пользователь" : "Система"}
+                            {" · "}
+                            {event.eventType}
+                          </p>
+                          <span className="text-[10px] font-bold text-forest/35">{formatTime(event.createdAt)}</span>
+                        </div>
+                        <p className="mt-1 text-sm text-forest/75">{event.message}</p>
+                        <p className="mt-2 break-all text-[10px] font-medium text-forest/35">{event.token}</p>
+                        {event.details ? (
+                          <pre className="mt-3 overflow-x-auto rounded-2xl bg-cream/50 px-3 py-3 text-[11px] leading-relaxed text-forest/65">
+                            {JSON.stringify(event.details, null, 2)}
+                          </pre>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </aside>
+            ) : null}
           </div>
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }
