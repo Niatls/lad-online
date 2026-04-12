@@ -24,6 +24,11 @@ type IceServer = {
   credential?: string;
 };
 
+type WakeLockSentinelLike = {
+  released: boolean;
+  release: () => Promise<void>;
+};
+
 const defaultIceServers: IceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
@@ -67,6 +72,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const lastEventValueRef = useRef("Инициализация звонка");
   const lastEventTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const onCloseRef = useRef(onClose);
+  const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
+  const restoringAudioRef = useRef(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -206,6 +213,47 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     throw new Error(normalizeMediaError(lastError));
   }, [normalizeMediaError, wait]);
+
+  const releaseWakeLock = useCallback(async () => {
+    const sentinel = wakeLockRef.current;
+    wakeLockRef.current = null;
+
+    if (!sentinel || sentinel.released) {
+      return;
+    }
+
+    try {
+      await sentinel.release();
+    } catch {
+      // ignore wake lock release failures
+    }
+  }, []);
+
+  const requestWakeLock = useCallback(async () => {
+    if (typeof navigator === "undefined" || document.visibilityState !== "visible") {
+      return;
+    }
+
+    const wakeLockApi = (navigator as Navigator & {
+      wakeLock?: {
+        request: (type: "screen") => Promise<WakeLockSentinelLike>;
+      };
+    }).wakeLock;
+
+    if (!wakeLockApi) {
+      return;
+    }
+
+    if (wakeLockRef.current && !wakeLockRef.current.released) {
+      return;
+    }
+
+    try {
+      wakeLockRef.current = await wakeLockApi.request("screen");
+    } catch {
+      // wake lock is best effort only
+    }
+  }, []);
 
   const postSignal = useCallback(
     async (signalType: string, payload: unknown) => {
@@ -389,6 +437,90 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     }
   }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, updateLastEvent]);
 
+  const restoreAudioAfterInterruption = useCallback(
+    async (reason: string) => {
+      if (closedRef.current || endingRef.current || restoringAudioRef.current) {
+        return;
+      }
+
+      restoringAudioRef.current = true;
+      setStatus("Восстанавливаем микрофон...");
+      updateLastEvent(`Возвращаем аудио: ${reason}`, true);
+      void postVoiceEvent("audio-restore", "Восстановление микрофона после прерывания", { reason });
+
+      try {
+        const nextStream = await acquireLocalAudioStream();
+        const nextTrack = nextStream.getAudioTracks()[0];
+        if (!nextTrack) {
+          throw new Error("Не удалось получить аудиотрек после восстановления.");
+        }
+
+        if (muted) {
+          nextTrack.enabled = false;
+        }
+
+        const previousStream = localStreamRef.current;
+        localStreamRef.current = nextStream;
+
+        const pc = peerRef.current;
+        if (pc) {
+          const sender = pc.getSenders().find((currentSender) => currentSender.track?.kind === "audio");
+          if (sender) {
+            await sender.replaceTrack(nextTrack);
+          } else {
+            pc.addTrack(nextTrack, nextStream);
+          }
+        }
+
+        previousStream?.getTracks().forEach((track) => track.stop());
+        reconnectAllowedRef.current = true;
+
+        if (role === "visitor") {
+          await invokeSendOffer(true);
+        } else {
+          await postSignal("rejoin-request", { reconnect: true, reason });
+        }
+      } catch (restoreError) {
+        const message = restoreError instanceof Error ? restoreError.message : "Не удалось восстановить микрофон.";
+        setError(message);
+        updateLastEvent("Не удалось восстановить микрофон", true);
+        void postVoiceEvent("audio-restore-failed", "Не удалось восстановить микрофон", {
+          reason,
+          error: message,
+        });
+      } finally {
+        restoringAudioRef.current = false;
+      }
+    },
+    [acquireLocalAudioStream, invokeSendOffer, muted, postSignal, postVoiceEvent, role, updateLastEvent],
+  );
+
+  const bindLocalTrackLifecycle = useCallback(
+    (stream: MediaStream) => {
+      const audioTrack = stream.getAudioTracks()[0];
+      if (!audioTrack) {
+        return;
+      }
+
+      audioTrack.onended = () => {
+        updateLastEvent("Локальный микрофон отключён устройством", true);
+        void postVoiceEvent("local-track-ended", "Локальный аудиотрек завершился");
+        if (document.visibilityState === "visible") {
+          void restoreAudioAfterInterruption("track-ended");
+        }
+      };
+
+      audioTrack.onmute = () => {
+        void postVoiceEvent("local-track-muted", "Локальный аудиотрек временно замьючен");
+      };
+
+      audioTrack.onunmute = () => {
+        void postVoiceEvent("local-track-unmuted", "Локальный аудиотрек снова активен");
+      };
+    },
+    [postVoiceEvent, restoreAudioAfterInterruption, updateLastEvent],
+  );
+
   const endInviteRemotely = useCallback(async () => {
     if (endingRef.current) {
       return;
@@ -505,6 +637,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       reconnectingRef.current = false;
       setIsReconnecting(false);
       destroyPeerConnection();
+      void releaseWakeLock();
 
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -517,7 +650,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       setUsageBytes(0);
       setIceRoute("Ищем маршрут...");
     },
-    [clearReconnectTimeout, destroyPeerConnection],
+    [clearReconnectTimeout, destroyPeerConnection, releaseWakeLock],
   );
 
   const handleVisitorRejoinRequest = useCallback(async () => {
@@ -648,6 +781,60 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   }, [cleanup, handleSignal, role, token, updateLastEvent]);
 
   useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    const handleForegroundRecovery = () => {
+      if (closedRef.current || endingRef.current) {
+        return;
+      }
+
+      if (document.visibilityState === "visible") {
+        void requestWakeLock();
+        const audioTrack = localStreamRef.current?.getAudioTracks()[0];
+        if (!audioTrack || audioTrack.readyState === "ended") {
+          void restoreAudioAfterInterruption("foreground-return");
+          return;
+        }
+
+        if (callEstablishedRef.current || reconnectAllowedRef.current) {
+          void attemptReconnect();
+        }
+      } else {
+        void releaseWakeLock();
+      }
+    };
+
+    const handleOnline = () => {
+      updateLastEvent("Сеть снова доступна", true);
+      void postVoiceEvent("network-online", "Сеть снова доступна");
+      reconnectAllowedRef.current = true;
+      handleForegroundRecovery();
+    };
+
+    const handleOffline = () => {
+      setStatus("Соединение потеряно. Ждём сеть...");
+      updateLastEvent("Соединение потеряно", true);
+      void postVoiceEvent("network-offline", "Устройство потеряло сеть");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("focus", handleForegroundRecovery);
+    window.addEventListener("pageshow", handleForegroundRecovery);
+    document.addEventListener("visibilitychange", handleForegroundRecovery);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("focus", handleForegroundRecovery);
+      window.removeEventListener("pageshow", handleForegroundRecovery);
+      document.removeEventListener("visibilitychange", handleForegroundRecovery);
+    };
+  }, [attemptReconnect, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, token, updateLastEvent]);
+
+  useEffect(() => {
     let mounted = true;
 
     async function start() {
@@ -685,6 +872,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
 
         localStreamRef.current = stream;
+        bindLocalTrackLifecycle(stream);
+        void requestWakeLock();
 
         createPeerRef.current = async () => {
           const currentStream = localStreamRef.current;
@@ -829,7 +1018,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [acquireLocalAudioStream, attemptReconnect, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, role, token, updateLastEvent]);
+  }, [acquireLocalAudioStream, attemptReconnect, bindLocalTrackLifecycle, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, requestWakeLock, role, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -851,7 +1040,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
   return (
     <div className="absolute inset-0 z-20 bg-white/95 backdrop-blur-xl p-6 flex flex-col">
-      <audio ref={remoteAudioRef} autoPlay />
+      <audio ref={remoteAudioRef} autoPlay playsInline />
       <div className="flex-1 flex flex-col items-center justify-center text-center">
         <div className="w-24 h-24 rounded-full bg-forest text-white flex items-center justify-center shadow-[0_24px_60px_rgba(45,63,45,0.18)] mb-6">
           {connecting ? <Loader2 className="h-10 w-10 animate-spin" /> : <Radio className="h-10 w-10" />}
