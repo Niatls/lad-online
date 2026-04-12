@@ -93,6 +93,8 @@ function getAdminVoiceSessionStorageKey(sessionId: number) {
 }
 
 export function AdminChatPanel() {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -142,12 +144,13 @@ export function AdminChatPanel() {
       return { left: 0, top: 0 };
     }
 
-    const viewportWidth = typeof window === "undefined" ? contextMenu.x : window.innerWidth;
-    const viewportHeight = typeof window === "undefined" ? contextMenu.y : window.innerHeight;
+    const panelRect = panelRef.current?.getBoundingClientRect();
+    const panelWidth = panelRect?.width ?? contextMenu.x;
+    const panelHeight = panelRect?.height ?? contextMenu.y;
 
     return {
-      left: Math.min(contextMenu.x, Math.max(16, viewportWidth - 220)),
-      top: Math.min(contextMenu.y, Math.max(16, viewportHeight - 220)),
+      left: Math.min(contextMenu.x, Math.max(16, panelWidth - 220)),
+      top: Math.min(contextMenu.y, Math.max(16, panelHeight - 220)),
     };
   }, [contextMenu]);
 
@@ -574,23 +577,36 @@ export function AdminChatPanel() {
   }, []);
 
   useEffect(() => {
-    const handleWindowClick = () => setContextMenu(null);
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (contextMenuRef.current && target && contextMenuRef.current.contains(target)) {
+        return;
+      }
+
+      setContextMenu(null);
+    };
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setContextMenu(null);
       }
     };
 
-    window.addEventListener("pointerdown", handleWindowClick);
+    window.addEventListener("pointerdown", handlePointerDown);
     window.addEventListener("keydown", handleEscape);
     return () => {
-      window.removeEventListener("pointerdown", handleWindowClick);
+      window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleEscape);
     };
   }, []);
 
   const openContextMenu = useCallback((message: Message, x: number, y: number) => {
-    setContextMenu({ message, x, y });
+    const panelRect = panelRef.current?.getBoundingClientRect();
+    setContextMenu({
+      message,
+      x: panelRect ? x - panelRect.left : x,
+      y: panelRect ? y - panelRect.top : y,
+    });
   }, []);
 
   const handleReplyFromMenu = useCallback((message: Message) => {
@@ -710,7 +726,7 @@ export function AdminChatPanel() {
   };
 
   return (
-    <div className="rounded-[2.5rem] border border-sage-light/20 border-white/40 bg-white/80 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden">
+    <div ref={panelRef} className="relative rounded-[2.5rem] border border-sage-light/20 border-white/40 bg-white/80 backdrop-blur-xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden">
       <div className="flex h-[calc(100vh-220px)] min-h-[600px]">
         <div className={`w-96 border-r border-sage-light/10 flex flex-col shrink-0 ${selectedId ? "hidden md:flex" : "flex w-full md:w-96"}`}>
           <div className="p-6 border-b border-sage-light/10 bg-white/40">
@@ -1045,9 +1061,10 @@ export function AdminChatPanel() {
 
       {contextMenu ? (
         <div
-          className="fixed z-50 min-w-[180px] rounded-[1.25rem] border border-sage-light/20 bg-white/95 p-2 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.18)] backdrop-blur"
+          ref={contextMenuRef}
+          className="absolute z-50 min-w-[180px] rounded-[1.25rem] border border-sage-light/20 bg-white/95 p-2 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.18)] backdrop-blur"
           style={contextMenuPosition}
-          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
           {!contextMenu.message.isDeleted ? (
             <button
