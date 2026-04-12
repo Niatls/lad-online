@@ -126,7 +126,7 @@ export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {[...Array(5)].map((_, index) => (
+                  {[...Array(4)].map((_, index) => (
                     <Star
                       key={index}
                       className="h-5 w-5 fill-amber-400 text-amber-400"
