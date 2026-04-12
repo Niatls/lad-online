@@ -734,6 +734,18 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
     reconnectingRef.current = false;
   }, [clearReconnectTimeout, invokeCreatePeer, invokeSendOffer, pauseDurationTracking, postSignal, postVoiceEvent, role, updateLastEvent]);
 
+  const shouldAttemptRecovery = useCallback(() => {
+    const pc = peerRef.current;
+    if (!pc) {
+      return Boolean(callEstablishedRef.current || reconnectAllowedRef.current);
+    }
+
+    return (
+      ["failed", "disconnected", "closed"].includes(pc.connectionState) ||
+      ["failed", "disconnected", "closed"].includes(pc.iceConnectionState)
+    );
+  }, []);
+
   const flushPendingCandidates = useCallback(async () => {
     const pc = peerRef.current;
     if (!pc?.remoteDescription || pendingCandidatesRef.current.length === 0) {
@@ -945,13 +957,11 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
           return;
         }
 
-        if (callEstablishedRef.current || reconnectAllowedRef.current) {
+        if (shouldAttemptRecovery()) {
           void attemptReconnect();
         }
       } else {
-        void releaseWakeLock();
         void startKeepAliveAudio();
-        syncMediaSession("active");
       }
     };
 
@@ -982,7 +992,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
       window.removeEventListener("pageshow", handleForegroundRecovery);
       document.removeEventListener("visibilitychange", handleForegroundRecovery);
     };
-  }, [attemptReconnect, pauseDurationTracking, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
+  }, [attemptReconnect, pauseDurationTracking, postVoiceEvent, requestWakeLock, restoreAudioAfterInterruption, shouldAttemptRecovery, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
 
   useEffect(() => {
     let mounted = true;
