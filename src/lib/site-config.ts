@@ -2,7 +2,6 @@ import {
   DiscordIcon,
   TelegramIcon,
   VKIcon,
-  WhatsAppIcon,
 } from "@/components/home/messenger-icons";
 
 export const siteConfig = {
@@ -21,25 +20,19 @@ export const siteMessengerLinks = [
   {
     Icon: TelegramIcon,
     label: "Telegram",
-    href: "#",
-    color: "hover:bg-white/30",
-  },
-  {
-    Icon: WhatsAppIcon,
-    label: "WhatsApp",
-    href: "#",
+    href: "https://t.me/lad_Psychological_Consultation",
     color: "hover:bg-white/30",
   },
   {
     Icon: VKIcon,
     label: "VK",
-    href: "#",
+    href: "https://vk.com/id1029460661",
     color: "hover:bg-white/30",
   },
   {
     Icon: DiscordIcon,
     label: "Discord",
-    href: "#",
+    href: "https://discord.com/channels/@me",
     color: "hover:bg-white/30",
   },
 ] as const;

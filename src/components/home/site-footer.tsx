@@ -94,6 +94,8 @@ export function SiteFooter({
                   <a
                     key={label}
                     href={href}
+                    target="_blank"
+                    rel="noreferrer"
                     className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 text-white/60 transition-all duration-300 hover:bg-sage/50 hover:text-white"
                   >
                     <Icon size={18} />

@@ -22,6 +22,8 @@ export function MessengerStrip() {
               <a
                 key={label}
                 href={href}
+                target="_blank"
+                rel="noreferrer"
                 className={`w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm ${color} flex items-center justify-center text-white transition-all duration-300 border border-white/10 hover:border-white/30 hover:scale-110`}
                 aria-label={label}
                 title={label}

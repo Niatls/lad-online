@@ -1148,17 +1148,19 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         ) : null}
 
         <div className="mt-8 w-full max-w-sm rounded-[2rem] border border-sage-light/20 bg-cream/35 p-4 text-left shadow-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Длительность</p>
-              <p className="mt-1 text-base font-bold text-forest">{formatDuration(durationSeconds)}</p>
+          {role === "admin" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Длительность</p>
+                <p className="mt-1 text-base font-bold text-forest">{formatDuration(durationSeconds)}</p>
+              </div>
+              <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Трафик</p>
+                <p className="mt-1 text-base font-bold text-forest">{formatUsage(usageBytes)}</p>
+                <p className="mt-1 text-[11px] text-forest/45">{((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB</p>
+              </div>
             </div>
-            <div className="rounded-[1.25rem] bg-white/80 px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">Трафик</p>
-              <p className="mt-1 text-base font-bold text-forest">{formatUsage(usageBytes)}</p>
-              <p className="mt-1 text-[11px] text-forest/45">{((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB</p>
-            </div>
-          </div>
+          ) : null}
           <div className="mt-3 rounded-[1.25rem] bg-white/80 px-4 py-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">ICE Route</p>
             <p className="mt-1 text-sm font-medium text-forest break-all">{iceRoute}</p>
