@@ -32,6 +32,23 @@ type IceServer = {
   credential?: string;
 };
 
+type VoicePeerDiagnostics = {
+  connectionState?: RTCPeerConnectionState;
+  iceConnectionState?: RTCIceConnectionState;
+  iceGatheringState?: RTCIceGatheringState;
+  signalingState?: RTCSignalingState;
+  iceRoute?: string;
+  trafficRouteLabel?: string;
+  selectedCandidateType?: string;
+  selectedProtocol?: string;
+  localCandidateType?: string;
+  localCandidateAddress?: string;
+  remoteCandidateType?: string;
+  remoteCandidateAddress?: string;
+  remoteCandidatePort?: number | string;
+  relayOnly?: boolean;
+};
+
 type WakeLockSentinelLike = {
   released: boolean;
   release: () => Promise<void>;
@@ -539,6 +556,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
     peerRef.current.ontrack = null;
     peerRef.current.onconnectionstatechange = null;
     peerRef.current.oniceconnectionstatechange = null;
+    peerRef.current.onicegatheringstatechange = null;
     peerRef.current.close();
     peerRef.current = null;
   }, []);
@@ -553,6 +571,74 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
   const startedReconnectRecently = useCallback((now = Date.now()) => {
     return now - lastReconnectStartedAtRef.current < 2000;
   }, []);
+
+  const collectPeerDiagnostics = useCallback(async (pc: RTCPeerConnection | null): Promise<VoicePeerDiagnostics> => {
+    if (!pc) {
+      return {
+        iceRoute,
+        trafficRouteLabel,
+        relayOnly: reconnectingRef.current,
+      };
+    }
+
+    const diagnostics: VoicePeerDiagnostics = {
+      connectionState: pc.connectionState,
+      iceConnectionState: pc.iceConnectionState,
+      iceGatheringState: pc.iceGatheringState,
+      signalingState: pc.signalingState,
+      iceRoute,
+      trafficRouteLabel,
+      relayOnly: reconnectingRef.current,
+    };
+
+    try {
+      const stats = await pc.getStats();
+      let selectedPair: RTCStats | null = null;
+
+      stats.forEach((report) => {
+        if (report.type === "transport" && "selectedCandidatePairId" in report && report.selectedCandidatePairId) {
+          selectedPair = stats.get(report.selectedCandidatePairId) ?? selectedPair;
+        }
+
+        if (
+          report.type === "candidate-pair" &&
+          (("selected" in report && report.selected) ||
+            ("nominated" in report && report.nominated && report.state === "succeeded"))
+        ) {
+          selectedPair = report;
+        }
+      });
+
+      if (selectedPair && "localCandidateId" in selectedPair && "remoteCandidateId" in selectedPair) {
+        const local = stats.get(selectedPair.localCandidateId);
+        const remote = stats.get(selectedPair.remoteCandidateId);
+
+        diagnostics.selectedProtocol =
+          (local && "protocol" in local ? local.protocol : undefined) ||
+          ("protocol" in selectedPair ? selectedPair.protocol : undefined);
+        diagnostics.selectedCandidateType =
+          (local && "candidateType" in local ? local.candidateType : undefined) || undefined;
+        diagnostics.localCandidateType =
+          (local && "candidateType" in local ? local.candidateType : undefined) || undefined;
+        diagnostics.localCandidateAddress =
+          (local && "address" in local ? local.address : undefined) ||
+          (local && "ip" in local ? local.ip : undefined) ||
+          undefined;
+        diagnostics.remoteCandidateType =
+          (remote && "candidateType" in remote ? remote.candidateType : undefined) || undefined;
+        diagnostics.remoteCandidateAddress =
+          (remote && "address" in remote ? remote.address : undefined) ||
+          (remote && "ip" in remote ? remote.ip : undefined) ||
+          undefined;
+        diagnostics.remoteCandidatePort =
+          (remote && "port" in remote ? remote.port : undefined) || undefined;
+      }
+    } catch (statsError) {
+      console.error("Failed to collect peer diagnostics:", statsError);
+    }
+
+    return diagnostics;
+  }, [iceRoute, trafficRouteLabel]);
 
   const markCallActive = useCallback(() => {
     if (callEstablishedRef.current) {
@@ -1078,12 +1164,35 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
           const iceServers = Array.isArray(iceConfigJson?.iceServers) && iceConfigJson.iceServers.length > 0
             ? iceConfigJson.iceServers
             : defaultIceServers;
-
-          const pc = new RTCPeerConnection({
-            iceServers,
-            iceCandidatePoolSize: 4,
+          const relayIceServers = iceServers.filter((server) => {
+            const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
+            return urls.some((url) => typeof url === "string" && /^turns?:/i.test(url));
           });
+          const relayOnly = reconnectingRef.current && relayIceServers.length > 0;
+
+          const pc = new RTCPeerConnection(
+            relayOnly
+              ? {
+                iceServers: relayIceServers,
+                iceCandidatePoolSize: 0,
+                iceTransportPolicy: "relay",
+              }
+              : {
+                iceServers,
+                iceCandidatePoolSize: 4,
+              },
+          );
           peerRef.current = pc;
+
+          void postVoiceEvent(
+            "peer-config",
+            relayOnly ? "Создан peer с relay-only реконнектом" : "Создан peer со стандартным ICE маршрутом",
+            {
+              relayOnly,
+              totalIceServers: iceServers.length,
+              relayIceServers: relayIceServers.length,
+            },
+          );
 
           currentStream.getTracks().forEach((track) => pc.addTrack(track, currentStream));
 
@@ -1128,12 +1237,16 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
             } else if (pc.connectionState === "failed") {
               pauseDurationTracking();
               updateLastEvent("WebRTC connectionState: failed", true);
-              void postVoiceEvent("connection-state", "WebRTC connectionState: failed");
+              void collectPeerDiagnostics(pc).then((details) => {
+                void postVoiceEvent("connection-state", "WebRTC connectionState: failed", details);
+              });
               void attemptReconnect();
             } else if (["disconnected", "closed"].includes(pc.connectionState)) {
               pauseDurationTracking();
               updateLastEvent(`WebRTC connectionState: ${pc.connectionState}`, true);
-              void postVoiceEvent("connection-state", `WebRTC connectionState: ${pc.connectionState}`);
+              void collectPeerDiagnostics(pc).then((details) => {
+                void postVoiceEvent("connection-state", `WebRTC connectionState: ${pc.connectionState}`, details);
+              });
               if (!closedRef.current && !endingRef.current) {
                 void attemptReconnect();
               }
@@ -1160,8 +1273,22 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
             } else if (pc.iceConnectionState === "failed") {
               pauseDurationTracking();
               updateLastEvent("ICE: failed", true);
-              void postVoiceEvent("ice-state", "ICE: failed");
+              void collectPeerDiagnostics(pc).then((details) => {
+                void postVoiceEvent("ice-state", "ICE: failed", details);
+              });
               void attemptReconnect();
+            }
+          };
+
+          pc.onicegatheringstatechange = () => {
+            if (peerRef.current !== pc || closedRef.current) {
+              return;
+            }
+
+            if (pc.iceGatheringState === "complete") {
+              void collectPeerDiagnostics(pc).then((details) => {
+                void postVoiceEvent("ice-gathering-state", "ICE gathering complete", details);
+              });
             }
           };
 
