@@ -397,7 +397,8 @@ export function ChatWidget() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to upload voice message");
+        const payload = await res.json().catch(() => null);
+        throw new Error(typeof payload?.error === "string" ? payload.error : "Failed to upload voice message");
       }
 
       const message = await res.json();
@@ -405,7 +406,7 @@ export function ChatWidget() {
       lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
     } catch (err) {
       console.error("Failed to upload voice message:", err);
-      setError("Не удалось отправить голосовое сообщение.");
+      setError(err instanceof Error ? `Голосовое: ${err.message}` : "Не удалось отправить голосовое сообщение.");
     } finally {
       setSendingVoice(false);
     }

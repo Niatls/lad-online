@@ -19,6 +19,10 @@ const EXT_BY_TYPE: Record<string, string> = {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json({ error: "Missing BLOB_READ_WRITE_TOKEN" }, { status: 500 });
+    }
+
     const { id } = await context.params;
     const sessionId = Number.parseInt(id, 10);
     if (Number.isNaN(sessionId)) {
@@ -83,6 +87,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json(message);
   } catch (error) {
     console.error("Voice message upload error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

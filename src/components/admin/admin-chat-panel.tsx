@@ -445,7 +445,8 @@ export function AdminChatPanel() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to upload voice message");
+        const payload = await res.json().catch(() => null);
+        throw new Error(typeof payload?.error === "string" ? payload.error : "Failed to upload voice message");
       }
 
       const message = await res.json();
