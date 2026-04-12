@@ -75,6 +75,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const reconnectAttemptsRef = useRef(0);
   const reconnectingRef = useRef(false);
+  const lastReconnectStartedAtRef = useRef(0);
   const endingRef = useRef(false);
   const pendingVisitorRejoinRef = useRef(false);
   const rejoinHandledAtRef = useRef(0);
@@ -549,6 +550,10 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
     }
   }, []);
 
+  const startedReconnectRecently = useCallback((now = Date.now()) => {
+    return now - lastReconnectStartedAtRef.current < 2000;
+  }, []);
+
   const markCallActive = useCallback(() => {
     if (callEstablishedRef.current) {
       resumeDurationTracking();
@@ -557,6 +562,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
 
     callEstablishedRef.current = true;
     reconnectAttemptsRef.current = 0;
+    lastReconnectStartedAtRef.current = 0;
     reconnectAllowedRef.current = true;
     reconnectingRef.current = false;
     clearReconnectTimeout();
@@ -684,7 +690,8 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
   }, [getCurrentDurationSeconds, postSignal, role, token, usageBytes]);
 
   const attemptReconnect = useCallback(async () => {
-    if (closedRef.current || endingRef.current || reconnectingRef.current) {
+    const now = Date.now();
+    if (closedRef.current || endingRef.current || reconnectingRef.current || startedReconnectRecently(now)) {
       return;
     }
 
@@ -703,6 +710,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
     }
 
     reconnectingRef.current = true;
+    lastReconnectStartedAtRef.current = now;
     reconnectAttemptsRef.current += 1;
     pauseDurationTracking();
     setError(null);
@@ -732,7 +740,17 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
     }
 
     reconnectingRef.current = false;
-  }, [clearReconnectTimeout, invokeCreatePeer, invokeSendOffer, pauseDurationTracking, postSignal, postVoiceEvent, role, updateLastEvent]);
+  }, [
+    clearReconnectTimeout,
+    invokeCreatePeer,
+    invokeSendOffer,
+    pauseDurationTracking,
+    postSignal,
+    postVoiceEvent,
+    role,
+    startedReconnectRecently,
+    updateLastEvent,
+  ]);
 
   const shouldAttemptRecovery = useCallback(() => {
     const pc = peerRef.current;
@@ -810,7 +828,7 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
 
   const handleVisitorRejoinRequest = useCallback(async () => {
     const now = Date.now();
-    if (now - rejoinHandledAtRef.current < 1800) {
+    if (now - rejoinHandledAtRef.current < 1800 || startedReconnectRecently(now)) {
       return;
     }
 
@@ -824,11 +842,12 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
 
     pendingVisitorRejoinRef.current = false;
     rejoinHandledAtRef.current = now;
+    lastReconnectStartedAtRef.current = now;
     setStatus("Переподключаем звонок...");
     updateLastEvent("Получен запрос на переподключение", true);
     await invokeCreatePeer();
     await invokeSendOffer(true);
-  }, [invokeCreatePeer, invokeSendOffer, updateLastEvent]);
+  }, [invokeCreatePeer, invokeSendOffer, startedReconnectRecently, updateLastEvent]);
 
   const handleSignal = useCallback(
     async (signal: VoiceSignal) => {
@@ -1069,12 +1088,20 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
           currentStream.getTracks().forEach((track) => pc.addTrack(track, currentStream));
 
           pc.onicecandidate = (event) => {
+            if (peerRef.current !== pc || closedRef.current) {
+              return;
+            }
+
             if (event.candidate) {
               void postSignal("candidate", event.candidate.toJSON());
             }
           };
 
           pc.ontrack = (event) => {
+            if (peerRef.current !== pc || closedRef.current) {
+              return;
+            }
+
             const [remoteStream] = event.streams;
             if (remoteAudioRef.current && remoteStream) {
               remoteAudioRef.current.srcObject = remoteStream;
@@ -1084,6 +1111,10 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
           };
 
           pc.onconnectionstatechange = () => {
+            if (peerRef.current !== pc || closedRef.current) {
+              return;
+            }
+
             if (pc.connectionState === "connected") {
               setStatus("Аудиоканал готов. Подключаем собеседника...");
               if (callEstablishedRef.current) {
@@ -1110,6 +1141,10 @@ export function VoiceCallPanel({ token, role, title, onClose, onStatsChange }: V
           };
 
           pc.oniceconnectionstatechange = () => {
+            if (peerRef.current !== pc || closedRef.current) {
+              return;
+            }
+
             if (pc.iceConnectionState === "checking") {
               if (callEstablishedRef.current) {
                 pauseDurationTracking();
