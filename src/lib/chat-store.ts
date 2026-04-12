@@ -438,6 +438,7 @@ export async function getAdminChatSessions() {
           case
             when m."deletedAt" is not null then 'Сообщение удалено'
             when m.content like '[[VOICE_CALL_TOKEN:%' then null
+            when m.content like '[[VOICE_MESSAGE:%' then 'Голосовое сообщение'
             else m.content
           end as content,
           m."createdAt"

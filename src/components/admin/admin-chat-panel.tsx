@@ -14,10 +14,13 @@ import {
   X,
   CornerUpLeft,
   Pencil,
+  Mic,
+  Square,
 } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { VoiceCallBoundary } from "@/components/chat/voice-call-boundary";
-import { parseVoiceInviteToken } from "@/lib/chat-message-format";
+import { VoiceMessagePlayer } from "@/components/chat/voice-message-player";
+import { getChatMessagePreviewText, parseVoiceInviteToken, parseVoiceMessageContent } from "@/lib/chat-message-format";
 
 type Message = {
   id: number;
@@ -92,6 +95,15 @@ function getAdminVoiceSessionStorageKey(sessionId: number) {
   return `admin_active_voice_token_${sessionId}`;
 }
 
+function getSupportedRecorderMimeType() {
+  if (typeof window === "undefined" || typeof MediaRecorder === "undefined") {
+    return null;
+  }
+
+  const mimeTypes = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+  return mimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? "";
+}
+
 export function AdminChatPanel() {
   const panelRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -101,6 +113,9 @@ export function AdminChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [sendingVoice, setSendingVoice] = useState(false);
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
   const [replyTarget, setReplyTarget] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -119,6 +134,10 @@ export function AdminChatPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef(new Map<number, HTMLDivElement | null>());
   const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -312,6 +331,11 @@ export function AdminChatPanel() {
     setActiveVoiceToken(storedToken);
   }, [activeVoiceToken, selectedId]);
 
+  useEffect(() => () => {
+    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || !selectedId || sending) return;
     const text = input.trim();
@@ -389,6 +413,113 @@ export function AdminChatPanel() {
       setSending(false);
     }
   };
+
+  const stopVoiceCapture = useCallback(() => {
+    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  }, []);
+
+  const uploadVoiceMessage = useCallback(async (blob: Blob, durationMs: number) => {
+    if (!selectedId) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("sender", "admin");
+    formData.append("durationMs", String(durationMs));
+    if (replyTarget?.id) {
+      formData.append("replyToId", String(replyTarget.id));
+    }
+    const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+    formData.append("file", new File([blob], `voice-message.${extension}`, { type: blob.type || "audio/webm" }));
+
+    setSendingVoice(true);
+    setReplyTarget(null);
+
+    try {
+      const res = await fetch(`/api/chat/sessions/${selectedId}/voice-message`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to upload voice message");
+      }
+
+      const message = await res.json();
+      setMessages((prev) => [...prev, message]);
+      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
+      await loadSessions();
+    } catch (err) {
+      console.error("Failed to upload voice message:", err);
+    } finally {
+      setSendingVoice(false);
+    }
+  }, [loadSessions, replyTarget, selectedId]);
+
+  const handleToggleVoiceRecording = useCallback(async () => {
+    if (!selectedId || sendingVoice || editingMessageId) {
+      return;
+    }
+
+    if (isRecordingVoice) {
+      mediaRecorderRef.current?.stop();
+      setIsRecordingVoice(false);
+      return;
+    }
+
+    const mimeType = getSupportedRecorderMimeType();
+    if (mimeType === null) {
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      voiceChunksRef.current = [];
+      const startedAt = Date.now();
+      recordingStartedAtRef.current = startedAt;
+      setRecordingStartedAt(startedAt);
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        setIsRecordingVoice(false);
+        setRecordingStartedAt(null);
+        recordingStartedAtRef.current = null;
+        stopVoiceCapture();
+      };
+
+      recorder.onstop = async () => {
+        const durationMs = Math.max(1000, Date.now() - (recordingStartedAtRef.current ?? Date.now()));
+        const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
+        voiceChunksRef.current = [];
+        setRecordingStartedAt(null);
+        recordingStartedAtRef.current = null;
+        stopVoiceCapture();
+
+        if (blob.size === 0) {
+          return;
+        }
+
+        await uploadVoiceMessage(blob, durationMs);
+      };
+
+      recorder.start();
+      setIsRecordingVoice(true);
+    } catch (err) {
+      console.error("Failed to start voice recording:", err);
+      stopVoiceCapture();
+    }
+  }, [editingMessageId, isRecordingVoice, selectedId, sendingVoice, stopVoiceCapture, uploadVoiceMessage]);
 
   const handleGenerateVoiceToken = async () => {
     if (!selectedId || creatingVoiceToken) return;
@@ -566,7 +697,7 @@ export function AdminChatPanel() {
       return "Сообщение удалено";
     }
 
-    return message.content;
+    return getChatMessagePreviewText(message.content) ?? "Системное сообщение";
   }, []);
 
   const clearLongPress = useCallback(() => {
@@ -635,9 +766,10 @@ export function AdminChatPanel() {
 
     const isAdmin = msg.sender === "admin";
     const isSystem = msg.sender === "system";
+    const voiceMessage = parseVoiceMessageContent(msg.content);
     const isSelected = selectedMessageIds.includes(msg.id);
     const canSelect = !isSystem;
-    const canEdit = isAdmin && !isSystem && !msg.isDeleted;
+    const canEdit = isAdmin && !isSystem && !msg.isDeleted && !voiceMessage;
 
     return (
       <div
@@ -700,10 +832,18 @@ export function AdminChatPanel() {
                       ? (selectedSession?.visitorName || "Пользователь")
                       : "Система"}
                 </p>
-                <p className="truncate">{msg.replyTo.isDeleted ? "Сообщение удалено" : msg.replyTo.content}</p>
+                <p className="truncate">
+                  {msg.replyTo.isDeleted ? "Сообщение удалено" : getChatMessagePreviewText(msg.replyTo.content) ?? "Системное сообщение"}
+                </p>
               </button>
             ) : null}
-            <p className={msg.isDeleted ? "italic opacity-70" : ""}>{msg.isDeleted ? "Сообщение удалено" : msg.content}</p>
+            {msg.isDeleted ? (
+              <p className="italic opacity-70">Сообщение удалено</p>
+            ) : voiceMessage ? (
+              <VoiceMessagePlayer payload={voiceMessage} tone={isAdmin ? "visitor" : "admin"} />
+            ) : (
+              <p>{msg.content}</p>
+            )}
           </div>
           <div className={`mt-2 flex items-center gap-2 ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
             <span className="text-[10px] font-bold text-forest/20 uppercase tracking-tighter">
@@ -793,7 +933,7 @@ export function AdminChatPanel() {
                           </span>
                         </div>
                         <p className={`text-xs truncate ${isActive ? "text-white/70" : "text-forest/50"}`}>
-                          {lastMsg ? (lastMsg.sender === "admin" ? "Вы: " : "") + lastMsg.content : "Новый диалог"}
+                          {lastMsg ? (lastMsg.sender === "admin" ? "Вы: " : "") + (getChatMessagePreviewText(lastMsg.content) ?? "Системное сообщение") : "Новый диалог"}
                         </p>
                       </div>
                       {s._count.messages > 0 && !isActive && (
@@ -996,6 +1136,18 @@ export function AdminChatPanel() {
                     className="flex-1 resize-none bg-transparent px-5 py-3.5 text-sm text-forest placeholder:text-forest/30 outline-none max-h-[150px]"
                   />
                   <button
+                    type="button"
+                    onClick={() => void handleToggleVoiceRecording()}
+                    disabled={sending || sendingVoice || Boolean(editingMessageId)}
+                    className={`mb-1 flex items-center justify-center rounded-2xl p-3.5 transition-all active:scale-95 ${
+                      isRecordingVoice
+                        ? "bg-red-500 text-white shadow-xl shadow-red-500/20"
+                        : "border border-sage-light/20 bg-white text-forest hover:bg-cream/40"
+                    } disabled:cursor-not-allowed disabled:opacity-30`}
+                  >
+                    {sendingVoice ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecordingVoice ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </button>
+                  <button
                     onClick={() => void handleSend()}
                     disabled={!input.trim() || sending}
                     className="mb-1 p-3.5 rounded-2xl bg-forest text-white hover:bg-forest/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xl shadow-forest/20 active:scale-95 flex items-center justify-center"
@@ -1003,6 +1155,15 @@ export function AdminChatPanel() {
                     {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </button>
                 </div>
+                {isRecordingVoice ? (
+                  <p className="mt-3 text-[11px] font-bold text-red-500">
+                    Запись идёт. Нажмите квадрат, чтобы отправить голосовое сообщение.
+                  </p>
+                ) : recordingStartedAt ? (
+                  <p className="mt-3 text-[11px] text-forest/40">
+                    Начало записи: {formatTime(new Date(recordingStartedAt).toISOString())}
+                  </p>
+                ) : null}
               </div>
             </>
           )}
