@@ -5,6 +5,7 @@ const VOICE_MESSAGE_SUFFIX = "]]";
 
 export type VoiceMessagePayload = {
   url: string;
+  pathname?: string | null;
   mimeType?: string | null;
   durationMs?: number | null;
   fileSize?: number | null;
@@ -41,6 +42,7 @@ export function parseVoiceMessageContent(content: string): VoiceMessagePayload |
 
     return {
       url: parsed.url,
+      pathname: typeof parsed.pathname === "string" ? parsed.pathname : null,
       mimeType: typeof parsed.mimeType === "string" ? parsed.mimeType : null,
       durationMs: typeof parsed.durationMs === "number" ? parsed.durationMs : null,
       fileSize: typeof parsed.fileSize === "number" ? parsed.fileSize : null,

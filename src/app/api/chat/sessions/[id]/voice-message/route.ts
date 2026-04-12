@@ -55,13 +55,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
         : null;
     const filename = `${Date.now()}-${sender}-${randomUUID()}.${extension}`;
     const blob = await put(`chat-voice/${sessionId}/${filename}`, file, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
       contentType: mimeType,
     });
+    const playbackUrl = `/api/chat/voice-file?pathname=${encodeURIComponent(blob.pathname)}`;
 
     const content = buildVoiceMessageContent({
-      url: blob.url,
+      url: playbackUrl,
+      pathname: blob.pathname,
       mimeType,
       durationMs: Number.isFinite(durationMs) ? durationMs : null,
       fileSize: file.size,
