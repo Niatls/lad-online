@@ -17,6 +17,10 @@ const EXT_BY_TYPE: Record<string, string> = {
   "video/mp4": "m4a",
 };
 
+function normalizeMimeType(value: string) {
+  return value.split(";")[0]?.trim().toLowerCase() || "audio/webm";
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Invalid file size" }, { status: 400 });
     }
 
-    const mimeType = file.type || "audio/webm";
+    const mimeType = normalizeMimeType(file.type || "audio/webm");
     const extension = EXT_BY_TYPE[mimeType];
     if (!extension) {
       return NextResponse.json({ error: "Unsupported audio type" }, { status: 400 });
