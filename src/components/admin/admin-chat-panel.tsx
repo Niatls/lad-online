@@ -11,8 +11,9 @@ import {
   Phone,
   Trash2,
   Archive,
-  CheckSquare,
   X,
+  CornerUpLeft,
+  Pencil,
 } from "lucide-react";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import { VoiceCallBoundary } from "@/components/chat/voice-call-boundary";
@@ -98,7 +99,6 @@ export function AdminChatPanel() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [selectingMessages, setSelectingMessages] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<number[]>([]);
   const [replyTarget, setReplyTarget] = useState<Message | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -116,6 +116,12 @@ export function AdminChatPanel() {
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef(new Map<number, HTMLDivElement | null>());
+  const longPressRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    message: Message;
+  } | null>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
@@ -131,6 +137,19 @@ export function AdminChatPanel() {
     () => ((displayedUsageBytes / usage.monthlyCapBytes) * 100 || 0).toFixed(4),
     [displayedUsageBytes, usage.monthlyCapBytes],
   );
+  const contextMenuPosition = useMemo(() => {
+    if (!contextMenu) {
+      return { left: 0, top: 0 };
+    }
+
+    const viewportWidth = typeof window === "undefined" ? contextMenu.x : window.innerWidth;
+    const viewportHeight = typeof window === "undefined" ? contextMenu.y : window.innerHeight;
+
+    return {
+      left: Math.min(contextMenu.x, Math.max(16, viewportWidth - 220)),
+      top: Math.min(contextMenu.y, Math.max(16, viewportHeight - 220)),
+    };
+  }, [contextMenu]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -404,9 +423,9 @@ export function AdminChatPanel() {
     setActiveVoiceStats(null);
     setVoiceEvents([]);
     setSelectedMessageIds([]);
-    setSelectingMessages(false);
     setReplyTarget(null);
     setEditingMessageId(null);
+    setContextMenu(null);
     await loadSessions();
   };
 
@@ -462,11 +481,11 @@ export function AdminChatPanel() {
     }
   };
 
-  const toggleMessageSelection = (messageId: number) => {
+  const toggleMessageSelection = useCallback((messageId: number) => {
     setSelectedMessageIds((prev) =>
       prev.includes(messageId) ? prev.filter((id) => id !== messageId) : [...prev, messageId],
     );
-  };
+  }, []);
 
   const handleDeleteMessages = async () => {
     if (!selectedId || selectedMessageIds.length === 0 || deletingMessages) {
@@ -500,7 +519,6 @@ export function AdminChatPanel() {
         ),
       );
       setSelectedMessageIds([]);
-      setSelectingMessages(false);
     } catch (err) {
       console.error("Failed to delete messages:", err);
     } finally {
@@ -548,6 +566,51 @@ export function AdminChatPanel() {
     return message.content;
   }, []);
 
+  const clearLongPress = useCallback(() => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current);
+      longPressRef.current = undefined;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleWindowClick = () => setContextMenu(null);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setContextMenu(null);
+      }
+    };
+
+    window.addEventListener("pointerdown", handleWindowClick);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("pointerdown", handleWindowClick);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const openContextMenu = useCallback((message: Message, x: number, y: number) => {
+    setContextMenu({ message, x, y });
+  }, []);
+
+  const handleReplyFromMenu = useCallback((message: Message) => {
+    setEditingMessageId(null);
+    setReplyTarget(message);
+    setContextMenu(null);
+  }, []);
+
+  const handleEditFromMenu = useCallback((message: Message) => {
+    setEditingMessageId(message.id);
+    setReplyTarget(null);
+    setInput(message.content);
+    setContextMenu(null);
+  }, []);
+
+  const handleSelectFromMenu = useCallback((messageId: number) => {
+    toggleMessageSelection(messageId);
+    setContextMenu(null);
+  }, [toggleMessageSelection]);
+
   const renderMessage = (msg: Message) => {
     const voiceToken = parseVoiceInviteToken(msg.content);
     if (voiceToken) {
@@ -558,7 +621,7 @@ export function AdminChatPanel() {
     const isSystem = msg.sender === "system";
     const isSelected = selectedMessageIds.includes(msg.id);
     const canSelect = !isSystem;
-    const canEdit = isAdmin && !isSystem && !msg.isDeleted && !selectingMessages;
+    const canEdit = isAdmin && !isSystem && !msg.isDeleted;
 
     return (
       <div
@@ -570,25 +633,36 @@ export function AdminChatPanel() {
           isSystem ? "justify-center" : isAdmin ? "justify-end" : "justify-start"
         }`}
       >
-        {selectingMessages && canSelect ? (
-          <button
-            type="button"
-            onClick={() => toggleMessageSelection(msg.id)}
-            className={`mr-3 mt-2 h-6 w-6 shrink-0 rounded-full border text-[11px] font-bold transition ${
-              isSelected ? "border-forest bg-forest text-white" : "border-sage-light/30 bg-white text-forest/45"
-            }`}
-          >
-            {isSelected ? "OK" : ""}
-          </button>
-        ) : null}
         <div className={`flex flex-col ${isSystem ? "items-center" : isAdmin ? "items-end" : "items-start"} max-w-[70%]`}>
           <div
+            onContextMenu={(event) => {
+              if (!canSelect) {
+                return;
+              }
+              event.preventDefault();
+              openContextMenu(msg, event.clientX, event.clientY);
+            }}
+            onMouseDown={(event) => {
+              if (event.button !== 0 || !canSelect) {
+                return;
+              }
+              clearLongPress();
+              longPressRef.current = setTimeout(() => {
+                toggleMessageSelection(msg.id);
+              }, 450);
+            }}
+            onMouseUp={clearLongPress}
+            onMouseLeave={clearLongPress}
             className={`rounded-[1.75rem] px-5 py-4 text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${
               isSystem
                 ? "bg-cream text-forest border border-sage-light/20"
                 : isAdmin
-                  ? "bg-forest text-white rounded-br-none"
-                  : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
+                  ? isSelected
+                    ? "bg-forest text-white rounded-br-none ring-2 ring-sage"
+                    : "bg-forest text-white rounded-br-none"
+                  : isSelected
+                    ? "bg-white text-forest border border-sage rounded-bl-none ring-2 ring-sage"
+                    : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
             }`}
           >
             {msg.replyTo ? (
@@ -623,26 +697,10 @@ export function AdminChatPanel() {
             {canEdit ? (
               <button
                 type="button"
-                onClick={() => {
-                  setEditingMessageId(msg.id);
-                  setReplyTarget(null);
-                  setInput(msg.content);
-                }}
+                onClick={() => handleEditFromMenu(msg)}
                 className="rounded-full border border-sage-light/20 bg-white px-2 py-1 text-[10px] font-bold text-forest/45 transition hover:text-forest"
               >
                 Ред.
-              </button>
-            ) : null}
-            {!isSystem && !selectingMessages ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingMessageId(null);
-                  setReplyTarget(msg);
-                }}
-                className="rounded-full border border-sage-light/20 bg-white px-2 py-1 text-[10px] font-bold text-forest/45 transition hover:text-forest"
-              >
-                Ответ
               </button>
             ) : null}
           </div>
@@ -797,22 +855,7 @@ export function AdminChatPanel() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectingMessages((prev) => !prev);
-                      setSelectedMessageIds([]);
-                    }}
-                    className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-bold transition ${
-                      selectingMessages
-                        ? "border-forest/20 bg-forest text-white"
-                        : "border-sage-light/20 bg-white text-forest"
-                    }`}
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                    Выбрать
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                   <button
                     type="button"
                     onClick={handleArchiveSession}
@@ -851,7 +894,6 @@ export function AdminChatPanel() {
                         type="button"
                         onClick={() => {
                           setSelectedMessageIds([]);
-                          setSelectingMessages(false);
                         }}
                         className="rounded-2xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100"
                       >
@@ -887,23 +929,6 @@ export function AdminChatPanel() {
                     Позвонить пользователю
                   </button>
                 </div>
-
-                <div className="mb-4 rounded-[1.5rem] border border-sage-light/15 bg-white/70 px-4 py-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-forest">Логи voice</p>
-                      <p className="text-xs text-forest/50">Лента событий закреплена справа от чата и обновляется вместе с диалогом.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => selectedId && void loadVoiceEvents(selectedId)}
-                      className="rounded-2xl border border-sage-light/20 bg-white px-3 py-2 text-[11px] font-bold text-forest transition hover:bg-cream/40"
-                    >
-                      Обновить
-                    </button>
-                  </div>
-                </div>
-
                 {replyTarget ? (
                   <div className="mb-4 rounded-[1.5rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -1017,6 +1042,43 @@ export function AdminChatPanel() {
           </div>
         </div>
       </div>
+
+      {contextMenu ? (
+        <div
+          className="fixed z-50 min-w-[180px] rounded-[1.25rem] border border-sage-light/20 bg-white/95 p-2 shadow-[0_24px_48px_-16px_rgba(0,0,0,0.18)] backdrop-blur"
+          style={contextMenuPosition}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {!contextMenu.message.isDeleted ? (
+            <button
+              type="button"
+              onClick={() => handleReplyFromMenu(contextMenu.message)}
+              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-medium text-forest transition hover:bg-cream/50"
+            >
+              <CornerUpLeft className="h-4 w-4" />
+              Ответить
+            </button>
+          ) : null}
+          {!contextMenu.message.isDeleted && contextMenu.message.sender === "admin" ? (
+            <button
+              type="button"
+              onClick={() => handleEditFromMenu(contextMenu.message)}
+              className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-medium text-forest transition hover:bg-cream/50"
+            >
+              <Pencil className="h-4 w-4" />
+              Редактировать
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => handleSelectFromMenu(contextMenu.message.id)}
+            className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-medium text-forest transition hover:bg-cream/50"
+          >
+            <Trash2 className="h-4 w-4" />
+            {selectedMessageIds.includes(contextMenu.message.id) ? "Снять выбор" : "Выбрать"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
