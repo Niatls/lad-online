@@ -35,6 +35,8 @@ const defaultIceServers: IceServer[] = [
 ];
 
 const MONTHLY_CAP_BYTES = 1000 * 1024 * 1024 * 1024;
+const SILENT_KEEPALIVE_AUDIO =
+  "data:audio/mp3;base64,SUQzAwAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjMyLjEwMQAAAAAAAAAAAAAA//uQxAADBzQABpAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAAP/7kMQAAgc0AAaQAAACQAAAABBMQU1FMy45OC4yAAAAAAAAAAAAAAD/+5DEAAIHNAAGkAAAAkAAAAAQTEFNRTMuOTguMgAAAAAAAAAAAAAA//uQxAADBzQABpAAAANIAAAAAExBTUUzLjk4LjIAAAAAAAAAAAAAAP/7kMQAAgc0AAaQAAACQAAAABBMQU1FMy45OC4yAAAAAAAAAAAAAAD/+5DEAAIHNAAGkAAAAkAAAAAQTEFNRTMuOTguMgAAAAAAAAAAAAAA";
 
 export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelProps) {
   const [status, setStatus] = useState("Готовим аудио...");
@@ -74,6 +76,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
   const onCloseRef = useRef(onClose);
   const wakeLockRef = useRef<WakeLockSentinelLike | null>(null);
   const restoringAudioRef = useRef(false);
+  const keepAliveAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -213,6 +216,86 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
     throw new Error(normalizeMediaError(lastError));
   }, [normalizeMediaError, wait]);
+
+  const stopKeepAliveAudio = useCallback(() => {
+    const audio = keepAliveAudioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    audio.pause();
+    audio.src = "";
+    keepAliveAudioRef.current = null;
+  }, []);
+
+  const startKeepAliveAudio = useCallback(async () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    let audio = keepAliveAudioRef.current;
+    if (!audio) {
+      audio = new Audio(SILENT_KEEPALIVE_AUDIO);
+      audio.loop = true;
+      audio.playsInline = true;
+      audio.preload = "auto";
+      audio.volume = 0.001;
+      keepAliveAudioRef.current = audio;
+    }
+
+    try {
+      await audio.play();
+    } catch {
+      // keep-alive audio is best effort only
+    }
+  }, []);
+
+  const syncMediaSession = useCallback(
+    (state: "none" | "active") => {
+      const mediaSession = (navigator as Navigator & {
+        mediaSession?: {
+          metadata: MediaMetadata | null;
+          playbackState: "none" | "paused" | "playing";
+          setActionHandler: (action: string, handler: (() => void) | null) => void;
+        };
+      }).mediaSession;
+
+      if (!mediaSession) {
+        return;
+      }
+
+      if (state === "none") {
+        mediaSession.playbackState = "none";
+        mediaSession.metadata = null;
+        mediaSession.setActionHandler("play", null);
+        mediaSession.setActionHandler("pause", null);
+        mediaSession.setActionHandler("stop", null);
+        return;
+      }
+
+      try {
+        mediaSession.metadata = new MediaMetadata({
+          title,
+          artist: role === "admin" ? "Посетитель" : "Поддержка Лад",
+          album: "Voice Mode",
+        });
+      } catch {
+        // ignore metadata failures on unsupported browsers
+      }
+
+      mediaSession.playbackState = "playing";
+      mediaSession.setActionHandler("play", () => {
+        void startKeepAliveAudio();
+      });
+      mediaSession.setActionHandler("pause", () => {
+        void onCloseRef.current();
+      });
+      mediaSession.setActionHandler("stop", () => {
+        void onCloseRef.current();
+      });
+    },
+    [role, startKeepAliveAudio, title],
+  );
 
   const releaseWakeLock = useCallback(async () => {
     const sentinel = wakeLockRef.current;
@@ -425,6 +508,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
     setIsReconnecting(false);
     connectedAtRef.current = Date.now();
     setStatus("Звонок активен");
+    void startKeepAliveAudio();
+    syncMediaSession("active");
     updateLastEvent("Аудиоканал подключён", true);
     void postVoiceEvent("call-active", "Аудиоканал подключён");
     setConnecting(false);
@@ -435,7 +520,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         void refreshConnectionStats();
       }, 1000);
     }
-  }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, updateLastEvent]);
+  }, [clearReconnectTimeout, postVoiceEvent, refreshConnectionStats, startKeepAliveAudio, syncMediaSession, updateLastEvent]);
 
   const restoreAudioAfterInterruption = useCallback(
     async (reason: string) => {
@@ -638,6 +723,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       setIsReconnecting(false);
       destroyPeerConnection();
       void releaseWakeLock();
+      stopKeepAliveAudio();
+      syncMediaSession("none");
 
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -650,7 +737,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       setUsageBytes(0);
       setIceRoute("Ищем маршрут...");
     },
-    [clearReconnectTimeout, destroyPeerConnection, releaseWakeLock],
+    [clearReconnectTimeout, destroyPeerConnection, releaseWakeLock, stopKeepAliveAudio, syncMediaSession],
   );
 
   const handleVisitorRejoinRequest = useCallback(async () => {
@@ -792,6 +879,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
 
       if (document.visibilityState === "visible") {
         void requestWakeLock();
+        void startKeepAliveAudio();
+        syncMediaSession("active");
         const audioTrack = localStreamRef.current?.getAudioTracks()[0];
         if (!audioTrack || audioTrack.readyState === "ended") {
           void restoreAudioAfterInterruption("foreground-return");
@@ -803,6 +892,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         }
       } else {
         void releaseWakeLock();
+        void startKeepAliveAudio();
+        syncMediaSession("active");
       }
     };
 
@@ -832,7 +923,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       window.removeEventListener("pageshow", handleForegroundRecovery);
       document.removeEventListener("visibilitychange", handleForegroundRecovery);
     };
-  }, [attemptReconnect, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, token, updateLastEvent]);
+  }, [attemptReconnect, postVoiceEvent, releaseWakeLock, requestWakeLock, restoreAudioAfterInterruption, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
 
   useEffect(() => {
     let mounted = true;
@@ -874,6 +965,8 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
         localStreamRef.current = stream;
         bindLocalTrackLifecycle(stream);
         void requestWakeLock();
+        void startKeepAliveAudio();
+        syncMediaSession("active");
 
         createPeerRef.current = async () => {
           const currentStream = localStreamRef.current;
@@ -1018,7 +1111,7 @@ export function VoiceCallPanel({ token, role, title, onClose }: VoiceCallPanelPr
       sendOfferRef.current = null;
       cleanup();
     };
-  }, [acquireLocalAudioStream, attemptReconnect, bindLocalTrackLifecycle, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, requestWakeLock, role, token, updateLastEvent]);
+  }, [acquireLocalAudioStream, attemptReconnect, bindLocalTrackLifecycle, cleanup, counterpartLabel, destroyPeerConnection, handleVisitorRejoinRequest, invokeCreatePeer, invokeSendOffer, markCallActive, pollSignals, postSignal, postVoiceEvent, requestWakeLock, role, startKeepAliveAudio, syncMediaSession, token, updateLastEvent]);
 
   const toggleMute = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];
