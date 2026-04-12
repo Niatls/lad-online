@@ -2,7 +2,6 @@
 
 import {
   ArrowRight,
-  CheckCircle2,
   ChevronDown,
   Clock,
   Heart,
@@ -136,19 +135,6 @@ export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
                 </div>
               </div>
 
-              <div className="animation-delay-400 absolute -bottom-4 -left-8 w-48 animate-float rounded-2xl border border-sage-light/20 bg-white p-4 shadow-xl">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-forest/50">Более</p>
-                    <p className="text-sm font-bold text-forest">
-                      1000+ клиентов
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
