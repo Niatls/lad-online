@@ -74,7 +74,7 @@ export function SiteFooter({
               <li>
                 <a
                   href={contacts.phoneHref}
-                  className="flex items-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
+                  className="flex select-text items-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
                 >
                   <Phone className="h-4 w-4" />
                   {contacts.phone}
@@ -83,7 +83,7 @@ export function SiteFooter({
               <li>
                 <a
                   href={contacts.emailHref}
-                  className="flex items-center gap-2 break-all text-sm text-white/50 transition-colors hover:text-white"
+                  className="flex select-text items-center gap-2 break-all text-sm text-white/50 transition-colors hover:text-white"
                 >
                   <Mail className="h-4 w-4 flex-shrink-0" />
                   {contacts.email}

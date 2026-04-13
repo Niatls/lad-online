@@ -42,7 +42,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
 
             return (
               <FadeIn key={`${service.title}-${index}`} delay={index * 100}>
-                <div className="group relative aspect-[4/3] h-full overflow-hidden rounded-2xl border border-sage-light/15 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sage/30 hover:shadow-xl">
+                <div className="group relative aspect-[2/3] h-full overflow-hidden rounded-2xl border border-sage-light/15 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sage/30 hover:shadow-xl">
                   {imageSrc ? (
                     <div className="absolute inset-0 bg-sage-light/10">
                       <Image
@@ -54,8 +54,8 @@ export function ServicesSection({ services }: ServicesSectionProps) {
                       />
                     </div>
                   ) : null}
-                  <div className="absolute inset-0 bg-gradient-to-t from-forest/72 via-forest/18 to-transparent" />
-                  <div className="absolute inset-x-4 bottom-4 rounded-[1.5rem] border border-white/28 bg-white/12 p-5 shadow-lg backdrop-blur-md sm:inset-x-5 sm:bottom-5 sm:p-6">
+                  <div className="absolute inset-0 bg-gradient-to-t from-forest/74 via-forest/20 to-transparent" />
+                  <div className="absolute inset-x-4 bottom-4 rounded-[1.5rem] border border-white/24 bg-white/10 p-5 shadow-lg backdrop-blur-md sm:inset-x-5 sm:bottom-5 sm:p-6">
                     <h3 className="mb-3 text-lg font-bold text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.28)]">
                       {service.title}
                     </h3>

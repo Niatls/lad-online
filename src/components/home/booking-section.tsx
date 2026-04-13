@@ -74,7 +74,7 @@ export function BookingSection({
                   </div>
                   <div>
                     <p className="mb-0.5 text-xs text-forest/40">Телефон</p>
-                    <p className="text-sm font-semibold text-forest">
+                    <p className="select-text text-sm font-semibold text-forest">
                       {contacts.phone}
                     </p>
                   </div>
@@ -88,7 +88,7 @@ export function BookingSection({
                     <p className="mb-0.5 text-xs text-forest/40">
                       Электронная почта
                     </p>
-                    <p className="break-all text-sm font-semibold text-forest">
+                    <p className="select-text break-all text-sm font-semibold text-forest">
                       {contacts.email}
                     </p>
                   </div>
@@ -154,7 +154,7 @@ export function BookingSection({
                       onChange={(event) =>
                         onFieldChange("name", event.target.value)
                       }
-                      className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
+                      className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
                     />
                   </div>
 
@@ -171,7 +171,7 @@ export function BookingSection({
                       onChange={(event) =>
                         onFieldChange("email", event.target.value)
                       }
-                      className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
+                      className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
                     />
                   </div>
 
@@ -188,7 +188,7 @@ export function BookingSection({
                       onChange={(event) =>
                         onFieldChange("phone", event.target.value)
                       }
-                      className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
+                      className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
                     />
                   </div>
 
@@ -204,7 +204,7 @@ export function BookingSection({
                       onChange={(event) =>
                         onFieldChange("reason", event.target.value)
                       }
-                      className="resize-none rounded-xl border-sage-light/30 bg-white px-4 py-3 text-forest placeholder:text-forest/30 focus:border-sage"
+                      className="resize-none select-text rounded-xl border-sage-light/30 bg-white px-4 py-3 text-forest placeholder:text-forest/30 focus:border-sage"
                     />
                   </div>
 

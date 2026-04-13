@@ -96,7 +96,7 @@ export function HomePageClient({
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col select-none">
       <HomeHeader
         mobileMenuOpen={mobileMenuOpen}
         scrolled={scrolled}
