@@ -55,7 +55,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
                     </div>
                   ) : null}
                   <div className="absolute inset-0 bg-gradient-to-t from-forest/74 via-forest/20 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] rounded-b-2xl border border-white/15 bg-white/[0.055] p-5 shadow-lg backdrop-blur-md sm:p-6">
+                  <div className="absolute inset-x-0 bottom-0 rounded-t-[1.5rem] rounded-b-2xl border border-white/12 bg-white/[0.035] p-5 shadow-lg backdrop-blur-md sm:p-6">
                     <h3 className="mb-3 text-lg font-bold text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.28)]">
                       {service.title}
                     </h3>

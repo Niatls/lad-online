@@ -74,6 +74,8 @@ export function HomePageClient({
     };
 
     const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+
       const target = event.target;
       if (!(target instanceof HTMLElement)) {
         setCopyContextMenu(null);
@@ -94,8 +96,6 @@ export function HomePageClient({
         setCopyContextMenu(null);
         return;
       }
-
-      event.preventDefault();
       setCopyContextMenu({
         text: copyText,
         x: Math.min(event.clientX, window.innerWidth - 156),
