@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { type BookingFormData } from "@/components/home/booking-section";
 import { HomeHeader } from "@/components/home/home-header";
@@ -43,6 +43,7 @@ export function HomePageClient({
   const [submitError, setSubmitError] = useState("");
   const [submittedApplicationNumber, setSubmittedApplicationNumber] =
     useState("");
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { homeContent: liveHomeContent } = useLiveEditor();
   const currentHomeContent = liveHomeContent || homeContent;
@@ -69,6 +70,13 @@ export function HomePageClient({
         return;
       }
 
+      if (
+        event.target instanceof Node &&
+        contextMenuRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+
       clearSelection();
       setCopyContextMenu(null);
     };
@@ -90,16 +98,38 @@ export function HomePageClient({
 
       const selection = window.getSelection();
       const selectedText = selection?.toString().trim() ?? "";
-      const copyText = selectedText || copyTarget.dataset.copyText || "";
-
-      if (!copyText) {
+      if (!selection || selection.isCollapsed || !selectedText) {
         setCopyContextMenu(null);
         return;
       }
+
+      const anchorElement =
+        selection.anchorNode instanceof Element
+          ? selection.anchorNode
+          : selection.anchorNode?.parentElement;
+      const focusElement =
+        selection.focusNode instanceof Element
+          ? selection.focusNode
+          : selection.focusNode?.parentElement;
+      const anchorCopyTarget = anchorElement?.closest("[data-copy-text]");
+      const focusCopyTarget = focusElement?.closest("[data-copy-text]");
+
+      if (anchorCopyTarget !== copyTarget || focusCopyTarget !== copyTarget) {
+        setCopyContextMenu(null);
+        return;
+      }
+
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const rect = range?.getBoundingClientRect();
+      if (!rect || (rect.width === 0 && rect.height === 0)) {
+        setCopyContextMenu(null);
+        return;
+      }
+
       setCopyContextMenu({
-        text: copyText,
-        x: Math.min(event.clientX, window.innerWidth - 156),
-        y: Math.min(event.clientY, window.innerHeight - 64),
+        text: selectedText,
+        x: Math.min(rect.right + 8, window.innerWidth - 156),
+        y: Math.min(Math.max(rect.top - 4, 8), window.innerHeight - 64),
       });
     };
 
@@ -126,7 +156,19 @@ export function HomePageClient({
     }
 
     try {
-      await navigator.clipboard.writeText(copyContextMenu.text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(copyContextMenu.text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = copyContextMenu.text;
+        textarea.setAttribute("readonly", "true");
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
     } finally {
       setCopyContextMenu(null);
     }
@@ -216,11 +258,13 @@ export function HomePageClient({
 
       {copyContextMenu ? (
         <div
+          ref={contextMenuRef}
           className="fixed z-[100] min-w-[140px] overflow-hidden rounded-xl border border-sage-light/30 bg-white/95 p-1 shadow-2xl backdrop-blur-md"
           style={{ left: copyContextMenu.x, top: copyContextMenu.y }}
         >
           <button
             type="button"
+            onMouseDown={(event) => event.preventDefault()}
             onClick={handleCopyFromMenu}
             className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-forest transition hover:bg-sage-light/20"
           >
