@@ -42,9 +42,9 @@ export function ServicesSection({ services }: ServicesSectionProps) {
 
             return (
               <FadeIn key={`${service.title}-${index}`} delay={index * 100}>
-                <div className="group h-full rounded-2xl border border-sage-light/15 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-sage/30 hover:shadow-xl sm:p-8">
+                <div className="group relative flex min-h-[360px] h-full items-end overflow-hidden rounded-2xl border border-sage-light/15 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sage/30 hover:shadow-xl">
                   {imageSrc ? (
-                    <div className="relative mb-5 aspect-[4/3] overflow-hidden rounded-2xl bg-sage-light/10">
+                    <div className="absolute inset-0 bg-sage-light/10">
                       <Image
                         src={imageSrc}
                         alt={service.title}
@@ -54,12 +54,15 @@ export function ServicesSection({ services }: ServicesSectionProps) {
                       />
                     </div>
                   ) : null}
-                  <h3 className="mb-3 text-lg font-bold text-forest">
-                    {service.title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-forest/50">
-                    {service.description}
-                  </p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-forest/70 via-forest/15 to-transparent" />
+                  <div className="relative m-4 rounded-[1.5rem] border border-white/35 bg-white/18 p-5 shadow-lg backdrop-blur-md sm:m-5 sm:p-6">
+                    <h3 className="mb-3 text-lg font-bold text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.28)]">
+                      {service.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-white/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.22)]">
+                      {service.description}
+                    </p>
+                  </div>
                 </div>
               </FadeIn>
             );
