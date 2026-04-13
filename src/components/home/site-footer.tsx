@@ -7,6 +7,7 @@ import type {
 import { siteMessengerLinks } from "@/lib/site-config";
 
 import type { NavLink } from "./home-data";
+import { SelectableContactAction } from "./selectable-contact-action";
 
 type SiteFooterProps = {
   contacts: HomeContactsContent;
@@ -72,22 +73,24 @@ export function SiteFooter({
             <h4 className="mb-4 text-sm font-semibold text-white">Контакты</h4>
             <ul className="space-y-3">
               <li>
-                <a
+                <SelectableContactAction
                   href={contacts.phoneHref}
-                  className="flex select-text items-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
-                >
-                  <Phone className="h-4 w-4" />
-                  {contacts.phone}
-                </a>
+                  Icon={Phone}
+                  text={contacts.phone}
+                  className="flex w-full items-center gap-2 text-left text-sm text-white/50 transition-colors hover:text-white"
+                  iconClassName="h-4 w-4"
+                  textClassName="select-text"
+                />
               </li>
               <li>
-                <a
+                <SelectableContactAction
                   href={contacts.emailHref}
-                  className="flex select-text items-center gap-2 break-all text-sm text-white/50 transition-colors hover:text-white"
-                >
-                  <Mail className="h-4 w-4 flex-shrink-0" />
-                  {contacts.email}
-                </a>
+                  Icon={Mail}
+                  text={contacts.email}
+                  className="flex w-full items-center gap-2 break-all text-left text-sm text-white/50 transition-colors hover:text-white"
+                  iconClassName="h-4 w-4 flex-shrink-0"
+                  textClassName="select-text"
+                />
               </li>
               <li className="flex gap-3 pt-2">
                 {siteMessengerLinks.map(({ Icon, href, label }) => (

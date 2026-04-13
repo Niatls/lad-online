@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import { useCallback, useRef } from "react";
 
 import {
   CheckCircle2,
@@ -49,6 +50,25 @@ export function BookingSection({
   onResetSuccess,
   onFieldChange,
 }: BookingSectionProps) {
+  const phoneTextRef = useRef<HTMLParagraphElement | null>(null);
+  const emailTextRef = useRef<HTMLParagraphElement | null>(null);
+
+  const selectText = useCallback((node: HTMLElement | null) => {
+    if (!node) {
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection) {
+      return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, []);
+
   return (
     <section id="booking" className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -74,7 +94,11 @@ export function BookingSection({
                   </div>
                   <div>
                     <p className="mb-0.5 text-xs text-forest/40">Телефон</p>
-                    <p className="select-text text-sm font-semibold text-forest">
+                    <p
+                      ref={phoneTextRef}
+                      onDoubleClick={() => selectText(phoneTextRef.current)}
+                      className="select-text text-sm font-semibold text-forest"
+                    >
                       {contacts.phone}
                     </p>
                   </div>
@@ -88,7 +112,11 @@ export function BookingSection({
                     <p className="mb-0.5 text-xs text-forest/40">
                       Электронная почта
                     </p>
-                    <p className="select-text break-all text-sm font-semibold text-forest">
+                    <p
+                      ref={emailTextRef}
+                      onDoubleClick={() => selectText(emailTextRef.current)}
+                      className="select-text break-all text-sm font-semibold text-forest"
+                    >
                       {contacts.email}
                     </p>
                   </div>
