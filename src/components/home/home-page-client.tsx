@@ -23,6 +23,12 @@ type HomePageClientProps = {
   previewMode?: boolean;
 };
 
+type CopyContextMenuState = {
+  text: string;
+  x: number;
+  y: number;
+} | null;
+
 export function HomePageClient({
   articles,
   homeContent,
@@ -30,6 +36,8 @@ export function HomePageClient({
 }: HomePageClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [copyContextMenu, setCopyContextMenu] =
+    useState<CopyContextMenuState>(null);
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -45,6 +53,84 @@ export function HomePageClient({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const clearSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        return;
+      }
+
+      selection.removeAllRanges();
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      clearSelection();
+      setCopyContextMenu(null);
+    };
+
+    const handleContextMenu = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        setCopyContextMenu(null);
+        return;
+      }
+
+      const copyTarget = target.closest("[data-copy-text]");
+      if (!(copyTarget instanceof HTMLElement)) {
+        setCopyContextMenu(null);
+        return;
+      }
+
+      const selection = window.getSelection();
+      const selectedText = selection?.toString().trim() ?? "";
+      const copyText = selectedText || copyTarget.dataset.copyText || "";
+
+      if (!copyText) {
+        setCopyContextMenu(null);
+        return;
+      }
+
+      event.preventDefault();
+      setCopyContextMenu({
+        text: copyText,
+        x: Math.min(event.clientX, window.innerWidth - 156),
+        y: Math.min(event.clientY, window.innerHeight - 64),
+      });
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setCopyContextMenu(null);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const handleCopyFromMenu = async () => {
+    if (!copyContextMenu?.text) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(copyContextMenu.text);
+    } finally {
+      setCopyContextMenu(null);
+    }
+  };
 
   const scrollToSection = (id: string) => {
     setMobileMenuOpen(false);
@@ -127,6 +213,21 @@ export function HomePageClient({
         services={currentHomeContent.services}
         onScrollToSection={scrollToSection}
       />
+
+      {copyContextMenu ? (
+        <div
+          className="fixed z-[100] min-w-[140px] overflow-hidden rounded-xl border border-sage-light/30 bg-white/95 p-1 shadow-2xl backdrop-blur-md"
+          style={{ left: copyContextMenu.x, top: copyContextMenu.y }}
+        >
+          <button
+            type="button"
+            onClick={handleCopyFromMenu}
+            className="w-full rounded-lg px-4 py-2 text-left text-sm font-medium text-forest transition hover:bg-sage-light/20"
+          >
+            Копировать
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

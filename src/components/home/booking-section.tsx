@@ -97,6 +97,7 @@ export function BookingSection({
                     <p
                       ref={phoneTextRef}
                       onDoubleClick={() => selectText(phoneTextRef.current)}
+                      data-copy-text={contacts.phone}
                       className="select-text text-sm font-semibold text-forest"
                     >
                       {contacts.phone}
@@ -115,6 +116,7 @@ export function BookingSection({
                     <p
                       ref={emailTextRef}
                       onDoubleClick={() => selectText(emailTextRef.current)}
+                      data-copy-text={contacts.email}
                       className="select-text break-all text-sm font-semibold text-forest"
                     >
                       {contacts.email}

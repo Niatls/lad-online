@@ -76,7 +76,11 @@ export function SelectableContactAction({
       className={className}
     >
       <Icon className={iconClassName} />
-      <span ref={textRef} className={textClassName}>
+      <span
+        ref={textRef}
+        className={textClassName}
+        data-copy-text={text}
+      >
         {text}
       </span>
     </button>
