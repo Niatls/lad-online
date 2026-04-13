@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useCallback, useRef } from "react";
+import { useRef } from "react";
 
 import {
   CheckCircle2,
@@ -53,21 +53,19 @@ export function BookingSection({
   const phoneTextRef = useRef<HTMLParagraphElement | null>(null);
   const emailTextRef = useRef<HTMLParagraphElement | null>(null);
 
-  const selectText = useCallback((node: HTMLElement | null) => {
+  const activateCopyTarget = (node: HTMLElement | null) => {
     if (!node) {
       return;
     }
 
-    const selection = window.getSelection();
-    if (!selection) {
-      return;
-    }
+    document
+      .querySelectorAll<HTMLElement>("[data-copy-active='true']")
+      .forEach((element) => {
+        element.dataset.copyActive = "false";
+      });
 
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }, []);
+    node.dataset.copyActive = "true";
+  };
 
   return (
     <section id="booking" className="bg-white py-24 sm:py-32">
@@ -96,9 +94,11 @@ export function BookingSection({
                     <p className="mb-0.5 text-xs text-forest/40">Телефон</p>
                     <p
                       ref={phoneTextRef}
-                      onDoubleClick={() => selectText(phoneTextRef.current)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onDoubleClick={() => activateCopyTarget(phoneTextRef.current)}
                       data-copy-text={contacts.phone}
-                      className="select-text text-sm font-semibold text-forest"
+                      data-copy-active="false"
+                      className="select-none text-sm font-semibold text-forest data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-sage-light/40 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
                     >
                       {contacts.phone}
                     </p>
@@ -115,9 +115,11 @@ export function BookingSection({
                     </p>
                     <p
                       ref={emailTextRef}
-                      onDoubleClick={() => selectText(emailTextRef.current)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onDoubleClick={() => activateCopyTarget(emailTextRef.current)}
                       data-copy-text={contacts.email}
-                      className="select-text break-all text-sm font-semibold text-forest"
+                      data-copy-active="false"
+                      className="select-none break-all text-sm font-semibold text-forest data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-sage-light/40 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
                     >
                       {contacts.email}
                     </p>

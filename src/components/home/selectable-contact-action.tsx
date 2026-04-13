@@ -23,6 +23,14 @@ export function SelectableContactAction({
   const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textRef = useRef<HTMLSpanElement | null>(null);
 
+  const clearActiveCopyTargets = () => {
+    document
+      .querySelectorAll<HTMLElement>("[data-copy-active='true']")
+      .forEach((node) => {
+        node.dataset.copyActive = "false";
+      });
+  };
+
   useEffect(() => {
     return () => {
       if (clickTimeoutRef.current) {
@@ -30,23 +38,6 @@ export function SelectableContactAction({
       }
     };
   }, []);
-
-  const selectText = () => {
-    const textNode = textRef.current;
-    if (!textNode) {
-      return;
-    }
-
-    const selection = window.getSelection();
-    if (!selection) {
-      return;
-    }
-
-    const range = document.createRange();
-    range.selectNodeContents(textNode);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  };
 
   const handleClick = () => {
     if (clickTimeoutRef.current) {
@@ -65,12 +56,16 @@ export function SelectableContactAction({
       clickTimeoutRef.current = null;
     }
 
-    selectText();
+    clearActiveCopyTargets();
+    if (textRef.current) {
+      textRef.current.dataset.copyActive = "true";
+    }
   };
 
   return (
     <button
       type="button"
+      onMouseDown={(event) => event.preventDefault()}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       className={className}
@@ -80,6 +75,7 @@ export function SelectableContactAction({
         ref={textRef}
         className={textClassName}
         data-copy-text={text}
+        data-copy-active="false"
       >
         {text}
       </span>

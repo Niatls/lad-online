@@ -59,10 +59,15 @@ export function HomePageClient({
     const clearSelection = () => {
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) {
-        return;
+      } else {
+        selection.removeAllRanges();
       }
 
-      selection.removeAllRanges();
+      document
+        .querySelectorAll<HTMLElement>("[data-copy-active='true']")
+        .forEach((node) => {
+          node.dataset.copyActive = "false";
+        });
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -90,46 +95,16 @@ export function HomePageClient({
         return;
       }
 
-      const copyTarget = target.closest("[data-copy-text]");
+      const copyTarget = target.closest("[data-copy-active='true'][data-copy-text]");
       if (!(copyTarget instanceof HTMLElement)) {
         setCopyContextMenu(null);
         return;
       }
 
-      const selection = window.getSelection();
-      const selectedText = selection?.toString().trim() ?? "";
-      if (!selection || selection.isCollapsed || !selectedText) {
-        setCopyContextMenu(null);
-        return;
-      }
-
-      const anchorElement =
-        selection.anchorNode instanceof Element
-          ? selection.anchorNode
-          : selection.anchorNode?.parentElement;
-      const focusElement =
-        selection.focusNode instanceof Element
-          ? selection.focusNode
-          : selection.focusNode?.parentElement;
-      const anchorCopyTarget = anchorElement?.closest("[data-copy-text]");
-      const focusCopyTarget = focusElement?.closest("[data-copy-text]");
-
-      if (anchorCopyTarget !== copyTarget || focusCopyTarget !== copyTarget) {
-        setCopyContextMenu(null);
-        return;
-      }
-
-      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-      const rect = range?.getBoundingClientRect();
-      if (!rect || (rect.width === 0 && rect.height === 0)) {
-        setCopyContextMenu(null);
-        return;
-      }
-
       setCopyContextMenu({
-        text: selectedText,
-        x: Math.min(rect.right + 8, window.innerWidth - 156),
-        y: Math.min(Math.max(rect.top - 4, 8), window.innerHeight - 64),
+        text: copyTarget.dataset.copyText || "",
+        x: Math.min(event.clientX, window.innerWidth - 156),
+        y: Math.min(event.clientY, window.innerHeight - 64),
       });
     };
 

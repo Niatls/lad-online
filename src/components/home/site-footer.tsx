@@ -79,7 +79,7 @@ export function SiteFooter({
                   text={contacts.phone}
                   className="flex w-full items-center gap-2 text-left text-sm text-white/50 transition-colors hover:text-white"
                   iconClassName="h-4 w-4"
-                  textClassName="select-text"
+                  textClassName="select-none data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-white/15 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
                 />
               </li>
               <li>
@@ -89,7 +89,7 @@ export function SiteFooter({
                   text={contacts.email}
                   className="flex w-full items-center gap-2 break-all text-left text-sm text-white/50 transition-colors hover:text-white"
                   iconClassName="h-4 w-4 flex-shrink-0"
-                  textClassName="select-text"
+                  textClassName="select-none data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-white/15 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
                 />
               </li>
               <li className="flex gap-3 pt-2">
