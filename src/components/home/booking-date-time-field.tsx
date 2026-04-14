@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { ru } from "date-fns/locale";
 import { CalendarDays, Clock3 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -126,9 +127,9 @@ export function BookingDateTimeField({
     selectedHour && selectedMinute ? `${selectedHour}:${selectedMinute}` : "";
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 select-none">
       <label className="text-sm font-medium text-forest">
-        Р”Р°С‚Р° Рё РІСЂРµРјСЏ РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё
+        Дата и время консультации
       </label>
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -141,14 +142,30 @@ export function BookingDateTimeField({
               <CalendarDays className="mr-2 h-4 w-4 text-sage-dark" />
               {selectedDate
                 ? formatBookingDate(selectedDate)
-                : "Р’С‹Р±РµСЂРёС‚Рµ РґР°С‚Сѓ РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё"}
+                : "Выберите дату консультации"}
             </Button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-2 shadow-xl"
+            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-2 shadow-xl select-none"
           >
             <Calendar
+              locale={ru}
+              formatters={{
+                formatCaption: (date, options) =>
+                  new Intl.DateTimeFormat("ru-RU", {
+                    month: "long",
+                    year: "numeric",
+                    timeZone: "Europe/Moscow",
+                  }).format(date),
+                formatWeekdayName: (date) =>
+                  new Intl.DateTimeFormat("ru-RU", {
+                    weekday: "short",
+                    timeZone: "Europe/Moscow",
+                  })
+                    .format(date)
+                    .slice(0, 2),
+              }}
               mode="single"
               selected={selectedDate}
               onSelect={(date) => {
@@ -158,17 +175,19 @@ export function BookingDateTimeField({
                 }
               }}
               disabled={(date) => date < getMinimumBookingDate()}
-              className="w-full rounded-xl bg-transparent"
+              className="w-full rounded-xl bg-transparent select-none"
               classNames={{
                 months: "w-full",
                 month: "w-full",
                 table: "w-full border-collapse",
-                head_row: "grid grid-cols-7",
-                row: "mt-2 grid grid-cols-7",
+                weekdays: "grid grid-cols-7 gap-1.5",
+                head_row: "grid grid-cols-7 gap-1.5",
+                row: "mt-2 grid grid-cols-7 gap-1.5",
                 cell: "p-0 text-center",
                 month_caption:
-                  "flex h-8 w-full items-center justify-center px-8 text-sm font-semibold text-forest",
-                weekday: "rounded-md text-[0.75rem] font-medium text-forest/45",
+                  "flex h-8 w-full items-center justify-center px-8 text-sm font-semibold capitalize text-forest",
+                weekday:
+                  "flex items-center justify-center rounded-md text-[0.75rem] font-medium uppercase text-forest/45",
                 day: "relative aspect-square h-full w-full p-0 text-center select-none",
                 today: "rounded-md bg-sage-light/30 text-forest",
               }}
@@ -188,17 +207,17 @@ export function BookingDateTimeField({
               {selectedTimeLabel ? (
                 <span>{selectedTimeLabel}</span>
               ) : (
-                <span className="text-forest/45">Р’СЂРµРјСЏ</span>
+                <span className="text-forest/35">Выберите время</span>
               )}
             </Button>
           </PopoverTrigger>
           <PopoverContent
             align="end"
-            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-3 shadow-xl"
+            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-3 shadow-xl select-none"
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-forest/40">
-                Р’СЂРµРјСЏ
+                Время
               </span>
               <span className="text-sm font-semibold text-sage-dark">
                 {isLoadingAvailability
@@ -214,7 +233,7 @@ export function BookingDateTimeField({
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <TimeColumn
-                  label="Р§Р°СЃС‹"
+                  label="Часы"
                   options={availableHours}
                   selectedValue={activeHour}
                   onSelect={(hour) => {
@@ -231,7 +250,7 @@ export function BookingDateTimeField({
                   }}
                 />
                 <TimeColumn
-                  label="РњРёРЅСѓС‚С‹"
+                  label="Минуты"
                   options={activeMinutes}
                   selectedValue={
                     activeHour === selectedHour ? selectedMinute : ""
@@ -267,7 +286,7 @@ function TimeColumn({
   onSelect,
 }: TimeColumnProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-sage-light/30 bg-white/80">
+    <div className="overflow-hidden rounded-2xl border border-sage-light/30 bg-white/80 select-none">
       <div className="border-b border-sage-light/20 px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-forest/40">
         {label}
       </div>

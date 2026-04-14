@@ -65,8 +65,7 @@ export function HomePageClient({
   useEffect(() => {
     const clearSelection = () => {
       const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) {
-      } else {
+      if (selection && !selection.isCollapsed) {
         selection.removeAllRanges();
       }
 
@@ -94,10 +93,13 @@ export function HomePageClient({
     };
 
     const handleContextMenu = (event: MouseEvent) => {
-      event.preventDefault();
-
       const target = event.target;
       if (!(target instanceof HTMLElement)) {
+        setCopyContextMenu(null);
+        return;
+      }
+
+      if (target.closest("input, textarea, [contenteditable='true']")) {
         setCopyContextMenu(null);
         return;
       }
@@ -107,6 +109,8 @@ export function HomePageClient({
         setCopyContextMenu(null);
         return;
       }
+
+      event.preventDefault();
 
       setCopyContextMenu({
         text: copyTarget.dataset.copyText || "",

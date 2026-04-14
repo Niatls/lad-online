@@ -158,7 +158,7 @@ export function ApplicationLookup() {
   };
 
   return (
-    <section className="bg-cream py-16">
+    <section className="bg-cream py-16 select-none">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-start gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="pt-2">
@@ -184,7 +184,7 @@ export function ApplicationLookup() {
                         ? `${moscowDateTime.day} ${moscowDateTime.month} ${moscowDateTime.year}`
                         : "Текущая дата"}
                     </p>
-                    <p className="mt-1 text-center text-xs text-forest/45">
+                    <p className="mt-1 text-center text-xs capitalize text-forest/45">
                       {moscowDateTime?.weekday || "день недели"}
                     </p>
                   </div>
@@ -201,69 +201,72 @@ export function ApplicationLookup() {
                       {calendarMonthName}
                     </p>
                     <p className="text-xs font-medium text-sage-dark">
-                      Запись: {appointment.day} числа, {appointment.time} МСК
+                      Запись: {appointment.day} число, {appointment.time} МСК
                     </p>
                   </div>
                 ) : null}
 
                 <div className="rounded-xl border border-sage-light/35 bg-sage-light/15 p-2.5 shadow-inner backdrop-blur-md">
                   <div className="grid grid-cols-7 gap-1.5 text-center">
-                  {weekDays.map((day) => (
-                    <div
-                      key={day}
-                      className="py-1 text-[11px] font-semibold text-forest/45"
-                    >
-                      {day}
-                    </div>
-                  ))}
-                  {calendarDays.map((day, index) => {
-                    const isCurrentDay =
-                      day !== null &&
-                      day === moscowDateTime?.dayNumber &&
-                      calendarMonthIndex === moscowDateTime.monthIndex &&
-                      calendarYear === moscowDateTime.yearNumber;
-                    const isAppointmentDay =
-                      day !== null &&
-                      appointment &&
-                      day === appointment.day &&
-                      calendarMonthIndex === appointment.monthIndex &&
-                      calendarYear === appointment.year;
-
-                    return (
+                    {weekDays.map((day) => (
                       <div
-                        key={`${day ?? "blank"}-${index}`}
-                        className={[
-                          "flex aspect-square min-h-8 items-center justify-center rounded-md border text-xs font-semibold transition sm:min-h-9 sm:text-sm",
-                          day === null
-                            ? "border-transparent"
-                            : "border-sage-light/35 bg-sage-light/10 text-forest backdrop-blur-sm",
-                          isCurrentDay
-                            ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-sage-light/90"
-                            : "",
-                          isAppointmentDay
-                            ? "border-forest bg-forest text-white shadow-md ring-2 ring-sage-light/80"
-                            : "",
-                          isCurrentDay && isAppointmentDay
-                            ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-white"
-                            : "",
-                        ].join(" ")}
+                        key={day}
+                        className="flex items-center justify-center py-1 text-[11px] font-semibold uppercase text-forest/45"
                       >
                         {day}
                       </div>
-                    );
-                  })}
-                </div>
+                    ))}
+                    {calendarDays.map((day, index) => {
+                      const isCurrentDay =
+                        day !== null &&
+                        day === moscowDateTime?.dayNumber &&
+                        calendarMonthIndex === moscowDateTime.monthIndex &&
+                        calendarYear === moscowDateTime.yearNumber;
+                      const isAppointmentDay =
+                        day !== null &&
+                        appointment &&
+                        day === appointment.day &&
+                        calendarMonthIndex === appointment.monthIndex &&
+                        calendarYear === appointment.year;
+
+                      return (
+                        <div
+                          key={`${day ?? "blank"}-${index}`}
+                          className={[
+                            "flex aspect-square min-h-8 items-center justify-center rounded-md border text-xs font-semibold transition sm:min-h-9 sm:text-sm",
+                            day === null
+                              ? "border-transparent"
+                              : "border-sage-light/35 bg-sage-light/10 text-forest backdrop-blur-sm",
+                            isCurrentDay
+                              ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-sage-light/90"
+                              : "",
+                            isAppointmentDay
+                              ? "border-forest bg-forest text-white shadow-md ring-2 ring-sage-light/80"
+                              : "",
+                            isCurrentDay && isAppointmentDay
+                              ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-white"
+                              : "",
+                          ].join(" ")}
+                        >
+                          {day}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]">
+            <form
+              onSubmit={handleSubmit}
+              className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]"
+            >
               <Input
                 aria-label="Код заявки"
                 placeholder="LAD-NG6GDW-K05"
                 value={applicationCode}
                 onChange={(event) => setApplicationCode(event.target.value)}
-                className="h-11 rounded-xl border-white/60 bg-white/70"
+                className="h-11 rounded-xl border-white/60 bg-white/70 select-text placeholder:text-forest/28"
                 required
               />
               <Button
