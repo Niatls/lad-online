@@ -35,12 +35,12 @@ export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
     <section className="relative flex min-h-screen items-center overflow-hidden">
       <div className="absolute inset-0">
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/hero-original.png')" }}
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed"
+          style={{ backgroundImage: "url('/hero-bg.png')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-cream/95 via-cream/85 to-cream/60" />
-        <div className="absolute right-10 top-20 h-72 w-72 animate-float rounded-full bg-sage-light/20 blur-3xl" />
-        <div className="animation-delay-400 absolute bottom-20 left-10 h-96 w-96 animate-float rounded-full bg-sage/10 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-r from-cream/82 via-cream/68 to-cream/42" />
+        <div className="absolute right-10 top-20 h-72 w-72 rounded-full bg-sage-light/20 blur-3xl" />
+        <div className="animation-delay-400 absolute bottom-20 left-10 h-96 w-96 rounded-full bg-sage/10 blur-3xl" />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-32 sm:px-6 sm:py-40 lg:px-8">
@@ -112,7 +112,7 @@ export function HeroSection({ content, onScrollToSection }: HeroSectionProps) {
 
           <div className="hidden justify-center lg:flex">
             <div className="relative">
-              <div className="animate-float flex h-96 w-80 flex-col justify-between rounded-3xl border border-sage-light/30 bg-gradient-to-br from-sage-light/40 to-sage/20 p-8 shadow-2xl backdrop-blur-sm">
+              <div className="flex h-96 w-80 flex-col justify-between rounded-3xl border border-sage-light/30 bg-gradient-to-br from-sage-light/40 to-sage/20 p-8 shadow-2xl backdrop-blur-sm">
                 <div>
                   <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/60 shadow-lg backdrop-blur-sm">
                     <Heart className="h-8 w-8 text-sage-dark" />

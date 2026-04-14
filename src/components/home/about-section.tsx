@@ -31,7 +31,7 @@ export function AboutSection({ content }: AboutSectionProps) {
   const activeContent = homeContent || content;
 
   return (
-    <section id="about" className="relative py-24 sm:py-32">
+    <section id="about" className="relative bg-transparent py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <FadeIn>

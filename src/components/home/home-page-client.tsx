@@ -231,7 +231,7 @@ export function HomePageClient({
         onScrollToSection={scrollToSection}
       />
 
-      <main className="flex-1">
+      <main className="flex-1 bg-[url('/hero-bg.png')] bg-fixed bg-cover bg-center bg-no-repeat">
         <HomeSectionsRenderer
           articles={articles}
           formData={formData}
