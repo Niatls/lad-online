@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { applicationContactMethods } from "@/lib/applications";
 import type { HomeContactsContent, HomePageContent } from "@/lib/content";
+import { cn } from "@/lib/utils";
 
 import { FadeIn } from "./fade-in";
 
@@ -147,6 +149,7 @@ export function BookingSection({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
 
   useEffect(() => {
     const parsedValue = parsePreferredTimeValue(formData.preferredTime);
@@ -205,6 +208,8 @@ export function BookingSection({
 
   const selectedHour = selectedTime ? selectedTime.split(":")[0] : "";
   const selectedMinute = selectedTime ? selectedTime.split(":")[1] : "";
+  const selectedTimeLabel =
+    selectedHour && selectedMinute ? `${selectedHour}:${selectedMinute}` : "";
 
   return (
     <section id="booking" className="bg-white py-24 sm:py-32">
@@ -415,7 +420,7 @@ export function BookingSection({
                     <Label className="text-sm font-medium text-forest">
                       Дата и время консультации
                     </Label>
-                    <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(220px,0.9fr)]">
                       <Popover
                         open={calendarOpen}
                         onOpenChange={setCalendarOpen}
@@ -461,7 +466,107 @@ export function BookingSection({
                         </PopoverContent>
                       </Popover>
 
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <Popover open={timeOpen} onOpenChange={setTimeOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={!selectedDate}
+                            className="h-12 w-full justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest shadow-sm transition hover:bg-sage-light/10 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            <Clock3 className="mr-2 h-4 w-4 text-sage-dark" />
+                            {selectedTimeLabel ? (
+                              <span>{selectedTimeLabel}</span>
+                            ) : (
+                              <span className="text-forest/45">Время</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="end"
+                          className="w-[280px] rounded-2xl border-sage-light/30 bg-cream p-3 shadow-xl"
+                        >
+                          <div className="mb-3 flex items-center justify-between px-1">
+                            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-forest/40">
+                              Время
+                            </span>
+                            <span className="text-sm font-semibold text-sage-dark">
+                              {selectedTimeLabel || "--:--"}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="overflow-hidden rounded-2xl border border-sage-light/30 bg-white/80">
+                              <div className="border-b border-sage-light/20 px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-forest/40">
+                                Часы
+                              </div>
+                              <ScrollArea className="h-52">
+                                <div className="space-y-1 p-2">
+                                  {hourOptions.map((hour) => {
+                                    const nextTime = `${hour}:${selectedMinute || "00"}`;
+
+                                    return (
+                                      <button
+                                        key={hour}
+                                        type="button"
+                                        onClick={() =>
+                                          syncPreferredTime(
+                                            selectedDate,
+                                            nextTime,
+                                          )
+                                        }
+                                        className={cn(
+                                          "flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition",
+                                          selectedHour === hour
+                                            ? "bg-sage text-white shadow-sm"
+                                            : "text-forest hover:bg-sage-light/15",
+                                        )}
+                                      >
+                                        {hour}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </ScrollArea>
+                            </div>
+
+                            <div className="overflow-hidden rounded-2xl border border-sage-light/30 bg-white/80">
+                              <div className="border-b border-sage-light/20 px-3 py-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-forest/40">
+                                Минуты
+                              </div>
+                              <ScrollArea className="h-52">
+                                <div className="space-y-1 p-2">
+                                  {timeOptions.map((minute) => {
+                                    const nextTime = `${selectedHour || "09"}:${minute}`;
+
+                                    return (
+                                      <button
+                                        key={minute}
+                                        type="button"
+                                        onClick={() =>
+                                          syncPreferredTime(
+                                            selectedDate,
+                                            nextTime,
+                                          )
+                                        }
+                                        className={cn(
+                                          "flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition",
+                                          selectedMinute === minute
+                                            ? "bg-sage text-white shadow-sm"
+                                            : "text-forest hover:bg-sage-light/15",
+                                        )}
+                                      >
+                                        {minute}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </ScrollArea>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+
+                      <div className="hidden">
                         <Select
                           value={selectedHour}
                           onValueChange={(value) =>
