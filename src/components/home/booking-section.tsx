@@ -18,7 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -38,20 +42,22 @@ const genderOptions = [
   { value: "female", label: "Женский" },
 ] as const;
 
-const timeOptions = [
-  "09:00",
-  "10:00",
-  "11:00",
-  "12:00",
-  "13:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-  "18:00",
-  "19:00",
-  "20:00",
-  "21:00",
+const timeOptions = ["00", "15", "30", "45"] as const;
+
+const hourOptions = [
+  "09",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
 ] as const;
 
 function formatBookingDate(date?: Date) {
@@ -77,11 +83,7 @@ function parsePreferredTimeValue(value: string) {
   }
 
   return {
-    date: new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3])
-    ),
+    date: new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
     time: `${match[4]}:${match[5]}`,
   };
 }
@@ -174,7 +176,7 @@ export function BookingSection({
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(
-          submittedApplication.applicationNumber
+          submittedApplication.applicationNumber,
         );
       } else {
         const textarea = document.createElement("textarea");
@@ -200,6 +202,9 @@ export function BookingSection({
     setSelectedTime(time ?? "");
     onFieldChange("preferredTime", buildPreferredTimeValue(date, time));
   };
+
+  const selectedHour = selectedTime ? selectedTime.split(":")[0] : "";
+  const selectedMinute = selectedTime ? selectedTime.split(":")[1] : "";
 
   return (
     <section id="booking" className="bg-white py-24 sm:py-32">
@@ -229,7 +234,9 @@ export function BookingSection({
                     <p
                       ref={phoneTextRef}
                       onMouseDown={(event) => event.preventDefault()}
-                      onDoubleClick={() => activateCopyTarget(phoneTextRef.current)}
+                      onDoubleClick={() =>
+                        activateCopyTarget(phoneTextRef.current)
+                      }
                       data-copy-text={contacts.phone}
                       data-copy-active="false"
                       className="select-none text-sm font-semibold text-forest data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-sage-light/40 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
@@ -250,7 +257,9 @@ export function BookingSection({
                     <p
                       ref={emailTextRef}
                       onMouseDown={(event) => event.preventDefault()}
-                      onDoubleClick={() => activateCopyTarget(emailTextRef.current)}
+                      onDoubleClick={() =>
+                        activateCopyTarget(emailTextRef.current)
+                      }
                       data-copy-text={contacts.email}
                       data-copy-active="false"
                       className="select-none break-all text-sm font-semibold text-forest data-[copy-active=true]:rounded-md data-[copy-active=true]:bg-sage-light/40 data-[copy-active=true]:px-1.5 data-[copy-active=true]:py-0.5"
@@ -334,7 +343,10 @@ export function BookingSection({
               ) : (
                 <form onSubmit={onSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-forest">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-forest"
+                    >
                       Как к вам обращаться
                     </Label>
                     <Input
@@ -356,7 +368,9 @@ export function BookingSection({
                       </Label>
                       <RadioGroup
                         value={formData.gender}
-                        onValueChange={(value) => onFieldChange("gender", value)}
+                        onValueChange={(value) =>
+                          onFieldChange("gender", value)
+                        }
                         className="grid grid-cols-2 gap-3"
                       >
                         {genderOptions.map((option) => (
@@ -364,7 +378,10 @@ export function BookingSection({
                             key={option.value}
                             className="flex cursor-pointer items-center gap-3 rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm font-medium text-forest transition hover:border-sage"
                           >
-                            <RadioGroupItem value={option.value} id={option.value} />
+                            <RadioGroupItem
+                              value={option.value}
+                              id={option.value}
+                            />
                             <span>{option.label}</span>
                           </label>
                         ))}
@@ -398,13 +415,16 @@ export function BookingSection({
                     <Label className="text-sm font-medium text-forest">
                       Дата и время консультации
                     </Label>
-                    <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <div className="space-y-3">
+                      <Popover
+                        open={calendarOpen}
+                        onOpenChange={setCalendarOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             type="button"
                             variant="outline"
-                            className="h-12 justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest hover:bg-sage-light/10"
+                            className="h-12 w-full justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest shadow-sm transition hover:bg-sage-light/10"
                           >
                             <CalendarDays className="mr-2 h-4 w-4 text-sage-dark" />
                             {selectedDate
@@ -425,43 +445,75 @@ export function BookingSection({
                                 setCalendarOpen(false);
                               }
                             }}
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
                             className="rounded-xl bg-transparent"
                             classNames={{
                               month_caption:
                                 "flex items-center justify-center h-8 w-full px-8 text-sm font-semibold text-forest",
                               weekday:
                                 "text-forest/45 rounded-md flex-1 text-[0.75rem] font-medium",
-                              day:
-                                "relative w-full h-full p-0 text-center aspect-square select-none",
-                              today:
-                                "bg-sage-light/30 text-forest rounded-md",
+                              day: "relative w-full h-full p-0 text-center aspect-square select-none",
+                              today: "bg-sage-light/30 text-forest rounded-md",
                             }}
                           />
                         </PopoverContent>
                       </Popover>
 
-                      <Select
-                        value={selectedTime}
-                        onValueChange={(value) =>
-                          syncPreferredTime(selectedDate, value)
-                        }
-                        disabled={!selectedDate}
-                      >
-                        <SelectTrigger className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest focus:border-sage">
-                          <div className="flex items-center gap-2">
-                            <Clock3 className="h-4 w-4 text-sage-dark" />
-                            <SelectValue placeholder="Время" />
-                          </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptions.map((time) => (
-                            <SelectItem key={time} value={time}>
-                              {time}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Select
+                          value={selectedHour}
+                          onValueChange={(value) =>
+                            syncPreferredTime(
+                              selectedDate,
+                              selectedMinute
+                                ? `${value}:${selectedMinute}`
+                                : "",
+                            )
+                          }
+                          disabled={!selectedDate}
+                        >
+                          <SelectTrigger className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest shadow-sm focus:border-sage">
+                            <div className="flex items-center gap-2">
+                              <Clock3 className="h-4 w-4 text-sage-dark" />
+                              <SelectValue placeholder="Часы" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {hourOptions.map((hour) => (
+                              <SelectItem key={hour} value={hour}>
+                                {hour}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select
+                          value={selectedMinute}
+                          onValueChange={(value) =>
+                            syncPreferredTime(
+                              selectedDate,
+                              selectedHour ? `${selectedHour}:${value}` : "",
+                            )
+                          }
+                          disabled={!selectedDate}
+                        >
+                          <SelectTrigger className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest shadow-sm focus:border-sage">
+                            <div className="flex items-center gap-2">
+                              <Clock3 className="h-4 w-4 text-sage-dark" />
+                              <SelectValue placeholder="Минуты" />
+                            </div>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {timeOptions.map((minute) => (
+                              <SelectItem key={minute} value={minute}>
+                                {minute}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   </div>
 
@@ -535,7 +587,10 @@ export function BookingSection({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="reason" className="text-sm font-medium text-forest">
+                    <Label
+                      htmlFor="reason"
+                      className="text-sm font-medium text-forest"
+                    >
                       Описание проблемы
                     </Label>
                     <Textarea
