@@ -26,6 +26,21 @@ export function VKIcon({ size = 24 }: IconProps) {
   );
 }
 
+export function MaxIcon({ size = 24 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4.1 7.7c0-2.16 1.75-3.91 3.91-3.91h7.98c2.16 0 3.91 1.75 3.91 3.91v8.6c0 2.16-1.75 3.91-3.91 3.91H8.01A3.91 3.91 0 0 1 4.1 16.3V7.7Z"
+        fill="currentColor"
+      />
+      <path
+        d="M7.35 16.2V7.8h2.07l2.58 4.03 2.58-4.03h2.07v8.4h-2.12v-4.65l-1.95 3.02h-1.16l-1.95-3.02v4.65H7.35Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export function WhatsAppIcon({ size = 24 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">

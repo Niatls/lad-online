@@ -1,7 +1,9 @@
 import {
   DiscordIcon,
+  MaxIcon,
   TelegramIcon,
   VKIcon,
+  WhatsAppIcon,
 } from "@/components/home/messenger-icons";
 
 export const siteConfig = {
@@ -32,7 +34,19 @@ export const siteMessengerLinks = [
   {
     Icon: DiscordIcon,
     label: "Discord",
-    href: "https://discord.com/channels/@me",
+    href: "https://discord.com/invite/b2DzPrTMsz",
+    color: "hover:bg-white/30",
+  },
+  {
+    Icon: MaxIcon,
+    label: "MAX",
+    href: "https://max.ru/u/f9LHodD0cOK7BpuCIK6wac9LWAa7ryMCfhwkxjqFL6cKiIO2oKrpYQ9qiJw",
+    color: "hover:bg-white/30",
+  },
+  {
+    Icon: WhatsAppIcon,
+    label: "WhatsApp",
+    href: "https://wa.me/79782939529",
     color: "hover:bg-white/30",
   },
 ] as const;

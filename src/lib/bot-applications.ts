@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
-import { formatApplicationNumber } from "@/lib/applications";
+import {
+  formatApplicationNumber,
+  generateApplicationVerificationCode,
+} from "@/lib/applications";
 
 type BotApplicationInput = {
   contact: string;
@@ -11,12 +14,14 @@ type BotApplicationInput = {
 };
 
 export async function createBotApplication(input: BotApplicationInput) {
+  const verificationCode = generateApplicationVerificationCode();
   const application = await db.application.create({
     data: {
       name: input.name,
       phone: input.contact,
       preferredTime: input.preferredTime ?? null,
       reason: input.reason,
+      verificationCode,
       source: input.source,
       telegramId:
         input.source === "telegram_bot" ? input.externalUserId ?? null : null,
@@ -25,6 +30,9 @@ export async function createBotApplication(input: BotApplicationInput) {
 
   return {
     application,
-    applicationNumber: formatApplicationNumber(application.id),
+    applicationNumber: formatApplicationNumber(
+      application.id,
+      application.verificationCode
+    ),
   };
 }

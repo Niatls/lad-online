@@ -5,7 +5,10 @@ import { AdminFilters } from "@/components/admin/admin-filters";
 import { AdminLogin } from "@/components/admin/admin-login";
 import { AdminOverview } from "@/components/admin/admin-overview";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { applicationStatuses } from "@/lib/applications";
+import {
+  applicationStatuses,
+  type ApplicationStatus,
+} from "@/lib/applications";
 import { getAdminDashboardData } from "@/lib/admin-dashboard";
 import {
   isAdminAuthenticated,
@@ -25,7 +28,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const isAuthenticated = isAdminAuthenticated(cookieStore);
   const filterStatus =
     typeof params.status === "string" && params.status in applicationStatuses
-      ? params.status
+      ? (params.status as ApplicationStatus)
       : undefined;
 
   if (!isAuthenticated) {

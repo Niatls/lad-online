@@ -3,7 +3,10 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
-import { type BookingFormData } from "@/components/home/booking-section";
+import {
+  type BookingFormData,
+  type BookingSubmissionResult,
+} from "@/components/home/booking-section";
 import { HomeHeader } from "@/components/home/home-header";
 import { useLiveEditor } from "@/components/admin/live-editor-context";
 import { HomeSectionsRenderer } from "@/components/home/home-sections-renderer";
@@ -12,9 +15,13 @@ import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
 const initialFormData: BookingFormData = {
   name: "",
+  gender: "",
+  age: "",
   email: "",
   phone: "",
+  preferredTime: "",
   reason: "",
+  contactMethod: "",
 };
 
 type HomePageClientProps = {
@@ -41,8 +48,8 @@ export function HomePageClient({
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const [submittedApplicationNumber, setSubmittedApplicationNumber] =
-    useState("");
+  const [submittedApplication, setSubmittedApplication] =
+    useState<BookingSubmissionResult | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
   const { homeContent: liveHomeContent } = useLiveEditor();
@@ -162,7 +169,12 @@ export function HomePageClient({
     event.preventDefault();
 
     if (previewMode) {
-      setSubmittedApplicationNumber("PREVIEW-001");
+      setSubmittedApplication({
+        applicationNumber: "PREVIEW-001",
+        contactHref: "#chat",
+        contactMethod: "Чат сайта",
+        preferredTime: formData.preferredTime || "выбранная дата",
+      });
       setSubmitError("");
       return;
     }
@@ -185,7 +197,12 @@ export function HomePageClient({
         throw new Error(result.message || "Не удалось отправить заявку");
       }
 
-      setSubmittedApplicationNumber(result.applicationNumber);
+      setSubmittedApplication({
+        applicationNumber: result.applicationNumber,
+        contactHref: result.contactHref,
+        contactMethod: result.contactMethod,
+        preferredTime: result.preferredTime,
+      });
       setFormData(initialFormData);
     } catch (error) {
       setSubmitError(
@@ -216,11 +233,11 @@ export function HomePageClient({
           homeContent={currentHomeContent}
           isSubmitting={isSubmitting}
           onFieldChange={handleFieldChange}
-          onResetSuccess={() => setSubmittedApplicationNumber("")}
+          onResetSuccess={() => setSubmittedApplication(null)}
           onScrollToSection={scrollToSection}
           onSubmit={handleSubmit}
           submitError={submitError}
-          submittedApplicationNumber={submittedApplicationNumber}
+          submittedApplication={submittedApplication}
         />
       </main>
 

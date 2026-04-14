@@ -4,16 +4,32 @@ import { db } from "@/lib/db";
 import {
   applicationFormSchema,
   formatApplicationNumber,
+  generateApplicationVerificationCode,
+  getApplicationContactMethod,
 } from "@/lib/applications";
 
 export async function POST(request: Request) {
   try {
     const json = await request.json();
     const payload = applicationFormSchema.parse(json);
+    const contactMethod = getApplicationContactMethod(payload.contactMethod);
+    const contactValue = [payload.phone, payload.email]
+      .map((value) => value?.trim())
+      .find(Boolean);
+    const verificationCode = generateApplicationVerificationCode();
 
     const application = await db.application.create({
       data: {
-        ...payload,
+        name: payload.name,
+        email: payload.email?.trim() || null,
+        phone: payload.phone?.trim() || null,
+        gender: payload.gender,
+        age: payload.age,
+        preferredTime: payload.preferredTime,
+        reason: payload.reason,
+        contactMethod: payload.contactMethod,
+        contactValue: contactValue || null,
+        verificationCode,
         source: "website",
       },
     });
@@ -21,7 +37,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: true,
-        applicationNumber: formatApplicationNumber(application.id),
+        applicationId: application.id,
+        applicationNumber: formatApplicationNumber(
+          application.id,
+          application.verificationCode
+        ),
+        contactMethod: contactMethod.label,
+        contactHref: contactMethod.href,
+        preferredTime: application.preferredTime,
+        verificationCode,
       },
       { status: 201 }
     );

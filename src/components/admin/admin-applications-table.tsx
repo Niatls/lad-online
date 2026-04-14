@@ -4,6 +4,7 @@ import {
   applicationStatuses,
   formatApplicationDate,
   formatApplicationNumber,
+  getApplicationContactMethod,
   getApplicationStatusLabel,
 } from "@/lib/applications";
 
@@ -95,10 +96,29 @@ export function AdminApplicationsTable({
               </td>
               <td className="px-6 py-5">
                 <div className="font-medium">{application.name}</div>
+                <div className="mt-1 text-xs text-forest/45">
+                  {application.gender || "пол не указан"}
+                  {application.age ? `, ${application.age}` : ""}
+                </div>
               </td>
               <td className="px-6 py-5 text-sm leading-6 text-forest/70">
-                <div>{application.phone}</div>
-                <div>{application.email}</div>
+                <div>{application.phone || "Телефон не указан"}</div>
+                <div>{application.email || "Email не указан"}</div>
+                <div className="mt-2 font-medium text-forest">
+                  {getApplicationContactMethod(application.contactMethod).label}
+                </div>
+                <div className="text-xs text-forest/45">
+                  Код заявки:{" "}
+                  {formatApplicationNumber(
+                    application.id,
+                    application.verificationCode
+                  )}
+                </div>
+                {application.preferredTime ? (
+                  <div className="text-xs text-forest/45">
+                    Запись: {application.preferredTime}
+                  </div>
+                ) : null}
               </td>
               <td className="max-w-md px-6 py-5 text-sm leading-6 text-forest/75">
                 {application.reason}

@@ -3,10 +3,12 @@
 import type React from "react";
 
 import { AboutSection } from "@/components/home/about-section";
+import { ApplicationLookup } from "@/components/home/application-lookup";
 import { ArticlesSection } from "@/components/home/articles-section";
 import {
   BookingSection,
   type BookingFormData,
+  type BookingSubmissionResult,
 } from "@/components/home/booking-section";
 import { CustomHomeSection } from "@/components/home/custom-home-section";
 import { HeroSection } from "@/components/home/hero-section";
@@ -29,7 +31,7 @@ type HomeSectionsRendererProps = {
   onScrollToSection: (id: string) => void;
   onSubmit: (event: React.FormEvent) => Promise<void>;
   submitError: string;
-  submittedApplicationNumber: string;
+  submittedApplication: BookingSubmissionResult | null;
 };
 
 export function HomeSectionsRenderer({
@@ -42,7 +44,7 @@ export function HomeSectionsRenderer({
   onScrollToSection,
   onSubmit,
   submitError,
-  submittedApplicationNumber,
+  submittedApplication,
 }: HomeSectionsRendererProps) {
   return (
     <SortableContext
@@ -63,6 +65,7 @@ export function HomeSectionsRenderer({
                       onScrollToSection={onScrollToSection}
                     />
                     <MessengerStrip />
+                    <ApplicationLookup />
                   </>
                 );
                 break;
@@ -89,7 +92,7 @@ export function HomeSectionsRenderer({
                     formData={formData}
                     isSubmitting={isSubmitting}
                     submitError={submitError}
-                    submittedApplicationNumber={submittedApplicationNumber}
+                    submittedApplication={submittedApplication}
                     onSubmit={onSubmit}
                     onResetSuccess={onResetSuccess}
                     onFieldChange={onFieldChange}
