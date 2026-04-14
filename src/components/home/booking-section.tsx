@@ -1,10 +1,12 @@
 "use client";
 
 import type React from "react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
+  CalendarDays,
   CheckCircle2,
+  Clock3,
   LoaderCircle,
   Mail,
   MapPin,
@@ -13,8 +15,11 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -27,6 +32,71 @@ import { applicationContactMethods } from "@/lib/applications";
 import type { HomeContactsContent, HomePageContent } from "@/lib/content";
 
 import { FadeIn } from "./fade-in";
+
+const genderOptions = [
+  { value: "male", label: "Мужской" },
+  { value: "female", label: "Женский" },
+] as const;
+
+const timeOptions = [
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+  "21:00",
+] as const;
+
+function formatBookingDate(date?: Date) {
+  if (!date) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function parsePreferredTimeValue(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+
+  if (!match) {
+    return {
+      date: undefined as Date | undefined,
+      time: "",
+    };
+  }
+
+  return {
+    date: new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3])
+    ),
+    time: `${match[4]}:${match[5]}`,
+  };
+}
+
+function buildPreferredTimeValue(date?: Date, time?: string) {
+  if (!date || !time) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
+  return `${year}-${month}-${day}T${time}`;
+}
 
 export type BookingFormData = {
   name: string;
@@ -72,6 +142,15 @@ export function BookingSection({
   const phoneTextRef = useRef<HTMLParagraphElement | null>(null);
   const emailTextRef = useRef<HTMLParagraphElement | null>(null);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  useEffect(() => {
+    const parsedValue = parsePreferredTimeValue(formData.preferredTime);
+    setSelectedDate(parsedValue.date);
+    setSelectedTime(parsedValue.time);
+  }, [formData.preferredTime]);
 
   const activateCopyTarget = (node: HTMLElement | null) => {
     if (!node) {
@@ -114,6 +193,12 @@ export function BookingSection({
     } catch {
       setCodeCopied(false);
     }
+  };
+
+  const syncPreferredTime = (date?: Date, time?: string) => {
+    setSelectedDate(date);
+    setSelectedTime(time ?? "");
+    onFieldChange("preferredTime", buildPreferredTimeValue(date, time));
   };
 
   return (
@@ -266,22 +351,24 @@ export function BookingSection({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label
-                        htmlFor="gender"
-                        className="text-sm font-medium text-forest"
-                      >
+                      <Label className="text-sm font-medium text-forest">
                         Пол
                       </Label>
-                      <Input
-                        id="gender"
-                        placeholder="Например: женский"
-                        required
+                      <RadioGroup
                         value={formData.gender}
-                        onChange={(event) =>
-                          onFieldChange("gender", event.target.value)
-                        }
-                        className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
-                      />
+                        onValueChange={(value) => onFieldChange("gender", value)}
+                        className="grid grid-cols-2 gap-3"
+                      >
+                        {genderOptions.map((option) => (
+                          <label
+                            key={option.value}
+                            className="flex cursor-pointer items-center gap-3 rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm font-medium text-forest transition hover:border-sage"
+                          >
+                            <RadioGroupItem value={option.value} id={option.value} />
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </RadioGroup>
                     </div>
 
                     <div className="space-y-2">
@@ -308,22 +395,74 @@ export function BookingSection({
                   </div>
 
                   <div className="space-y-2">
-                    <Label
-                      htmlFor="preferredTime"
-                      className="text-sm font-medium text-forest"
-                    >
+                    <Label className="text-sm font-medium text-forest">
                       Дата и время консультации
                     </Label>
-                    <Input
-                      id="preferredTime"
-                      type="datetime-local"
-                      required
-                      value={formData.preferredTime}
-                      onChange={(event) =>
-                        onFieldChange("preferredTime", event.target.value)
-                      }
-                      className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"
-                    />
+                    <div className="grid gap-3 sm:grid-cols-[1.2fr_0.8fr]">
+                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-12 justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest hover:bg-sage-light/10"
+                          >
+                            <CalendarDays className="mr-2 h-4 w-4 text-sage-dark" />
+                            {selectedDate
+                              ? formatBookingDate(selectedDate)
+                              : "Выберите дату консультации"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          className="w-auto rounded-2xl border-sage-light/30 bg-cream p-2 shadow-xl"
+                        >
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => {
+                              syncPreferredTime(date, selectedTime);
+                              if (date) {
+                                setCalendarOpen(false);
+                              }
+                            }}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            className="rounded-xl bg-transparent"
+                            classNames={{
+                              month_caption:
+                                "flex items-center justify-center h-8 w-full px-8 text-sm font-semibold text-forest",
+                              weekday:
+                                "text-forest/45 rounded-md flex-1 text-[0.75rem] font-medium",
+                              day:
+                                "relative w-full h-full p-0 text-center aspect-square select-none",
+                              today:
+                                "bg-sage-light/30 text-forest rounded-md",
+                            }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Select
+                        value={selectedTime}
+                        onValueChange={(value) =>
+                          syncPreferredTime(selectedDate, value)
+                        }
+                        disabled={!selectedDate}
+                      >
+                        <SelectTrigger className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest focus:border-sage">
+                          <div className="flex items-center gap-2">
+                            <Clock3 className="h-4 w-4 text-sage-dark" />
+                            <SelectValue placeholder="Время" />
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {timeOptions.map((time) => (
+                            <SelectItem key={time} value={time}>
+                              {time}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
