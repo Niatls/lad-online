@@ -13,6 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { buildAvailableBookingTimes } from "@/lib/booking-availability";
 import { cn } from "@/lib/utils";
 
 import type {
@@ -58,8 +59,10 @@ export function BookingDateTimeField({
     }
 
     let isActive = true;
+    const fallbackTimes = buildAvailableBookingTimes(dateKey, []);
 
     setIsLoadingAvailability(true);
+    setAvailableTimes(fallbackTimes);
 
     fetch(`/api/applications/availability?date=${dateKey}`, {
       cache: "no-store",
@@ -79,7 +82,7 @@ export function BookingDateTimeField({
       })
       .catch(() => {
         if (isActive) {
-          setAvailableTimes([]);
+          setAvailableTimes(fallbackTimes);
         }
       })
       .finally(() => {
