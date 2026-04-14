@@ -1,9 +1,9 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { CalendarDays, LoaderCircle, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, LoaderCircle, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,14 @@ export function ApplicationLookup() {
   const [moscowDateTime, setMoscowDateTime] = useState<ReturnType<
     typeof formatMoscowDateTime
   > | null>(null);
+  const [displayMonth, setDisplayMonth] = useState(() => {
+    const now = new Date();
+    return {
+      year: now.getFullYear(),
+      monthIndex: now.getMonth(),
+    };
+  });
+  const [activeDay, setActiveDay] = useState<number | null>(null);
 
   useEffect(() => {
     const updateMoscowDateTime = () => {
@@ -102,21 +110,46 @@ export function ApplicationLookup() {
   }, []);
 
   const appointment = parsePreferredTime(result?.preferredTime ?? null);
-  const calendarYear = appointment?.year ?? moscowDateTime?.yearNumber;
-  const calendarMonthIndex =
-    appointment?.monthIndex ?? moscowDateTime?.monthIndex;
-  const calendarMonthName =
-    typeof calendarYear === "number" && typeof calendarMonthIndex === "number"
-      ? new Intl.DateTimeFormat("ru-RU", {
-          month: "long",
-          timeZone: "Europe/Moscow",
-          year: "numeric",
-        }).format(new Date(calendarYear, calendarMonthIndex, 1))
-      : "Текущий месяц";
-  const calendarDays =
-    typeof calendarYear === "number" && typeof calendarMonthIndex === "number"
-      ? getCalendarDays(calendarYear, calendarMonthIndex)
-      : [];
+
+  useEffect(() => {
+    if (appointment) {
+      setDisplayMonth({
+        year: appointment.year,
+        monthIndex: appointment.monthIndex,
+      });
+      setActiveDay(appointment.day);
+      return;
+    }
+
+    if (moscowDateTime) {
+      setDisplayMonth({
+        year: moscowDateTime.yearNumber,
+        monthIndex: moscowDateTime.monthIndex,
+      });
+      setActiveDay(moscowDateTime.dayNumber);
+    }
+  }, [appointment, moscowDateTime]);
+
+  const calendarMonthName = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ru-RU", {
+        month: "long",
+        year: "numeric",
+      }).format(new Date(displayMonth.year, displayMonth.monthIndex, 1)),
+    [displayMonth]
+  );
+  const calendarDays = useMemo(
+    () => getCalendarDays(displayMonth.year, displayMonth.monthIndex),
+    [displayMonth]
+  );
+
+  const handleMonthShift = (delta: number) => {
+    const nextDate = new Date(displayMonth.year, displayMonth.monthIndex + delta, 1);
+    setDisplayMonth({
+      year: nextDate.getFullYear(),
+      monthIndex: nextDate.getMonth(),
+    });
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -166,8 +199,8 @@ export function ApplicationLookup() {
               Проверить дату записи
             </h2>
             <p className="mt-3 max-w-xl text-sm leading-6 text-forest/55">
-              Введите код под календарем. Текущий день уже отмечен, а после
-              проверки появится дата консультации.
+              Введите код под календарем. После проверки здесь отобразится дата
+              консультации.
             </p>
           </div>
 
@@ -207,6 +240,26 @@ export function ApplicationLookup() {
                 ) : null}
 
                 <div className="rounded-xl border border-sage-light/35 bg-sage-light/15 p-2.5 shadow-inner backdrop-blur-md">
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => handleMonthShift(-1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-sage-light/35 bg-white/70 text-forest transition hover:bg-sage-light/20"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <p className="text-sm font-semibold capitalize text-forest">
+                      {calendarMonthName}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleMonthShift(1)}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-sage-light/35 bg-white/70 text-forest transition hover:bg-sage-light/20"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-7 gap-1.5 text-center">
                     {weekDays.map((day) => (
                       <div
@@ -219,37 +272,41 @@ export function ApplicationLookup() {
                     {calendarDays.map((day, index) => {
                       const isCurrentDay =
                         day !== null &&
-                        day === moscowDateTime?.dayNumber &&
-                        calendarMonthIndex === moscowDateTime.monthIndex &&
-                        calendarYear === moscowDateTime.yearNumber;
+                        moscowDateTime &&
+                        day === moscowDateTime.dayNumber &&
+                        displayMonth.monthIndex === moscowDateTime.monthIndex &&
+                        displayMonth.year === moscowDateTime.yearNumber;
                       const isAppointmentDay =
                         day !== null &&
                         appointment &&
                         day === appointment.day &&
-                        calendarMonthIndex === appointment.monthIndex &&
-                        calendarYear === appointment.year;
+                        displayMonth.monthIndex === appointment.monthIndex &&
+                        displayMonth.year === appointment.year;
+                      const isActiveDay = day !== null && day === activeDay;
 
-                      return (
-                        <div
-                          key={`${day ?? "blank"}-${index}`}
+                      return day === null ? (
+                        <div key={`blank-${index}`} className="aspect-square" />
+                      ) : (
+                        <button
+                          key={`${day}-${index}`}
+                          type="button"
+                          onClick={() => setActiveDay(day)}
                           className={[
                             "flex aspect-square min-h-8 items-center justify-center rounded-md border text-xs font-semibold transition sm:min-h-9 sm:text-sm",
-                            day === null
-                              ? "border-transparent"
-                              : "border-sage-light/35 bg-sage-light/10 text-forest backdrop-blur-sm",
+                            "border-sage-light/35 bg-sage-light/10 text-forest backdrop-blur-sm hover:bg-sage-light/20",
                             isCurrentDay
                               ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-sage-light/90"
                               : "",
                             isAppointmentDay
                               ? "border-forest bg-forest text-white shadow-md ring-2 ring-sage-light/80"
                               : "",
-                            isCurrentDay && isAppointmentDay
-                              ? "border-sage-dark bg-sage-dark text-white shadow-lg ring-2 ring-white"
+                            isActiveDay && !isCurrentDay && !isAppointmentDay
+                              ? "border-sage bg-white ring-2 ring-sage-light/80"
                               : "",
                           ].join(" ")}
                         >
                           {day}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

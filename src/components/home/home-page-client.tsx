@@ -106,6 +106,7 @@ export function HomePageClient({
 
       const copyTarget = target.closest("[data-copy-active='true'][data-copy-text]");
       if (!(copyTarget instanceof HTMLElement)) {
+        event.preventDefault();
         setCopyContextMenu(null);
         return;
       }
