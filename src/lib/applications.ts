@@ -136,6 +136,7 @@ export function formatApplicationDate(date: Date) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Europe/Moscow",
   }).format(date);
 }
 
@@ -153,6 +154,7 @@ export function formatPreferredTime(value?: string | null) {
   return new Intl.DateTimeFormat("ru-RU", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Europe/Moscow",
   }).format(parsed);
 }
 

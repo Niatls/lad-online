@@ -48,7 +48,9 @@ function InfoRow({
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-forest/35">
         {label}
       </p>
-      <p className="mt-2 text-sm leading-6 text-forest/80">{value}</p>
+      <p className="mt-2 break-all text-sm leading-6 text-forest/80">
+        {value}
+      </p>
     </div>
   );
 }
