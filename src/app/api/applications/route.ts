@@ -39,7 +39,9 @@ export async function POST(request: Request) {
         "contactMethod",
         "contactValue",
         "verificationCode",
-        "source"
+        "source",
+        "createdAt",
+        "updatedAt"
       )
       values (
         ${payload.name},
@@ -52,7 +54,9 @@ export async function POST(request: Request) {
         ${payload.contactMethod},
         ${contactValue || null},
         ${verificationCode},
-        ${"website"}
+        ${"website"},
+        now(),
+        now()
       )
       returning "id", "preferredTime", "verificationCode"
     `);
