@@ -53,7 +53,7 @@ export function ArticlesSection({ articles }: ArticlesSectionProps) {
   return (
     <section
       id="articles"
-      className="bg-transparent py-24 sm:py-32"
+      className="bg-[linear-gradient(180deg,_#ffffff_0%,_#f8f4ec_100%)] py-24 sm:py-32"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <FadeIn>

@@ -31,7 +31,7 @@ const processSteps = [
 
 export function ProcessSection() {
   return (
-    <section id="process" className="py-24 sm:py-32 bg-transparent">
+    <section id="process" className="py-24 sm:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="text-center max-w-2xl mx-auto mb-16">
