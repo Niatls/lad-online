@@ -13,7 +13,9 @@ export async function POST(request: Request) {
     const json = await request.json();
     const payload = applicationFormSchema.parse(json);
     const contactMethod = getApplicationContactMethod(payload.contactMethod);
-    const contactValue = [payload.phone, payload.email]
+    const phone = payload.phone?.trim() || "";
+    const email = payload.email?.trim() || null;
+    const contactValue = [phone, email]
       .map((value) => value?.trim())
       .find(Boolean);
     const verificationCode = generateApplicationVerificationCode();
@@ -21,8 +23,8 @@ export async function POST(request: Request) {
     const application = await db.application.create({
       data: {
         name: payload.name,
-        email: payload.email?.trim() || null,
-        phone: payload.phone?.trim() || null,
+        email,
+        phone,
         gender: payload.gender,
         age: payload.age,
         preferredTime: payload.preferredTime,
