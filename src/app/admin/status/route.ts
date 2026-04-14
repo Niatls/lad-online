@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { applicationStatuses } from "@/lib/applications";
@@ -19,10 +20,12 @@ export async function POST(request: Request) {
     return NextResponse.redirect(new URL("/admin?error=invalid_status", request.url));
   }
 
-  await db.application.update({
-    where: { id },
-    data: { status },
-  });
+  await db.$executeRaw(Prisma.sql`
+    update "Application"
+    set "status" = ${status},
+        "updatedAt" = now()
+    where "id" = ${id}
+  `);
 
   return NextResponse.redirect(new URL("/admin", request.url));
 }
