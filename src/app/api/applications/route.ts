@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { db } from "@/lib/db";
@@ -7,6 +8,12 @@ import {
   generateApplicationVerificationCode,
   getApplicationContactMethod,
 } from "@/lib/applications";
+
+type CreatedApplicationRow = {
+  id: number;
+  preferredTime: string | null;
+  verificationCode: string | null;
+};
 
 export async function POST(request: Request) {
   try {
@@ -20,21 +27,39 @@ export async function POST(request: Request) {
       .find(Boolean);
     const verificationCode = generateApplicationVerificationCode();
 
-    const application = await db.application.create({
-      data: {
-        name: payload.name,
-        email,
-        phone,
-        gender: payload.gender,
-        age: payload.age,
-        preferredTime: payload.preferredTime,
-        reason: payload.reason,
-        contactMethod: payload.contactMethod,
-        contactValue: contactValue || null,
-        verificationCode,
-        source: "website",
-      },
-    });
+    const [application] = await db.$queryRaw<CreatedApplicationRow[]>(Prisma.sql`
+      insert into "Application" (
+        "name",
+        "email",
+        "phone",
+        "gender",
+        "age",
+        "preferredTime",
+        "reason",
+        "contactMethod",
+        "contactValue",
+        "verificationCode",
+        "source"
+      )
+      values (
+        ${payload.name},
+        ${email},
+        ${phone},
+        ${payload.gender},
+        ${payload.age},
+        ${payload.preferredTime},
+        ${payload.reason},
+        ${payload.contactMethod},
+        ${contactValue || null},
+        ${verificationCode},
+        ${"website"}
+      )
+      returning "id", "preferredTime", "verificationCode"
+    `);
+
+    if (!application) {
+      throw new Error("Application insert returned no rows");
+    }
 
     return NextResponse.json(
       {

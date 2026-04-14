@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -8,6 +9,13 @@ import {
   parseApplicationCode,
 } from "@/lib/applications";
 import { db } from "@/lib/db";
+
+type ApplicationLookupRow = {
+  id: number;
+  contactMethod: string | null;
+  preferredTime: string | null;
+  verificationCode: string | null;
+};
 
 export async function POST(request: Request) {
   try {
@@ -25,20 +33,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const application = await db.application.findFirst({
-      where: {
-        id: applicationCode.id,
-        ...(applicationCode.verificationCode
-          ? { verificationCode: applicationCode.verificationCode }
-          : {}),
-      },
-      select: {
-        id: true,
-        contactMethod: true,
-        preferredTime: true,
-        verificationCode: true,
-      },
-    });
+    const rows = await db.$queryRaw<ApplicationLookupRow[]>(Prisma.sql`
+      select
+        "id",
+        "contactMethod",
+        "preferredTime",
+        "verificationCode"
+      from "Application"
+      where "id" = ${applicationCode.id}
+      ${applicationCode.verificationCode
+        ? Prisma.sql`and "verificationCode" = ${applicationCode.verificationCode}`
+        : Prisma.empty}
+      limit 1
+    `);
+    const application = rows[0];
 
     if (!application) {
       return NextResponse.json(
