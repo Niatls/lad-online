@@ -49,7 +49,7 @@ export function ServicesSection({ services }: ServicesSectionProps) {
                         src={imageSrc}
                         alt={service.title}
                         fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
                         sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                       />
                     </div>
