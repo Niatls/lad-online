@@ -21,9 +21,8 @@ import type {
 import {
   buildPreferredTimeValue,
   formatBookingDate,
+  formatDateKey,
   getMinimumBookingDate,
-  hourOptions,
-  minuteOptions,
   parsePreferredTimeValue,
 } from "./booking-utils";
 
@@ -40,6 +39,8 @@ export function BookingDateTimeField({
   const [selectedTime, setSelectedTime] = useState("");
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
   useEffect(() => {
     const parsedValue = parsePreferredTimeValue(preferredTime);
@@ -47,21 +48,87 @@ export function BookingDateTimeField({
     setSelectedTime(parsedValue.time);
   }, [preferredTime]);
 
+  useEffect(() => {
+    const dateKey = selectedDate ? formatDateKey(selectedDate) : "";
+
+    if (!dateKey) {
+      setAvailableTimes([]);
+      return;
+    }
+
+    let isActive = true;
+
+    setIsLoadingAvailability(true);
+
+    fetch(`/api/applications/availability?date=${dateKey}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result = await response.json();
+
+        if (!response.ok || !result.ok) {
+          throw new Error(result.message || "Failed to load booking slots.");
+        }
+
+        if (isActive) {
+          setAvailableTimes(
+            Array.isArray(result.availableTimes) ? result.availableTimes : []
+          );
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setAvailableTimes([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoadingAvailability(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedDate]);
+
   const syncPreferredTime = (date?: Date, time?: string) => {
     setSelectedDate(date);
     setSelectedTime(time ?? "");
     onFieldChange("preferredTime", buildPreferredTimeValue(date, time));
   };
 
+  useEffect(() => {
+    if (!selectedDate || !selectedTime) {
+      return;
+    }
+
+    if (!availableTimes.includes(selectedTime)) {
+      syncPreferredTime(selectedDate, "");
+    }
+  }, [availableTimes, selectedDate, selectedTime]);
+
   const selectedHour = selectedTime ? selectedTime.split(":")[0] : "";
   const selectedMinute = selectedTime ? selectedTime.split(":")[1] : "";
+  const availableHours = Array.from(
+    new Set(availableTimes.map((time) => time.split(":")[0]))
+  );
+  const activeHour =
+    selectedHour && availableHours.includes(selectedHour)
+      ? selectedHour
+      : availableHours[0] || "";
+  const activeMinutes = activeHour
+    ? availableTimes
+        .filter((time) => time.startsWith(`${activeHour}:`))
+        .map((time) => time.split(":")[1])
+    : [];
   const selectedTimeLabel =
     selectedHour && selectedMinute ? `${selectedHour}:${selectedMinute}` : "";
 
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium text-forest">
-        Дата и время консультации
+        Р”Р°С‚Р° Рё РІСЂРµРјСЏ РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё
       </label>
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
@@ -74,7 +141,7 @@ export function BookingDateTimeField({
               <CalendarDays className="mr-2 h-4 w-4 text-sage-dark" />
               {selectedDate
                 ? formatBookingDate(selectedDate)
-                : "Выберите дату консультации"}
+                : "Р’С‹Р±РµСЂРёС‚Рµ РґР°С‚Сѓ РєРѕРЅСЃСѓР»СЊС‚Р°С†РёРё"}
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -85,7 +152,7 @@ export function BookingDateTimeField({
               mode="single"
               selected={selectedDate}
               onSelect={(date) => {
-                syncPreferredTime(date, selectedTime);
+                syncPreferredTime(date, "");
                 if (date) {
                   setCalendarOpen(false);
                 }
@@ -121,7 +188,7 @@ export function BookingDateTimeField({
               {selectedTimeLabel ? (
                 <span>{selectedTimeLabel}</span>
               ) : (
-                <span className="text-forest/45">Время</span>
+                <span className="text-forest/45">Р’СЂРµРјСЏ</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -131,36 +198,54 @@ export function BookingDateTimeField({
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-forest/40">
-                Время
+                Р’СЂРµРјСЏ
               </span>
               <span className="text-sm font-semibold text-sage-dark">
-                {selectedTimeLabel || "--:--"}
+                {isLoadingAvailability
+                  ? "..."
+                  : selectedTimeLabel || availableTimes[0] || "--:--"}
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <TimeColumn
-                label="Часы"
-                options={hourOptions}
-                selectedValue={selectedHour}
-                onSelect={(hour) =>
-                  syncPreferredTime(
-                    selectedDate,
-                    `${hour}:${selectedMinute || "00"}`,
-                  )
-                }
-              />
-              <TimeColumn
-                label="Минуты"
-                options={minuteOptions}
-                selectedValue={selectedMinute}
-                onSelect={(minute) =>
-                  syncPreferredTime(
-                    selectedDate,
-                    `${selectedHour || "09"}:${minute}`,
-                  )
-                }
-              />
-            </div>
+
+            {selectedDate && !isLoadingAvailability && availableTimes.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-sage-light/30 bg-white/70 px-4 py-6 text-center text-sm text-forest/55">
+                На выбранную дату свободных слотов нет. Попробуйте другой день.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <TimeColumn
+                  label="Р§Р°СЃС‹"
+                  options={availableHours}
+                  selectedValue={activeHour}
+                  onSelect={(hour) => {
+                    if (!selectedDate) {
+                      return;
+                    }
+
+                    const nextMinute =
+                      availableTimes
+                        .find((time) => time.startsWith(`${hour}:`))
+                        ?.split(":")[1] || "00";
+
+                    syncPreferredTime(selectedDate, `${hour}:${nextMinute}`);
+                  }}
+                />
+                <TimeColumn
+                  label="РњРёРЅСѓС‚С‹"
+                  options={activeMinutes}
+                  selectedValue={
+                    activeHour === selectedHour ? selectedMinute : ""
+                  }
+                  onSelect={(minute) => {
+                    if (!selectedDate || !activeHour) {
+                      return;
+                    }
+
+                    syncPreferredTime(selectedDate, `${activeHour}:${minute}`);
+                  }}
+                />
+              </div>
+            )}
           </PopoverContent>
         </Popover>
       </div>
@@ -187,23 +272,29 @@ function TimeColumn({
         {label}
       </div>
       <ScrollArea className="h-48">
-        <div className="space-y-1 p-2">
-          {options.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onSelect(option)}
-              className={cn(
-                "flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition",
-                selectedValue === option
-                  ? "bg-sage text-white shadow-sm"
-                  : "text-forest hover:bg-sage-light/15",
-              )}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
+        {options.length === 0 ? (
+          <div className="flex h-48 items-center justify-center px-4 text-center text-sm text-forest/45">
+            Нет доступных значений
+          </div>
+        ) : (
+          <div className="space-y-1 p-2">
+            {options.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onSelect(option)}
+                className={cn(
+                  "flex h-10 w-full items-center justify-center rounded-xl text-sm font-semibold transition",
+                  selectedValue === option
+                    ? "bg-sage text-white shadow-sm"
+                    : "text-forest hover:bg-sage-light/15"
+                )}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        )}
       </ScrollArea>
     </div>
   );

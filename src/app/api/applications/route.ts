@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { db } from "@/lib/db";
 import {
+  isPreferredTimeAvailable,
+  parsePreferredTime,
+} from "@/lib/booking-availability";
+import {
   applicationFormSchema,
   formatApplicationNumber,
   generateApplicationVerificationCode,
@@ -13,6 +17,10 @@ type CreatedApplicationRow = {
   id: number;
   preferredTime: string | null;
   verificationCode: string | null;
+};
+
+type PreferredTimeRow = {
+  preferredTime: string | null;
 };
 
 export async function POST(request: Request) {
@@ -26,6 +34,43 @@ export async function POST(request: Request) {
       .map((value) => value?.trim())
       .find(Boolean);
     const verificationCode = generateApplicationVerificationCode();
+    const parsedPreferredTime = parsePreferredTime(payload.preferredTime);
+
+    if (!parsedPreferredTime) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Выберите корректную дату и время консультации.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const existingRows = await db.$queryRaw<PreferredTimeRow[]>(Prisma.sql`
+      select "preferredTime"
+      from "Application"
+      where "preferredTime" like ${`${parsedPreferredTime.dateKey}T%`}
+        and coalesce("status", 'new') <> 'archived'
+    `);
+    const existingPreferredTimes = existingRows
+      .map((row) => row.preferredTime)
+      .filter((value): value is string => Boolean(value));
+
+    if (
+      !isPreferredTimeAvailable(
+        payload.preferredTime,
+        existingPreferredTimes
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Это время уже занято или недоступно. Пожалуйста, выберите другой слот.",
+        },
+        { status: 400 }
+      );
+    }
 
     const [application] = await db.$queryRaw<CreatedApplicationRow[]>(Prisma.sql`
       insert into "Application" (
