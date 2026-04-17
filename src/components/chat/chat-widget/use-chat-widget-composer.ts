@@ -1,5 +1,11 @@
 import { useCallback, useEffect } from "react";
 
+import {
+  createOptimisticChatWidgetMessage,
+  editChatWidgetMessage,
+  sendChatWidgetMessage,
+  uploadChatWidgetVoiceMessage,
+} from "@/components/chat/chat-widget/composer-message-api";
 import type { Message } from "@/components/chat/chat-widget/types";
 import { getSupportedRecorderMimeType } from "@/components/chat/chat-widget/utils";
 
@@ -61,44 +67,33 @@ export function useChatWidgetComposer({
 
   useEffect(() => () => stopVoiceCapture(), [stopVoiceCapture]);
 
-  const uploadVoiceMessage = useCallback(async (blob: Blob, durationMs: number) => {
-    if (!sessionId) {
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("sender", "visitor");
-    formData.append("durationMs", String(durationMs));
-    if (replyTarget?.id) {
-      formData.append("replyToId", String(replyTarget.id));
-    }
-    const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
-    formData.append("file", new File([blob], `voice-message.${extension}`, { type: blob.type || "audio/webm" }));
-
-    setSendingVoice(true);
-    setReplyTarget(null);
-
-    try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}/voice-message`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(typeof payload?.error === "string" ? payload.error : "Failed to upload voice message");
+  const uploadVoiceMessage = useCallback(
+    async (blob: Blob, durationMs: number) => {
+      if (!sessionId) {
+        return;
       }
 
-      const message = await res.json();
-      setMessages((prev) => [...prev, message]);
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-    } catch (err) {
-      console.error("Failed to upload voice message:", err);
-      setError(err instanceof Error ? `Голосовое: ${err.message}` : "Не удалось отправить голосовое сообщение.");
-    } finally {
-      setSendingVoice(false);
-    }
-  }, [lastMsgIdRef, replyTarget, sessionId, setError, setMessages, setReplyTarget, setSendingVoice]);
+      setSendingVoice(true);
+      setReplyTarget(null);
+
+      try {
+        const message = await uploadChatWidgetVoiceMessage({
+          blob,
+          durationMs,
+          replyToId: replyTarget?.id ?? null,
+          sessionId,
+        });
+        setMessages((prev) => [...prev, message]);
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
+      } catch (err) {
+        console.error("Failed to upload voice message:", err);
+        setError(err instanceof Error ? `Р“РѕР»РѕСЃРѕРІРѕРµ: ${err.message}` : "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ.");
+      } finally {
+        setSendingVoice(false);
+      }
+    },
+    [lastMsgIdRef, replyTarget, sessionId, setError, setMessages, setReplyTarget, setSendingVoice],
+  );
 
   const handleToggleVoiceRecording = useCallback(async () => {
     if (!sessionId || needsName || sendingVoice || editingMessageId) {
@@ -113,7 +108,7 @@ export function useChatWidgetComposer({
 
     const mimeType = getSupportedRecorderMimeType();
     if (mimeType === null) {
-      setError("Голосовые сообщения не поддерживаются в этом браузере.");
+      setError("Р“РѕР»РѕСЃРѕРІС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РЅРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ РІ СЌС‚РѕРј Р±СЂР°СѓР·РµСЂРµ.");
       return;
     }
 
@@ -135,7 +130,7 @@ export function useChatWidgetComposer({
       };
 
       recorder.onerror = () => {
-        setError("Не удалось записать голосовое сообщение.");
+        setError("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїРёСЃР°С‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ.");
         setIsRecordingVoice(false);
         setRecordingStartedAt(null);
         recordingStartedAtRef.current = null;
@@ -151,7 +146,7 @@ export function useChatWidgetComposer({
         stopVoiceCapture();
 
         if (blob.size === 0) {
-          setError("Не удалось сохранить запись.");
+          setError("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р·Р°РїРёСЃСЊ.");
           return;
         }
 
@@ -162,7 +157,7 @@ export function useChatWidgetComposer({
       setIsRecordingVoice(true);
     } catch (err) {
       console.error("Failed to start voice recording:", err);
-      setError("Не удалось получить доступ к микрофону.");
+      setError("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґРѕСЃС‚СѓРї Рє РјРёРєСЂРѕС„РѕРЅСѓ.");
       stopVoiceCapture();
     }
   }, [
@@ -192,23 +187,13 @@ export function useChatWidgetComposer({
     if (editingMessageId) {
       setSending(true);
       try {
-        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messageId: editingMessageId, content: text, sender: "visitor" }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to edit");
-        }
-
-        const updated = await res.json();
+        const updated = await editChatWidgetMessage(sessionId, editingMessageId, text);
         setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
         setEditingMessageId(null);
         setInput("");
       } catch (err) {
         console.error("Failed to edit:", err);
-        setError("Не удалось сохранить изменения.");
+        setError("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ.");
       } finally {
         setSending(false);
       }
@@ -220,46 +205,21 @@ export function useChatWidgetComposer({
     setSending(true);
 
     const tempId = Date.now();
-    const optimistic: Message = {
-      id: tempId,
-      sender: "visitor",
-      content: text,
-      replyToId: currentReplyTarget?.id ?? null,
-      deletedAt: null,
-      deletedBy: null,
-      editedAt: null,
-      isEdited: false,
-      isDeleted: false,
-      replyTo: currentReplyTarget
-        ? {
-          id: currentReplyTarget.id,
-          sender: currentReplyTarget.sender,
-          content: currentReplyTarget.isDeleted ? "Сообщение удалено" : currentReplyTarget.content,
-          isDeleted: currentReplyTarget.isDeleted,
-        }
-        : null,
-      createdAt: new Date().toISOString(),
-    };
+    const optimistic = createOptimisticChatWidgetMessage(tempId, text, currentReplyTarget);
     setMessages((prev) => [...prev, optimistic]);
     setReplyTarget(null);
 
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, sender: "visitor", replyToId: optimistic.replyToId }),
+      const message = await sendChatWidgetMessage({
+        content: text,
+        replyToId: optimistic.replyToId,
+        sessionId,
       });
-
-      if (res.ok) {
-        const message = await res.json();
-        setMessages((prev) => prev.map((current) => (current.id === tempId ? message : current)));
-        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-      } else {
-        throw new Error("Failed to send");
-      }
+      setMessages((prev) => prev.map((current) => (current.id === tempId ? message : current)));
+      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
     } catch (err) {
       console.error("Failed to send:", err);
-      setError("Не удалось отправить сообщение.");
+      setError("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ.");
       setMessages((prev) => prev.filter((message) => message.id !== tempId));
       setInput(text);
       setReplyTarget(currentReplyTarget);
