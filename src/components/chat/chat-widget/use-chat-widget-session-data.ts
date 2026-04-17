@@ -1,10 +1,8 @@
 import { useCallback, useEffect } from "react";
 
-import {
-  createChatWidgetSession,
-  fetchChatWidgetVoiceInvite,
-} from "@/components/chat/chat-widget/session-data-api";
+import { createChatWidgetSession } from "@/components/chat/chat-widget/session-data-api";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
+import { useChatWidgetSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 import { getStoredVisitorName, getVisitorId } from "@/components/chat/chat-widget/utils";
@@ -55,22 +53,11 @@ export function useChatWidgetSessionData({
   lastMsgIdRef,
   pollRef,
 }: UseChatWidgetSessionDataParams) {
-  const syncVoiceInvite = useCallback(async (currentSessionId: number) => {
-    try {
-      const invite = await fetchChatWidgetVoiceInvite(currentSessionId);
-      if (!invite || !["pending", "active"].includes(invite.status)) {
-        setAvailableVoiceInvite(null);
-        if (activeVoiceToken && invite?.token === activeVoiceToken) {
-          setActiveVoiceToken(null);
-        }
-        return;
-      }
-
-      setAvailableVoiceInvite(invite);
-    } catch {
-      // keep current UI state on transient failures
-    }
-  }, [activeVoiceToken, setActiveVoiceToken, setAvailableVoiceInvite]);
+  const syncVoiceInvite = useChatWidgetSyncVoiceInvite({
+    activeVoiceToken,
+    setAvailableVoiceInvite,
+    setActiveVoiceToken,
+  });
 
   useEffect(() => {
     const storedName = getStoredVisitorName();
