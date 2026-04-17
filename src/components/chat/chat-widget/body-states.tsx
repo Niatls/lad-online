@@ -1,5 +1,6 @@
-import { MessageCircle, User } from "lucide-react";
+import { User } from "lucide-react";
 
+import { ChatWidgetEmptyMessages } from "@/components/chat/chat-widget/empty-messages-state";
 import { ChatWidgetErrorState } from "@/components/chat/chat-widget/error-state";
 import { ChatWidgetLoadingState } from "@/components/chat/chat-widget/loading-state";
 
@@ -22,16 +23,16 @@ export function ChatWidgetNameStep({
         <User className="h-10 w-10 text-sage" />
       </div>
       <div>
-        <h4 className="mb-2 text-xl font-bold text-forest">Р С™Р В°Р С” Р С” Р Р†Р В°Р С Р С•Р В±РЎР‚Р В°РЎвЂ°Р В°РЎвЂљРЎРЉРЎРѓРЎРЏ?</h4>
+        <h4 className="mb-2 text-xl font-bold text-forest">Р В РЎв„ўР В Р’В°Р В РЎвЂќ Р В РЎвЂќ Р В Р вЂ Р В Р’В°Р В РЎВ Р В РЎвЂўР В Р’В±Р РЋР вЂљР В Р’В°Р РЋРІР‚В°Р В Р’В°Р РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ?</h4>
         <p className="max-w-[260px] text-sm leading-relaxed text-forest/50">
-          Р Р€Р С”Р В°Р В¶Р С‘РЎвЂљР Вµ Р С‘Р СРЎРЏ Р С‘Р В»Р С‘ Р С—РЎРѓР ВµР Р†Р Т‘Р С•Р Р…Р С‘Р С. Р СћР В°Р С” РЎРѓР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ РЎРѓР СР С•Р В¶Р ВµРЎвЂљ Р С•Р В±РЎР‚Р В°РЎвЂљР С‘РЎвЂљРЎРЉРЎРѓРЎРЏ Р С” Р Р†Р В°Р С Р Р† РЎвЂЎР В°РЎвЂљР Вµ Р С‘ Р С—РЎР‚Р С‘ Р С–Р С•Р В»Р С•РЎРѓР С•Р Р†Р С•Р С Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р С‘.
+          Р В Р в‚¬Р В РЎвЂќР В Р’В°Р В Р’В¶Р В РЎвЂР РЋРІР‚С™Р В Р’Вµ Р В РЎвЂР В РЎВР РЋР РЏ Р В РЎвЂР В Р’В»Р В РЎвЂ Р В РЎвЂ”Р РЋР С“Р В Р’ВµР В Р вЂ Р В РўвЂР В РЎвЂўР В Р вЂ¦Р В РЎвЂР В РЎВ. Р В РЎС›Р В Р’В°Р В РЎвЂќ Р РЋР С“Р В РЎвЂ—Р В Р’ВµР РЋРІР‚В Р В РЎвЂР В Р’В°Р В Р’В»Р В РЎвЂР РЋР С“Р РЋРІР‚С™ Р РЋР С“Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂўР В Р’В±Р РЋР вЂљР В Р’В°Р РЋРІР‚С™Р В РЎвЂР РЋРІР‚С™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р В РЎвЂќ Р В Р вЂ Р В Р’В°Р В РЎВ Р В Р вЂ  Р РЋРІР‚РЋР В Р’В°Р РЋРІР‚С™Р В Р’Вµ Р В РЎвЂ Р В РЎвЂ—Р РЋР вЂљР В РЎвЂ Р В РЎвЂ“Р В РЎвЂўР В Р’В»Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р вЂ Р В РЎвЂўР В РЎВ Р В РЎвЂўР В Р’В±Р РЋРІР‚В°Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В РЎвЂ.
         </p>
       </div>
       <div className="w-full max-w-[280px] space-y-3">
         <input
           value={pendingVisitorName}
           onChange={(event) => onChangeName(event.target.value)}
-          placeholder="Р ВР СРЎРЏ Р С‘Р В»Р С‘ Р С—РЎРѓР ВµР Р†Р Т‘Р С•Р Р…Р С‘Р С"
+          placeholder="Р В Р’ВР В РЎВР РЋР РЏ Р В РЎвЂР В Р’В»Р В РЎвЂ Р В РЎвЂ”Р РЋР С“Р В Р’ВµР В Р вЂ Р В РўвЂР В РЎвЂўР В Р вЂ¦Р В РЎвЂР В РЎВ"
           className="w-full rounded-2xl border border-sage-light/20 bg-white px-4 py-3 text-sm text-forest outline-none focus:border-forest/30"
         />
         <button
@@ -40,29 +41,11 @@ export function ChatWidgetNameStep({
           disabled={!pendingVisitorName.trim() || loading}
           className="w-full rounded-2xl bg-forest px-4 py-3 text-sm font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
         >
-          {loading ? "Р СџР С•Р Т‘Р С”Р В»РЎР‹РЎвЂЎР В°Р ВµР С..." : "Р СџРЎР‚Р С•Р Т‘Р С•Р В»Р В¶Р С‘РЎвЂљРЎРЉ"}
+          {loading ? "Р В РЎСџР В РЎвЂўР В РўвЂР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРІР‚РЋР В Р’В°Р В Р’ВµР В РЎВ..." : "Р В РЎСџРЎР‚Р С•Р Т‘Р С•Р В»Р В¶Р С‘РЎвЂљРЎРЉ"}
         </button>
       </div>
     </div>
   );
 }
 
-type ChatWidgetEmptyMessagesProps = {
-  visitorName: string;
-};
-
-export function ChatWidgetEmptyMessages({ visitorName }: ChatWidgetEmptyMessagesProps) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center px-6 py-12 text-center">
-      <div className="mb-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-[2rem] bg-sage/10 transition-transform duration-500 hover:rotate-0">
-        <MessageCircle className="h-10 w-10 text-sage" />
-      </div>
-      <h4 className="mb-2 text-xl font-bold text-forest">Р СџРЎР‚Р С‘Р Р†Р ВµРЎвЂљ, {visitorName || "Р Т‘РЎР‚РЎС“Р С–"}!</h4>
-      <p className="max-w-[240px] text-sm leading-relaxed text-forest/50">
-        Р СљРЎвЂ№ Р Р†РЎРѓР ВµР С–Р Т‘Р В° Р Р…Р В° РЎРѓР Р†РЎРЏР В·Р С‘. Р С›Р С—Р С‘РЎв‚¬Р С‘РЎвЂљР Вµ Р Р†Р В°РЎв‚¬РЎС“ РЎРѓР С‘РЎвЂљРЎС“Р В°РЎвЂ Р С‘РЎР‹, Р С‘ Р Р…Р В°РЎв‚¬ РЎРѓР С—Р ВµРЎвЂ Р С‘Р В°Р В»Р С‘РЎРѓРЎвЂљ Р С•РЎвЂљР Р†Р ВµРЎвЂљР С‘РЎвЂљ Р Р†Р В°Р С Р Р† Р В±Р В»Р С‘Р В¶Р В°Р в„–РЎв‚¬Р ВµР Вµ Р Р†РЎР‚Р ВµР СРЎРЏ.
-      </p>
-    </div>
-  );
-}
-
-export { ChatWidgetErrorState, ChatWidgetLoadingState };
+export { ChatWidgetEmptyMessages, ChatWidgetErrorState, ChatWidgetLoadingState };
