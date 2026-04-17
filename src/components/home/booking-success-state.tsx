@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-
 import { CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import { useCopyApplicationCode } from "./booking-success/use-copy-application-code";
 import type { BookingSubmissionResult } from "./booking-types";
 
 type BookingSuccessStateProps = {
@@ -17,32 +16,9 @@ export function BookingSuccessState({
   submittedApplication,
   onResetSuccess,
 }: BookingSuccessStateProps) {
-  const [codeCopied, setCodeCopied] = useState(false);
-
-  const copyApplicationCode = async () => {
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(
-          submittedApplication.applicationNumber,
-        );
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = submittedApplication.applicationNumber;
-        textarea.setAttribute("readonly", "true");
-        textarea.style.position = "fixed";
-        textarea.style.left = "-9999px";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-
-      setCodeCopied(true);
-      window.setTimeout(() => setCodeCopied(false), 1800);
-    } catch {
-      setCodeCopied(false);
-    }
-  };
+  const { codeCopied, copyApplicationCode } = useCopyApplicationCode(
+    submittedApplication.applicationNumber
+  );
 
   return (
     <div className="flex h-full min-h-[400px] flex-col items-center justify-center space-y-4 text-center">
