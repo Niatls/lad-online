@@ -1,6 +1,7 @@
 import { ChatWidgetComposerEditingBanner } from "@/components/chat/chat-widget/composer-editing-banner";
 import { ChatWidgetComposerErrorBanner } from "@/components/chat/chat-widget/composer-error-banner";
 import { ChatWidgetComposerInputBar } from "@/components/chat/chat-widget/composer-input-bar";
+import { ChatWidgetComposerRecordingStatus } from "@/components/chat/chat-widget/composer-recording-status";
 import { ChatWidgetComposerReplyBanner } from "@/components/chat/chat-widget/composer-reply-banner";
 import { ChatWidgetComposerVoiceInvite } from "@/components/chat/chat-widget/composer-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
@@ -101,15 +102,11 @@ export function ChatWidgetComposer({
         onSend={onSend}
       />
 
-      {isRecordingVoice ? (
-        <p className="mt-2 text-center text-[11px] font-bold text-red-500">
-          РРґС‘С‚ Р·Р°РїРёСЃСЊ. РќР°Р¶РјРёС‚Рµ РєРІР°РґСЂР°С‚, С‡С‚РѕР±С‹ РѕС‚РїСЂР°РІРёС‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ.
-        </p>
-      ) : recordingStartedAt ? (
-        <p className="mt-2 text-center text-[11px] text-forest/40">
-          РќР°С‡Р°Р»Рѕ Р·Р°РїРёСЃРё: {new Date(recordingStartedAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-        </p>
-      ) : null}
+      <ChatWidgetComposerRecordingStatus
+        isRecordingVoice={isRecordingVoice}
+        recordingStartedAt={recordingStartedAt}
+      />
+
       <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-wide text-forest/30">
         Р‘РµР·РѕРїР°СЃРЅС‹Р№ С‡Р°С‚ вЂў Р›Р°Рґ
       </p>
