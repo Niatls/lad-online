@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import {
   bindVoiceLocalTrackLifecycle,
@@ -8,13 +8,14 @@ import {
 } from "./audio-lifecycle";
 import { formatCallDuration, formatUsageBytes } from "./formatters";
 import { acquireVoiceAudioStream } from "./media";
-import { endVoiceInvite } from "./signaling";
+import { useVoiceCallActions } from "./use-voice-call-actions";
 import { useVoiceCallConnection } from "./use-voice-call-connection";
 import { useVoiceCallDuration } from "./use-voice-call-duration";
 import { useVoiceCallMediaControls } from "./use-voice-call-media-controls";
 import { useVoiceCallRecoveryHandlers } from "./use-voice-call-recovery-handlers";
 import { useVoiceCallRuntimeRefs } from "./use-voice-call-runtime-refs";
 import { useVoiceCallSignalController } from "./use-voice-call-signal-controller";
+import { useVoiceCallSessionReset } from "./use-voice-call-session-reset";
 import { useVoiceCallStartup } from "./use-voice-call-startup";
 import { useVoiceCallState } from "./use-voice-call-state";
 import { useVoiceCallStatsChange } from "./use-voice-call-stats-change";
@@ -93,11 +94,13 @@ export function useVoiceCallPanel({
     [role],
   );
 
-  useEffect(() => {
-    startupJoinSentRef.current = false;
-    initialOfferSentRef.current = false;
-    reconnectAllowedRef.current = false;
-  }, [initialOfferSentRef, reconnectAllowedRef, role, startupJoinSentRef, token]);
+  useVoiceCallSessionReset({
+    initialOfferSentRef,
+    reconnectAllowedRef,
+    role,
+    startupJoinSentRef,
+    token,
+  });
 
   const acquireLocalAudioStream = useCallback(async () => acquireVoiceAudioStream(), []);
 
@@ -352,38 +355,20 @@ export function useVoiceCallPanel({
     usageBytes,
   });
 
-  const toggleMute = useCallback(() => {
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) {
-      return;
-    }
-
-    track.enabled = !track.enabled;
-    setMuted(!track.enabled);
-  }, [localStreamRef, setMuted]);
-
-  const endInviteRemotely = useCallback(async () => {
-    if (endingRef.current) {
-      return;
-    }
-
-    endingRef.current = true;
-    await endVoiceInvite({
-      token,
-      role,
-      usageBytes,
-      durationSeconds: getCurrentDurationSeconds(),
-      postSignal,
-    });
-  }, [endingRef, getCurrentDurationSeconds, postSignal, role, token, usageBytes]);
-
-  const handleEnd = useCallback(async () => {
-    updateLastEvent("\u0412\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043b\u0438 \u0437\u0432\u043e\u043d\u043e\u043a", true);
-    void postVoiceEvent("local-hangup", "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043b \u0437\u0432\u043e\u043d\u043e\u043a");
-    await endInviteRemotely();
-    cleanup();
-    onCloseRef.current();
-  }, [cleanup, endInviteRemotely, onCloseRef, postVoiceEvent, updateLastEvent]);
+  const { toggleMute, handleEnd } = useVoiceCallActions({
+    cleanup,
+    endingRef,
+    getCurrentDurationSeconds,
+    localStreamRef,
+    onCloseRef,
+    postSignal,
+    postVoiceEvent,
+    role,
+    setMuted,
+    token,
+    updateLastEvent,
+    usageBytes,
+  });
 
   return {
     remoteAudioRef,
