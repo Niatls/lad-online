@@ -1,5 +1,7 @@
 import { User } from "lucide-react";
 
+import { ChatWidgetNameStepForm } from "@/components/chat/chat-widget/name-step-form";
+
 type ChatWidgetNameStepProps = {
   pendingVisitorName: string;
   loading: boolean;
@@ -19,27 +21,17 @@ export function ChatWidgetNameStep({
         <User className="h-10 w-10 text-sage" />
       </div>
       <div>
-        <h4 className="mb-2 text-xl font-bold text-forest">Р В Р’В Р РЋРІвЂћСћР В Р’В Р вЂ™Р’В°Р В Р’В Р РЋРІР‚Сњ Р В Р’В Р РЋРІР‚Сњ Р В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р’В Р РЋР’В Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В Р вЂ°Р В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ?</h4>
+        <h4 className="mb-2 text-xl font-bold text-forest">Как к вам обращаться?</h4>
         <p className="max-w-[260px] text-sm leading-relaxed text-forest/50">
-          Р В Р’В Р В РІвЂљВ¬Р В Р’В Р РЋРІР‚СњР В Р’В Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚ВР В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚ВР В Р’В Р РЋР’ВР В Р Р‹Р В Р РЏ Р В Р’В Р РЋРІР‚ВР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚В Р В Р’В Р РЋРІР‚вЂќР В Р Р‹Р В РЎвЂњР В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В Р В Р’В Р СћРІР‚ВР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРівЂљВР В Р’В Р РЋР’В. Р В РЎС›Р В Р’В°Р В РЎвЂќ Р РЋР С“Р В РЎвЂ—Р В Р’ВµР РЋРІР‚В Р В РЎвЂР В Р’В°Р В Р’В»Р В РЎвЂР РЋР С“Р РЋРІР‚С™ Р РЋР С“Р В РЎВР В РЎвЂўР В Р’В¶Р В Р’ВµР РЋРІР‚С™ Р В РЎвЂўР В Р’В±Р РЋР вЂљР В Р’В°Р РЋРівЂљС™Р В РЎвЂР РЋРівЂљС™Р РЋР Р‰Р РЋР С“Р РЋР РЏ Р В РЎвЂќ Р В Р вЂ Р В Р’В°Р В РЎВ Р В Р вЂ  Р РЋРІР‚РЋР В Р’В°Р РЋРівЂљС™Р В Р’Вµ Р В РЎвЂ Р В РЎвЂ—Р РЋР вЂљР В РЎвЂ Р В РЎвЂ“Р В РЎвЂўР В Р’В»Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р вЂ Р В РЎвЂўР В РЎВ Р В РЎвЂўР В Р’В±Р РЋРівЂљВ°Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В РЎвЂ.
+          Укажите имя или псевдоним. Так специалист сможет обратиться к вам в чате и при голосовом общении.
         </p>
       </div>
-      <div className="w-full max-w-[280px] space-y-3">
-        <input
-          value={pendingVisitorName}
-          onChange={(event) => onChangeName(event.target.value)}
-          placeholder="Р В Р’ВР В РЎВР РЋР РЏ Р В РЎвЂР В Р’В»Р В РЎвЂ Р В РЎвЂ—Р РЋР С“Р В Р’ВµР В Р вЂ Р В РўвЂР В РЎвЂўР В Р вЂ¦Р В РЎвЂР В РЎВ"
-          className="w-full rounded-2xl border border-sage-light/20 bg-white px-4 py-3 text-sm text-forest outline-none focus:border-forest/30"
-        />
-        <button
-          type="button"
-          onClick={onSaveName}
-          disabled={!pendingVisitorName.trim() || loading}
-          className="w-full rounded-2xl bg-forest px-4 py-3 text-sm font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
-        >
-          {loading ? "Р В РЎСџР В РЎвЂўР В РўвЂР В РЎвЂќР В Р’В»Р РЋР вЂ№Р РЋРівЂљРЋР В Р’В°Р В Р’ВµР В РЎВ..." : "Р В РЎСџРЎР‚Р С•Р Т‘Р С•Р В»Р В¶Р С‘РЎвЂљРЎРЉ"}
-        </button>
-      </div>
+      <ChatWidgetNameStepForm
+        pendingVisitorName={pendingVisitorName}
+        loading={loading}
+        onChangeName={onChangeName}
+        onSaveName={onSaveName}
+      />
     </div>
   );
 }
