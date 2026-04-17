@@ -1,5 +1,10 @@
-import { useCallback } from "react";
+﻿import { useCallback } from "react";
 
+import {
+  createAdminVoiceToken,
+  deleteAdminChatMessages,
+  deleteAdminChatSession,
+} from "@/components/admin/admin-chat-panel/actions-api";
 import type { Message, Session, VoiceEvent, VoiceLiveStats } from "@/components/admin/admin-chat-panel/types";
 
 type UseAdminChatActionsParams = {
@@ -28,6 +33,9 @@ type UseAdminChatActionsParams = {
   setDeletingSession: React.Dispatch<React.SetStateAction<boolean>>;
   setDeletingMessages: React.Dispatch<React.SetStateAction<boolean>>;
 };
+
+const visitorLabel = (name: string | null | undefined, selectedId: number) =>
+  name || `\u043f\u043e\u0441\u0435\u0442\u0438\u0442\u0435\u043b\u044f #${selectedId}`;
 
 export function useAdminChatActions({
   selectedId,
@@ -86,15 +94,7 @@ export function useAdminChatActions({
 
     setCreatingVoiceToken(true);
     try {
-      const res = await fetch(`/api/admin/chat/sessions/${selectedId}/voice-token`, {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to create voice token");
-      }
-
-      const invite = await res.json();
+      const invite = await createAdminVoiceToken(selectedId);
       if (invite?.token) {
         setActiveVoiceToken(invite.token);
       }
@@ -124,22 +124,14 @@ export function useAdminChatActions({
       return;
     }
 
-    const name = selectedSession?.visitorName || `посетителя #${selectedId}`;
-    if (!window.confirm(`Скрыть ${name} из активных диалогов, но сохранить всю историю?`)) {
+    const name = visitorLabel(selectedSession?.visitorName, selectedId);
+    if (!window.confirm(`\u0421\u043a\u0440\u044b\u0442\u044c ${name} \u0438\u0437 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u0445 \u0434\u0438\u0430\u043b\u043e\u0433\u043e\u0432, \u043d\u043e \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0432\u0441\u044e \u0438\u0441\u0442\u043e\u0440\u0438\u044e?`)) {
       return;
     }
 
     setArchivingSession(true);
     try {
-      const res = await fetch(`/api/admin/chat/sessions/${selectedId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "soft" }),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to archive session");
-      }
-
+      await deleteAdminChatSession(selectedId, "soft");
       await resetSelectedSession();
     } catch (err) {
       console.error("Failed to archive session:", err);
@@ -153,22 +145,14 @@ export function useAdminChatActions({
       return;
     }
 
-    const name = selectedSession?.visitorName || `посетителя #${selectedId}`;
-    if (!window.confirm(`Удалить ${name} и всю историю чата?`)) {
+    const name = visitorLabel(selectedSession?.visitorName, selectedId);
+    if (!window.confirm(`\u0423\u0434\u0430\u043b\u0438\u0442\u044c ${name} \u0438 \u0432\u0441\u044e \u0438\u0441\u0442\u043e\u0440\u0438\u044e \u0447\u0430\u0442\u0430?`)) {
       return;
     }
 
     setDeletingSession(true);
     try {
-      const res = await fetch(`/api/admin/chat/sessions/${selectedId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "hard" }),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to delete session");
-      }
-
+      await deleteAdminChatSession(selectedId, "hard");
       await resetSelectedSession();
     } catch (err) {
       console.error("Failed to delete session:", err);
@@ -182,31 +166,20 @@ export function useAdminChatActions({
       return;
     }
 
-    const name = selectedSession?.visitorName || `пользователя #${selectedId}`;
-    if (!window.confirm(`Удалить ${selectedMessageIds.length} сообщ. и для ${name}?`)) {
+    const name = visitorLabel(selectedSession?.visitorName, selectedId);
+    if (!window.confirm(`\u0423\u0434\u0430\u043b\u0438\u0442\u044c ${selectedMessageIds.length} \u0441\u043e\u043e\u0431\u0449. \u0438 \u0434\u043b\u044f ${name}?`)) {
       return;
     }
 
     setDeletingMessages(true);
     try {
-      const res = await fetch(`/api/admin/chat/sessions/${selectedId}/messages`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messageIds: selectedMessageIds }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete messages");
-      }
-
-      const data = await res.json();
-      const deletedIds = new Set<number>(data.deletedIds ?? []);
+      const deletedIds = new Set<number>(await deleteAdminChatMessages(selectedId, selectedMessageIds));
       setMessages((prev) =>
         prev.map((message) =>
           deletedIds.has(message.id)
             ? { ...message, content: "", deletedAt: new Date().toISOString(), deletedBy: "admin", isDeleted: true }
-            : message,
-        ),
+            : message
+        )
       );
       setSelectedMessageIds([]);
     } catch (err) {
