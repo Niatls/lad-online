@@ -23,10 +23,28 @@ export function getAdminSessionToken() {
     .digest("hex");
 }
 
-export function isAdminAuthenticated(cookieStore: ReadonlyRequestCookies) {
+export function isAdminAuthenticated(cookieStore: ReadonlyRequestCookies, authHeader?: string | null) {
   if (!isAdminPasswordConfigured()) {
     return true;
   }
 
-  return cookieStore.get(ADMIN_SESSION_COOKIE)?.value === getAdminSessionToken();
+  const token = getAdminSessionToken();
+  if (!token) return false;
+
+  // Check cookie
+  if (cookieStore.get(ADMIN_SESSION_COOKIE)?.value === token) {
+    return true;
+  }
+
+  // Check Authorization header (Bearer token)
+  if (authHeader) {
+    const bearerToken = authHeader.startsWith("Bearer ") 
+      ? authHeader.substring(7) 
+      : authHeader;
+    if (bearerToken === token) {
+      return true;
+    }
+  }
+
+  return false;
 }
