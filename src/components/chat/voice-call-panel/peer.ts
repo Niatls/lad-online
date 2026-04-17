@@ -1,3 +1,5 @@
+import { attachVoicePeerEvents } from "./attach-voice-peer-events";
+import { resolveVoiceIceConfig } from "./resolve-voice-ice-config";
 import type { IceServer, VoicePeerDiagnostics } from "./types";
 
 type CreateVoicePeerParams = {
@@ -73,34 +75,28 @@ export async function createVoicePeer({
   setError(null);
   setIsReconnecting(reconnecting);
 
-  const iceConfigRes = await fetch("/api/chat/voice/ice-servers", { cache: "no-store" }).catch(() => null);
-  const iceConfigJson = iceConfigRes && iceConfigRes.ok ? await iceConfigRes.json() : null;
-  const iceServers = Array.isArray(iceConfigJson?.iceServers) && iceConfigJson.iceServers.length > 0
-    ? iceConfigJson.iceServers
-    : defaultIceServers;
-  const relayIceServers = iceServers.filter((server) => {
-    const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
-    return urls.some((url) => typeof url === "string" && /^turns?:/i.test(url));
+  const { iceServers, relayIceServers, relayOnly } = await resolveVoiceIceConfig({
+    defaultIceServers,
+    reconnecting,
   });
-  const relayOnly = reconnecting && relayIceServers.length > 0;
 
   const pc = new RTCPeerConnection(
     relayOnly
       ? {
-        iceServers: relayIceServers,
-        iceCandidatePoolSize: 0,
-        iceTransportPolicy: "relay",
-      }
+          iceServers: relayIceServers,
+          iceCandidatePoolSize: 0,
+          iceTransportPolicy: "relay",
+        }
       : {
-        iceServers,
-        iceCandidatePoolSize: 4,
-      },
+          iceServers,
+          iceCandidatePoolSize: 4,
+        },
   );
   peerRef.current = pc;
 
   void postVoiceEvent(
     "peer-config",
-    relayOnly ? "Создан peer с relay-only реконнектом" : "Создан peer со стандартным ICE маршрутом",
+    relayOnly ? "РЎРѕР·РґР°РЅ peer СЃ relay-only СЂРµРєРѕРЅРЅРµРєС‚РѕРј" : "РЎРѕР·РґР°РЅ peer СЃРѕ СЃС‚Р°РЅРґР°СЂС‚РЅС‹Рј ICE РјР°СЂС€СЂСѓС‚РѕРј",
     {
       relayOnly,
       totalIceServers: iceServers.length,
@@ -111,101 +107,23 @@ export async function createVoicePeer({
 
   currentStream.getTracks().forEach((track) => pc.addTrack(track, currentStream));
 
-  pc.onicecandidate = (event) => {
-    if (peerRef.current !== pc || closedRef.current) {
-      return;
-    }
-
-    if (event.candidate) {
-      void postSignal("candidate", event.candidate.toJSON());
-    }
-  };
-
-  pc.ontrack = (event) => {
-    if (peerRef.current !== pc || closedRef.current) {
-      return;
-    }
-
-    const [remoteStream] = event.streams;
-    if (remoteAudioRef.current && remoteStream) {
-      remoteAudioRef.current.srcObject = remoteStream;
-      void remoteAudioRef.current.play().catch(() => undefined);
-    }
-    markCallActive();
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (peerRef.current !== pc || closedRef.current) {
-      return;
-    }
-
-    if (pc.connectionState === "connected") {
-      setStatus("Аудиоканал готов. Подключаем собеседника...");
-      if (callEstablishedRef.current) {
-        resumeDurationTracking();
-      }
-      updateLastEvent("WebRTC connectionState: connected");
-      void postVoiceEvent("connection-state", "WebRTC connectionState: connected");
-    } else if (pc.connectionState === "connecting") {
-      setStatus("Соединяем аудиоканал...");
-      updateLastEvent("WebRTC connectionState: connecting");
-    } else if (pc.connectionState === "failed") {
-      pauseDurationTracking();
-      updateLastEvent("WebRTC connectionState: failed", true);
-      void collectPeerDiagnostics(pc).then((details) => {
-        void postVoiceEvent("connection-state", "WebRTC connectionState: failed", details);
-      });
-      void attemptReconnect();
-    } else if (["disconnected", "closed"].includes(pc.connectionState)) {
-      pauseDurationTracking();
-      updateLastEvent(`WebRTC connectionState: ${pc.connectionState}`, true);
-      void collectPeerDiagnostics(pc).then((details) => {
-        void postVoiceEvent("connection-state", `WebRTC connectionState: ${pc.connectionState}`, details);
-      });
-      if (!closedRef.current && !endingRef.current) {
-        void attemptReconnect();
-      }
-    }
-  };
-
-  pc.oniceconnectionstatechange = () => {
-    if (peerRef.current !== pc || closedRef.current) {
-      return;
-    }
-
-    if (pc.iceConnectionState === "checking") {
-      if (callEstablishedRef.current) {
-        pauseDurationTracking();
-      }
-      setStatus("Проверяем маршрут для звонка...");
-      updateLastEvent("ICE: checking");
-    } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-      setStatus("Маршрут найден. Ждём аудио...");
-      if (callEstablishedRef.current) {
-        resumeDurationTracking();
-      }
-      updateLastEvent(`ICE: ${pc.iceConnectionState}`);
-    } else if (pc.iceConnectionState === "failed") {
-      pauseDurationTracking();
-      updateLastEvent("ICE: failed", true);
-      void collectPeerDiagnostics(pc).then((details) => {
-        void postVoiceEvent("ice-state", "ICE: failed", details);
-      });
-      void attemptReconnect();
-    }
-  };
-
-  pc.onicegatheringstatechange = () => {
-    if (peerRef.current !== pc || closedRef.current) {
-      return;
-    }
-
-    if (pc.iceGatheringState === "complete") {
-      void collectPeerDiagnostics(pc).then((details) => {
-        void postVoiceEvent("ice-gathering-state", "ICE gathering complete", details);
-      });
-    }
-  };
+  attachVoicePeerEvents({
+    attemptReconnect,
+    callEstablishedRef,
+    closedRef,
+    collectPeerDiagnostics,
+    endingRef,
+    markCallActive,
+    pauseDurationTracking,
+    pc,
+    peerRef,
+    postSignal,
+    postVoiceEvent,
+    remoteAudioRef,
+    resumeDurationTracking,
+    setStatus,
+    updateLastEvent,
+  });
 
   return pc;
 }
@@ -219,7 +137,7 @@ export function createVoiceOfferSender({
   postVoiceEvent,
 }: CreateVoiceOfferSenderParams) {
   return async (iceRestart = false) => {
-    const pc = peerRef.current ?? await createPeer();
+    const pc = peerRef.current ?? (await createPeer());
     if (!pc || pc.signalingState !== "stable") {
       return;
     }
@@ -227,11 +145,11 @@ export function createVoiceOfferSender({
     const offer = await pc.createOffer({ offerToReceiveAudio: true, iceRestart });
     await pc.setLocalDescription(offer);
     await postSignal("offer", offer);
-    setStatus(iceRestart ? "Переподключаем специалиста..." : "Вызываем специалиста...");
-    updateLastEvent(iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer", true);
+    setStatus(iceRestart ? "РџРµСЂРµРїРѕРґРєР»СЋС‡Р°РµРј СЃРїРµС†РёР°Р»РёСЃС‚Р°..." : "Р’С‹Р·С‹РІР°РµРј СЃРїРµС†РёР°Р»РёСЃС‚Р°...");
+    updateLastEvent(iceRestart ? "РћС‚РїСЂР°РІР»РµРЅ offer СЃ ICE restart" : "РћС‚РїСЂР°РІР»РµРЅ РЅРѕРІС‹Р№ offer", true);
     void postVoiceEvent(
       iceRestart ? "offer-restart" : "offer-created",
-      iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer",
+      iceRestart ? "РћС‚РїСЂР°РІР»РµРЅ offer СЃ ICE restart" : "РћС‚РїСЂР°РІР»РµРЅ РЅРѕРІС‹Р№ offer",
     );
   };
 }
