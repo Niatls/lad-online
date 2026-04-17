@@ -1,5 +1,6 @@
-import { Loader2, Mic, Send, Square, X } from "lucide-react";
+import { Loader2, Mic, Send, Square } from "lucide-react";
 
+import { ChatWidgetComposerEditingBanner } from "@/components/chat/chat-widget/composer-editing-banner";
 import { ChatWidgetComposerErrorBanner } from "@/components/chat/chat-widget/composer-error-banner";
 import { ChatWidgetComposerReplyBanner } from "@/components/chat/chat-widget/composer-reply-banner";
 import { ChatWidgetComposerVoiceInvite } from "@/components/chat/chat-widget/composer-voice-invite";
@@ -82,21 +83,7 @@ export function ChatWidgetComposer({
       ) : null}
 
       {editingMessageId ? (
-        <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ</p>
-              <p className="mt-1 text-xs text-forest/55">РР·РјРµРЅРёС‚Рµ С‚РµРєСЃС‚ Рё РѕС‚РїСЂР°РІСЊС‚Рµ РїРѕРІС‚РѕСЂРЅРѕ.</p>
-            </div>
-            <button
-              type="button"
-              onClick={onCancelEditing}
-              className="rounded-full p-1 text-forest/35 hover:bg-white/70 hover:text-forest"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <ChatWidgetComposerEditingBanner onCancelEditing={onCancelEditing} />
       ) : null}
 
       <div className="flex items-end gap-2 rounded-[1.75rem] border border-sage-light/20 bg-cream/30 p-2 transition-all focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5">
