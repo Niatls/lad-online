@@ -1,7 +1,7 @@
 import { ChatWidgetMessageReplyPreview } from "@/components/chat/chat-widget/message-reply-preview";
+import { resolveChatWidgetMessageState } from "@/components/chat/chat-widget/resolve-chat-widget-message-state";
 import type { Message } from "@/components/chat/chat-widget/types";
 import { VoiceMessagePlayer } from "@/components/chat/voice-message-player";
-import { parseVoiceMessageContent } from "@/lib/chat-message-format";
 
 type ChatWidgetMessageBodyProps = {
   isSystem: boolean;
@@ -16,7 +16,7 @@ export function ChatWidgetMessageBody({
   message,
   onJumpToMessage,
 }: ChatWidgetMessageBodyProps) {
-  const voiceMessage = parseVoiceMessageContent(message.content);
+  const { voiceMessage } = resolveChatWidgetMessageState(message);
 
   return (
     <div
@@ -37,7 +37,7 @@ export function ChatWidgetMessageBody({
         />
       ) : null}
       {message.isDeleted ? (
-        <p className="italic opacity-70">Р В Р Р‹Р В РЎвЂўР В РЎвЂўР В Р’В±Р РЋРІР‚В°Р В Р’ВµР В Р вЂ¦Р В РЎвЂР В Р’Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•</p>
+        <p className="italic opacity-70">Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРівЂљВР В Р’В Р вЂ™Р’Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•</p>
       ) : voiceMessage ? (
         <VoiceMessagePlayer payload={voiceMessage} tone={isSystem ? "system" : isVisitor ? "visitor" : "admin"} />
       ) : (

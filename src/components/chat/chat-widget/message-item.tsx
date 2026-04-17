@@ -1,7 +1,7 @@
 import { ChatWidgetMessageActions } from "@/components/chat/chat-widget/message-actions";
 import { ChatWidgetMessageBody } from "@/components/chat/chat-widget/message-body";
+import { resolveChatWidgetMessageState } from "@/components/chat/chat-widget/resolve-chat-widget-message-state";
 import type { Message } from "@/components/chat/chat-widget/types";
-import { parseVoiceInviteToken, parseVoiceMessageContent } from "@/lib/chat-message-format";
 
 type ChatWidgetMessageItemProps = {
   message: Message;
@@ -18,15 +18,10 @@ export function ChatWidgetMessageItem({
   onEdit,
   setMessageRef,
 }: ChatWidgetMessageItemProps) {
-  const voiceToken = parseVoiceInviteToken(message.content);
+  const { canEdit, isSystem, isVisitor, voiceToken } = resolveChatWidgetMessageState(message);
   if (voiceToken) {
     return null;
   }
-
-  const isVisitor = message.sender === "visitor";
-  const isSystem = message.sender === "system";
-  const voiceMessage = parseVoiceMessageContent(message.content);
-  const canEdit = isVisitor && !isSystem && !message.isDeleted && !voiceMessage;
 
   return (
     <div
