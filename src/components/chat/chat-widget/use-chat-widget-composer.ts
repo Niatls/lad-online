@@ -1,11 +1,9 @@
 import { useCallback, useEffect } from "react";
 
 import {
-  createOptimisticChatWidgetMessage,
-  editChatWidgetMessage,
-  sendChatWidgetMessage,
   uploadChatWidgetVoiceMessage,
 } from "@/components/chat/chat-widget/composer-message-api";
+import { sendChatWidgetComposerMessage } from "@/components/chat/chat-widget/composer-send-message";
 import { startChatWidgetVoiceRecording } from "@/components/chat/chat-widget/composer-voice-recording";
 import type { Message } from "@/components/chat/chat-widget/types";
 
@@ -138,51 +136,19 @@ export function useChatWidgetComposer({
     if (!input.trim() || !sessionId || sending) {
       return;
     }
-    setError((prev) => (prev ? null : prev));
-
-    const text = input.trim();
-    if (editingMessageId) {
-      setSending(true);
-      try {
-        const updated = await editChatWidgetMessage(sessionId, editingMessageId, text);
-        setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
-        setEditingMessageId(null);
-        setInput("");
-      } catch (err) {
-        console.error("Failed to edit:", err);
-        setError("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ.");
-      } finally {
-        setSending(false);
-      }
-      return;
-    }
-
-    const currentReplyTarget = replyTarget;
-    setInput("");
-    setSending(true);
-
-    const tempId = Date.now();
-    const optimistic = createOptimisticChatWidgetMessage(tempId, text, currentReplyTarget);
-    setMessages((prev) => [...prev, optimistic]);
-    setReplyTarget(null);
-
-    try {
-      const message = await sendChatWidgetMessage({
-        content: text,
-        replyToId: optimistic.replyToId,
-        sessionId,
-      });
-      setMessages((prev) => prev.map((current) => (current.id === tempId ? message : current)));
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-    } catch (err) {
-      console.error("Failed to send:", err);
-      setError("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ.");
-      setMessages((prev) => prev.filter((message) => message.id !== tempId));
-      setInput(text);
-      setReplyTarget(currentReplyTarget);
-    } finally {
-      setSending(false);
-    }
+    await sendChatWidgetComposerMessage({
+      editingMessageId,
+      input,
+      lastMsgIdRef,
+      replyTarget,
+      sessionId,
+      setEditingMessageId,
+      setError,
+      setInput,
+      setMessages,
+      setReplyTarget,
+      setSending,
+    });
   }, [
     editingMessageId,
     input,
