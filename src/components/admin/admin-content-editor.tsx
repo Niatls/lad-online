@@ -1,320 +1,62 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Eye, FilePenLine, LayoutPanelTop, MonitorPlay, Settings2 } from "lucide-react";
-import Link from "next/link";
-
-import { ContentPagesSection } from "@/components/admin/content-pages-section";
-import { HomeContentSection } from "@/components/admin/home-content-section";
-import { emptyPageForm, type PageFormState } from "@/components/admin/editor-types";
-import { HomePageClient } from "@/components/home/home-page-client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { HomePageContent, ManagedContentPage } from "@/lib/content";
-
-type AdminContentEditorProps = {
-  homeContent: HomePageContent;
-  pages: ManagedContentPage[];
-  onSaved?: () => void;
-};
-
-type SavedPageResponse = Omit<ManagedContentPage, "updatedAt"> & {
-  updatedAt: string | null;
-};
+import { AdminContentEditorHeader } from "@/components/admin/admin-content-editor/header";
+import { AdminContentPreviewDialog } from "@/components/admin/admin-content-editor/preview-dialog";
+import { AdminContentEditorTabs } from "@/components/admin/admin-content-editor/tabs";
+import type { AdminContentEditorProps } from "@/components/admin/admin-content-editor/types";
+import { useAdminContentEditor } from "@/components/admin/admin-content-editor/use-admin-content-editor";
 
 export function AdminContentEditor({
   homeContent,
   pages,
   onSaved,
 }: AdminContentEditorProps) {
-  const [homeForm, setHomeForm] = useState(homeContent);
-  const [managedPages, setManagedPages] = useState(pages);
-  const [pageForm, setPageForm] = useState<PageFormState>(emptyPageForm);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [isSavingHome, setIsSavingHome] = useState(false);
-  const [isSavingPage, setIsSavingPage] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("");
-
-  const previewArticles = useMemo(
-    () =>
-      managedPages.filter(
-        (page) =>
-          page.pageType === "article" &&
-          page.published &&
-          page.showOnHomepage
-      ),
-    [managedPages]
-  );
-
-  function setHomeField<K extends keyof HomePageContent>(
-    key: K,
-    value: HomePageContent[K]
-  ) {
-    setHomeForm((current) => ({ ...current, [key]: value }));
-  }
-
-  const saveHomeContent = async () => {
-    setIsSavingHome(true);
-    setStatusMessage("");
-
-    const response = await fetch("/api/admin/content/home", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(homeForm),
-    });
-    const result = await response.json();
-
-    setIsSavingHome(false);
-    setStatusMessage(
-      response.ok && result.ok
-        ? "Главная страница сохранена."
-        : result.message || "Не удалось сохранить главную страницу."
-    );
-
-    if (response.ok && result.ok) {
-      onSaved?.();
-    }
-  };
-
-  const upsertManagedPage = (savedPage: ManagedContentPage) => {
-    setManagedPages((current) => {
-      const remaining = current.filter(
-        (page) =>
-          !(
-            (savedPage.id !== null && page.id === savedPage.id) ||
-            page.slug === savedPage.slug
-          )
-      );
-
-      return [savedPage, ...remaining];
-    });
-  };
-
-  const savePage = async () => {
-    setIsSavingPage(true);
-    setStatusMessage("");
-
-    const payload = {
-      ...pageForm,
-      summaryPoints: pageForm.summaryPoints
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean),
-    };
-
-    const url = pageForm.id
-      ? `/api/admin/content/pages/${pageForm.id}`
-      : "/api/admin/content/pages";
-    const method = pageForm.id ? "PUT" : "POST";
-
-    const response = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-
-    setIsSavingPage(false);
-    if (!response.ok || !result.ok) {
-      setStatusMessage(result.message || "Не удалось сохранить материал.");
-      return;
-    }
-
-    if (result.page) {
-      const responsePage = result.page as SavedPageResponse;
-      const savedPage: ManagedContentPage = {
-        ...responsePage,
-        updatedAt: responsePage.updatedAt
-          ? new Date(responsePage.updatedAt)
-          : null,
-      };
-
-      upsertManagedPage(savedPage);
-      setPageForm({
-        id: savedPage.id,
-        slug: savedPage.slug,
-        title: savedPage.title,
-        excerpt: savedPage.excerpt,
-        content: savedPage.content,
-        pageType: savedPage.pageType,
-        published: savedPage.published,
-        showOnHomepage: savedPage.showOnHomepage,
-        summaryPoints: savedPage.summaryPoints.join("\n"),
-        sourceLabel: savedPage.sourceLabel,
-        sourceHref: savedPage.sourceHref,
-        researchLabel: savedPage.researchLabel,
-        researchHref: savedPage.researchHref,
-      });
-
-      const publicPath =
-        savedPage.pageType === "article"
-          ? `/articles/${savedPage.slug}`
-          : `/pages/${savedPage.slug}`;
-
-      setStatusMessage(
-        savedPage.published
-          ? `Материал сохранен и опубликован. Адрес: ${publicPath}`
-          : "Материал сохранен как черновик. Он уже появился в списке слева, но пока не виден на сайте."
-      );
-      onSaved?.();
-      return;
-    }
-
-    setStatusMessage("Материал сохранен.");
-    onSaved?.();
-  };
-
-  const deletePage = async () => {
-    if (!pageForm.id) {
-      setStatusMessage("Удалять можно только уже сохраненные материалы.");
-      return;
-    }
-
-    const response = await fetch(`/api/admin/content/pages/${pageForm.id}`, {
-      method: "DELETE",
-    });
-    const result = await response.json();
-
-    if (!response.ok || !result.ok) {
-      setStatusMessage(result.message || "Не удалось удалить материал.");
-      return;
-    }
-
-    setManagedPages((current) =>
-      current.filter((page) => page.id !== pageForm.id)
-    );
-    setPageForm(emptyPageForm);
-    setStatusMessage("Материал удален.");
-    onSaved?.();
-  };
+  const {
+    deletePage,
+    homeForm,
+    isPreviewOpen,
+    isSavingHome,
+    isSavingPage,
+    managedPages,
+    pageForm,
+    previewArticles,
+    saveHomeContent,
+    savePage,
+    setHomeField,
+    setIsPreviewOpen,
+    setPageForm,
+    statusMessage,
+  } = useAdminContentEditor({
+    homeContent,
+    pages,
+    onSaved,
+  });
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-sage-light/30 bg-white/90 p-6 shadow-lg sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-forest">Редактор сайта</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-forest/60">
-              Управляйте главной страницей, меню, услугами, контактами и
-              материалами. Для главной теперь есть перетаскивание секций, а
-              предпросмотр открывается отдельно на весь экран.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/admin/live"
-              target="_blank"
-              className="inline-flex items-center gap-2 rounded-xl bg-forest/10 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest/20"
-            >
-              <MonitorPlay className="h-4 w-4" />
-              Live-редактор
-            </Link>
-            <button
-              type="button"
-              onClick={() => setIsPreviewOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-forest/90"
-            >
-              <Eye className="h-4 w-4" />
-              Предпросмотр внутри админки
-            </button>
-          </div>
-        </div>
-
-        {statusMessage ? (
-          <p className="mt-6 rounded-xl bg-sage-light/20 px-4 py-3 text-sm text-forest">
-            {statusMessage}
-          </p>
-        ) : null}
-      </section>
-
-      <Tabs defaultValue="home" className="space-y-6">
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-white/90 p-2">
-          <TabsTrigger
-            value="home"
-            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
-          >
-            <LayoutPanelTop className="h-4 w-4" />
-            Главная
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
-          >
-            <Settings2 className="h-4 w-4" />
-            Навигация и услуги
-          </TabsTrigger>
-          <TabsTrigger
-            value="pages"
-            className="flex-none rounded-xl px-4 py-2 data-[state=active]:bg-sage data-[state=active]:text-white"
-          >
-            <FilePenLine className="h-4 w-4" />
-            Материалы
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="home">
-          <HomeContentSection
-            homeForm={homeForm}
-            isSavingHome={isSavingHome}
-            mode="main"
-            onOpenPreview={() => setIsPreviewOpen(true)}
-            onSave={saveHomeContent}
-            setHomeField={setHomeField}
-          />
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <HomeContentSection
-            homeForm={homeForm}
-            isSavingHome={isSavingHome}
-            mode="settings"
-            onOpenPreview={() => setIsPreviewOpen(true)}
-            onSave={saveHomeContent}
-            setHomeField={setHomeField}
-          />
-        </TabsContent>
-
-        <TabsContent value="pages">
-          <ContentPagesSection
-            isSavingPage={isSavingPage}
-            onDelete={deletePage}
-            onReset={() => setPageForm(emptyPageForm)}
-            onSave={savePage}
-            pageForm={pageForm}
-            pages={managedPages}
-            setPageForm={setPageForm}
-          />
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent
-          showCloseButton
-          className="h-screen w-screen max-w-none sm:max-w-none overflow-hidden rounded-none border-0 p-0"
-        >
-          <DialogHeader className="border-b border-sage-light/20 px-6 py-4">
-            <DialogTitle>Предпросмотр главной страницы</DialogTitle>
-            <DialogDescription>
-              Ниже отображается текущая версия страницы из редактора до
-              публикации.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="h-full overflow-y-auto bg-cream">
-            <HomePageClient
-              articles={previewArticles}
-              homeContent={homeForm}
-              previewMode
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AdminContentEditorHeader
+        onOpenPreview={() => setIsPreviewOpen(true)}
+        statusMessage={statusMessage}
+      />
+      <AdminContentEditorTabs
+        homeForm={homeForm}
+        isSavingHome={isSavingHome}
+        isSavingPage={isSavingPage}
+        onDeletePage={deletePage}
+        onOpenPreview={() => setIsPreviewOpen(true)}
+        onSaveHome={saveHomeContent}
+        onSavePage={savePage}
+        pageForm={pageForm}
+        pages={managedPages}
+        setHomeField={setHomeField}
+        setPageForm={setPageForm}
+      />
+      <AdminContentPreviewDialog
+        articles={previewArticles}
+        homeContent={homeForm}
+        onOpenChange={setIsPreviewOpen}
+        open={isPreviewOpen}
+      />
     </div>
   );
 }
