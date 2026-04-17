@@ -1,5 +1,7 @@
 import { Loader2, MessageCircle, User, X } from "lucide-react";
 
+import { ChatWidgetLoadingState } from "@/components/chat/chat-widget/loading-state";
+
 type ChatWidgetNameStepProps = {
   pendingVisitorName: string;
   loading: boolean;
@@ -14,21 +16,21 @@ export function ChatWidgetNameStep({
   onSaveName,
 }: ChatWidgetNameStepProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-5 px-4 text-center">
-      <div className="w-20 h-20 rounded-[2rem] bg-sage/10 flex items-center justify-center">
+    <div className="flex h-full flex-col items-center justify-center gap-5 px-4 text-center">
+      <div className="flex h-20 w-20 items-center justify-center rounded-[2rem] bg-sage/10">
         <User className="h-10 w-10 text-sage" />
       </div>
       <div>
-        <h4 className="text-forest font-bold text-xl mb-2">Как к вам обращаться?</h4>
-        <p className="text-forest/50 text-sm leading-relaxed max-w-[260px]">
-          Укажите имя или псевдоним. Так специалист сможет обратиться к вам в чате и при голосовом общении.
+        <h4 className="mb-2 text-xl font-bold text-forest">РљР°Рє Рє РІР°Рј РѕР±СЂР°С‰Р°С‚СЊСЃСЏ?</h4>
+        <p className="max-w-[260px] text-sm leading-relaxed text-forest/50">
+          РЈРєР°Р¶РёС‚Рµ РёРјСЏ РёР»Рё РїСЃРµРІРґРѕРЅРёРј. РўР°Рє СЃРїРµС†РёР°Р»РёСЃС‚ СЃРјРѕР¶РµС‚ РѕР±СЂР°С‚РёС‚СЊСЃСЏ Рє РІР°Рј РІ С‡Р°С‚Рµ Рё РїСЂРё РіРѕР»РѕСЃРѕРІРѕРј РѕР±С‰РµРЅРёРё.
         </p>
       </div>
       <div className="w-full max-w-[280px] space-y-3">
         <input
           value={pendingVisitorName}
           onChange={(event) => onChangeName(event.target.value)}
-          placeholder="Имя или псевдоним"
+          placeholder="РРјСЏ РёР»Рё РїСЃРµРІРґРѕРЅРёРј"
           className="w-full rounded-2xl border border-sage-light/20 bg-white px-4 py-3 text-sm text-forest outline-none focus:border-forest/30"
         />
         <button
@@ -37,18 +39,9 @@ export function ChatWidgetNameStep({
           disabled={!pendingVisitorName.trim() || loading}
           className="w-full rounded-2xl bg-forest px-4 py-3 text-sm font-bold text-white shadow-lg shadow-forest/15 transition hover:bg-forest/90 disabled:opacity-50"
         >
-          {loading ? "Подключаем..." : "Продолжить"}
+          {loading ? "РџРѕРґРєР»СЋС‡Р°РµРј..." : "РџСЂРѕРґРѕР»Р¶РёС‚СЊ"}
         </button>
       </div>
-    </div>
-  );
-}
-
-export function ChatWidgetLoadingState() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-3">
-      <Loader2 className="h-8 w-8 animate-spin text-sage" />
-      <p className="text-forest/40 text-sm font-medium">Подключаемся...</p>
     </div>
   );
 }
@@ -61,17 +54,17 @@ type ChatWidgetErrorStateProps = {
 
 export function ChatWidgetErrorState({ error, loading, onRetry }: ChatWidgetErrorStateProps) {
   return (
-    <div className="text-center py-12 px-6 flex flex-col items-center justify-center h-full">
-      <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+    <div className="flex h-full flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
         <X className="h-8 w-8 text-red-500/50" />
       </div>
-      <p className="text-forest/70 text-sm font-medium mb-4">{error}</p>
+      <p className="mb-4 text-sm font-medium text-forest/70">{error}</p>
       <button
         onClick={onRetry}
-        className="px-6 py-2 rounded-xl bg-forest text-white text-sm font-bold shadow-lg hover:bg-forest/90 transition-all flex items-center gap-2 mx-auto active:scale-95"
+        className="mx-auto flex items-center gap-2 rounded-xl bg-forest px-6 py-2 text-sm font-bold text-white shadow-lg transition-all hover:bg-forest/90 active:scale-95"
       >
         <Loader2 className={`h-3.5 w-3.5 animate-spin ${loading ? "block" : "hidden"}`} />
-        Попробовать снова
+        РџРѕРїСЂРѕР±РѕРІР°С‚СЊ СЃРЅРѕРІР°
       </button>
     </div>
   );
@@ -83,14 +76,16 @@ type ChatWidgetEmptyMessagesProps = {
 
 export function ChatWidgetEmptyMessages({ visitorName }: ChatWidgetEmptyMessagesProps) {
   return (
-    <div className="text-center py-12 px-6 flex flex-col items-center justify-center h-full">
-      <div className="w-20 h-20 rounded-[2rem] bg-sage/10 flex items-center justify-center mb-6 rotate-12 transition-transform hover:rotate-0 duration-500">
+    <div className="flex h-full flex-col items-center justify-center px-6 py-12 text-center">
+      <div className="mb-6 flex h-20 w-20 rotate-12 items-center justify-center rounded-[2rem] bg-sage/10 transition-transform duration-500 hover:rotate-0">
         <MessageCircle className="h-10 w-10 text-sage" />
       </div>
-      <h4 className="text-forest font-bold text-xl mb-2">Привет, {visitorName || "друг"}!</h4>
-      <p className="text-forest/50 text-sm leading-relaxed max-w-[240px]">
-        Мы всегда на связи. Опишите вашу ситуацию, и наш специалист ответит вам в ближайшее время.
+      <h4 className="mb-2 text-xl font-bold text-forest">РџСЂРёРІРµС‚, {visitorName || "РґСЂСѓРі"}!</h4>
+      <p className="max-w-[240px] text-sm leading-relaxed text-forest/50">
+        РњС‹ РІСЃРµРіРґР° РЅР° СЃРІСЏР·Рё. РћРїРёС€РёС‚Рµ РІР°С€Сѓ СЃРёС‚СѓР°С†РёСЋ, Рё РЅР°С€ СЃРїРµС†РёР°Р»РёСЃС‚ РѕС‚РІРµС‚РёС‚ РІР°Рј РІ Р±Р»РёР¶Р°Р№С€РµРµ РІСЂРµРјСЏ.
       </p>
     </div>
   );
 }
+
+export { ChatWidgetLoadingState };
