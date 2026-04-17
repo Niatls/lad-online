@@ -1,42 +1,33 @@
-import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { db } from "@/lib/db";
-import {
-  isPreferredTimeAvailable,
-  parsePreferredTime,
-} from "@/lib/booking-availability";
-import {
-  applicationFormSchema,
-  formatApplicationNumber,
-  generateApplicationVerificationCode,
-  getApplicationContactMethod,
-} from "@/lib/applications";
 
-type CreatedApplicationRow = {
-  id: number;
-  preferredTime: string | null;
-  verificationCode: string | null;
-};
-
-type PreferredTimeRow = {
-  preferredTime: string | null;
-};
+import { createApplicationSubmission } from "@/lib/application-submission";
+import { applicationFormSchema } from "@/lib/applications";
 
 export async function POST(request: Request) {
   try {
     const json = await request.json();
     const payload = applicationFormSchema.parse(json);
-    const contactMethod = getApplicationContactMethod(payload.contactMethod);
-    const phone = payload.phone?.trim() || "";
-    const email = payload.email?.trim() || null;
-    const contactValue = [phone, email]
-      .map((value) => value?.trim())
-      .find(Boolean);
-    const verificationCode = generateApplicationVerificationCode();
-    const parsedPreferredTime = parsePreferredTime(payload.preferredTime);
+    const application = await createApplicationSubmission(payload, {
+      source: "website",
+    });
 
-    if (!parsedPreferredTime) {
+    return NextResponse.json(
+      {
+        ok: true,
+        applicationId: application.applicationId,
+        applicationNumber: application.applicationNumber,
+        contactMethod: application.contactMethod,
+        contactHref: application.contactHref,
+        preferredTime: application.preferredTime,
+        verificationCode: application.verificationCode,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Failed to create application", error);
+
+    if (error instanceof Error && error.message === "INVALID_PREFERRED_TIME") {
       return NextResponse.json(
         {
           ok: false,
@@ -46,21 +37,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const existingRows = await db.$queryRaw<PreferredTimeRow[]>(Prisma.sql`
-      select "preferredTime"
-      from "Application"
-      where "preferredTime" like ${`${parsedPreferredTime.dateKey}T%`}
-        and coalesce("status", 'new') <> 'archived'
-    `);
-    const existingPreferredTimes = existingRows
-      .map((row) => row.preferredTime)
-      .filter((value): value is string => Boolean(value));
-
     if (
-      !isPreferredTimeAvailable(
-        payload.preferredTime,
-        existingPreferredTimes
-      )
+      error instanceof Error &&
+      error.message === "PREFERRED_TIME_UNAVAILABLE"
     ) {
       return NextResponse.json(
         {
@@ -71,62 +50,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const [application] = await db.$queryRaw<CreatedApplicationRow[]>(Prisma.sql`
-      insert into "Application" (
-        "name",
-        "email",
-        "phone",
-        "gender",
-        "age",
-        "preferredTime",
-        "reason",
-        "contactMethod",
-        "contactValue",
-        "verificationCode",
-        "source",
-        "createdAt",
-        "updatedAt"
-      )
-      values (
-        ${payload.name},
-        ${email},
-        ${phone},
-        ${payload.gender},
-        ${payload.age},
-        ${payload.preferredTime},
-        ${payload.reason},
-        ${payload.contactMethod},
-        ${contactValue || null},
-        ${verificationCode},
-        ${"website"},
-        now(),
-        now()
-      )
-      returning "id", "preferredTime", "verificationCode"
-    `);
-
-    if (!application) {
-      throw new Error("Application insert returned no rows");
-    }
-
-    return NextResponse.json(
-      {
-        ok: true,
-        applicationId: application.id,
-        applicationNumber: formatApplicationNumber(
-          application.id,
-          application.verificationCode
-        ),
-        contactMethod: contactMethod.label,
-        contactHref: contactMethod.href,
-        preferredTime: application.preferredTime,
-        verificationCode,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("Failed to create application", error);
 
     if (error instanceof ZodError) {
       return NextResponse.json(

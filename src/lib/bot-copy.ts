@@ -2,6 +2,7 @@ export const START_QUESTION_TEXT = "Задать вопрос";
 export const START_BOOKING_TEXT = "Записаться на консультацию";
 export const START_PRICING_TEXT = "Узнать расценки";
 export const BACK_TO_MENU_TEXT = "Вернуться в меню";
+export const BOOKING_SKIP_TEXT = "Пропустить";
 
 export const MAIN_MENU_TEXT = [
   "Здравствуйте! Вы попали в бот сайта психологических консультаций «Лад».",
@@ -35,11 +36,26 @@ export const QUESTION_CONTACT_PROMPT =
 
 export const QUESTION_BODY_PROMPT = "Опишите ваш вопрос:";
 
-export const BOOKING_CONTACT_PROMPT =
-  "Укажите ваш номер телефона или удобный способ связи:";
+export const BOOKING_GENDER_PROMPT = "Укажите пол:";
+
+export const BOOKING_AGE_PROMPT = "Укажите возраст числом:";
+
+export const BOOKING_DATE_PROMPT =
+  "Укажите дату консультации в формате ДД.ММ.ГГГГ или YYYY-MM-DD. Можно написать «сегодня» или «завтра».";
 
 export const BOOKING_TIME_PROMPT =
-  "Предложите удобное для вас время по Москве, например: завтра 18:00";
+  "Укажите удобное время по Москве в формате ЧЧ:ММ.";
+
+export const BOOKING_CONTACT_PROMPT = "Выберите удобный способ связи:";
+
+export const BOOKING_PHONE_PROMPT =
+  "Укажите телефон, если хотите. Если не хотите, нажмите «Пропустить».";
+
+export const BOOKING_EMAIL_PROMPT =
+  "Укажите email, если хотите. Если не хотите, нажмите «Пропустить».";
+
+export const BOOKING_REASON_PROMPT =
+  "Опишите проблему или тему обращения, можно кратко.";
 
 export const UNKNOWN_COMMAND_TEXT =
   "Пожалуйста, воспользуйтесь меню или начните заново командой /start.";

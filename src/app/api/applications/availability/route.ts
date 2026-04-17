@@ -1,12 +1,6 @@
-import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { buildAvailableBookingTimes } from "@/lib/booking-availability";
-import { db } from "@/lib/db";
-
-type PreferredTimeRow = {
-  preferredTime: string | null;
-};
+import { loadAvailableBookingTimes } from "@/lib/application-submission";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -23,20 +17,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const rows = await db.$queryRaw<PreferredTimeRow[]>(Prisma.sql`
-      select "preferredTime"
-      from "Application"
-      where "preferredTime" like ${`${date}T%`}
-        and coalesce("status", 'new') <> 'archived'
-    `);
-
-    const preferredTimes = rows
-      .map((row) => row.preferredTime)
-      .filter((value): value is string => Boolean(value));
-
     return NextResponse.json({
       ok: true,
-      availableTimes: buildAvailableBookingTimes(date, preferredTimes),
+      availableTimes: await loadAvailableBookingTimes(date),
     });
   } catch (error) {
     console.error("Failed to load booking availability", error);
