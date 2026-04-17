@@ -1,5 +1,10 @@
 import { useCallback, useEffect } from "react";
 
+import {
+  createChatWidgetSession,
+  fetchChatWidgetMessages,
+  fetchChatWidgetVoiceInvite,
+} from "@/components/chat/chat-widget/session-data-api";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 import { getStoredVisitorName, getVisitorId, getVoiceSessionStorageKey } from "@/components/chat/chat-widget/utils";
 
@@ -25,6 +30,9 @@ type UseChatWidgetSessionDataParams = {
   pollRef: React.MutableRefObject<ReturnType<typeof setInterval> | undefined>;
 };
 
+const CHAT_CONNECT_ERROR = "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ Рє С‡Р°С‚Сѓ. РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РїРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ.";
+const CHAT_NETWORK_ERROR = "РћС€РёР±РєР° СЃРµС‚Рё. РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ.";
+
 export function useChatWidgetSessionData({
   isOpen,
   visitorName,
@@ -48,14 +56,7 @@ export function useChatWidgetSessionData({
 }: UseChatWidgetSessionDataParams) {
   const syncVoiceInvite = useCallback(async (currentSessionId: number) => {
     try {
-      const res = await fetch(`/api/chat/sessions/${currentSessionId}/voice`, { cache: "no-store" });
-      if (!res.ok) {
-        setAvailableVoiceInvite(null);
-        return;
-      }
-
-      const data = await res.json();
-      const invite = data?.invite as VoiceInvite | null;
+      const invite = await fetchChatWidgetVoiceInvite(currentSessionId);
       if (!invite || !["pending", "active"].includes(invite.status)) {
         setAvailableVoiceInvite(null);
         if (activeVoiceToken && invite?.token === activeVoiceToken) {
@@ -100,25 +101,16 @@ export function useChatWidgetSessionData({
     setError(null);
     try {
       const visitorId = getVisitorId();
-      const res = await fetch("/api/chat/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ visitorId, visitorName: resolvedName }),
-      });
-      if (res.ok) {
-        const session = await res.json();
-        setSessionId(session.id);
-        setMessages(session.messages || []);
-        if (session.messages?.length) {
-          lastMsgIdRef.current = session.messages[session.messages.length - 1].id;
-        }
-        void syncVoiceInvite(session.id);
-      } else {
-        setError("Не удалось подключиться к чату. Пожалуйста, попробуйте позже.");
+      const session = await createChatWidgetSession({ visitorId, visitorName: resolvedName });
+      setSessionId(session.id);
+      setMessages(session.messages || []);
+      if (session.messages?.length) {
+        lastMsgIdRef.current = session.messages[session.messages.length - 1].id;
       }
+      void syncVoiceInvite(session.id);
     } catch (err) {
       console.error("Failed to init chat:", err);
-      setError("Ошибка сети. Проверьте соединение.");
+      setError(err instanceof Error && err.message === "Failed to create session" ? CHAT_CONNECT_ERROR : CHAT_NETWORK_ERROR);
     } finally {
       setLoading(false);
     }
@@ -130,28 +122,28 @@ export function useChatWidgetSessionData({
     }
 
     try {
-      const [messagesRes] = await Promise.all([
-        fetch(`/api/chat/sessions/${sessionId}/messages?after=${lastMsgIdRef.current}`),
+      const [newMessages] = await Promise.all([
+        fetchChatWidgetMessages(sessionId, lastMsgIdRef.current),
         syncVoiceInvite(sessionId),
       ]);
-      if (messagesRes.ok) {
-        const newMessages: Message[] = await messagesRes.json();
-        if (newMessages.length > 0) {
-          setMessages((prev) => {
-            const existingIds = new Set(prev.map((message) => message.id));
-            const uniqueNew = newMessages.filter((message) => !existingIds.has(message.id));
-            if (uniqueNew.length === 0) {
-              return prev;
-            }
-            return [...prev, ...uniqueNew];
-          });
-          lastMsgIdRef.current = newMessages[newMessages.length - 1].id;
-          if (!isOpen && newMessages.some((message) => message.sender === "admin" || message.sender === "system")) {
-            setHasUnread(true);
-          }
-          scrollToBottom();
-        }
+      if (newMessages.length === 0) {
+        return;
       }
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((message) => message.id));
+        const uniqueNew = newMessages.filter((message) => !existingIds.has(message.id));
+        if (uniqueNew.length === 0) {
+          return prev;
+        }
+
+        return [...prev, ...uniqueNew];
+      });
+      lastMsgIdRef.current = newMessages[newMessages.length - 1].id;
+      if (!isOpen && newMessages.some((message) => message.sender === "admin" || message.sender === "system")) {
+        setHasUnread(true);
+      }
+      scrollToBottom();
     } catch {
       // silent fail on polling
     }
