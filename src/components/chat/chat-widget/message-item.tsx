@@ -1,5 +1,4 @@
-import { CornerUpLeft, Pencil } from "lucide-react";
-
+import { ChatWidgetMessageActions } from "@/components/chat/chat-widget/message-actions";
 import { ChatWidgetMessageReplyPreview } from "@/components/chat/chat-widget/message-reply-preview";
 import type { Message } from "@/components/chat/chat-widget/types";
 import { VoiceMessagePlayer } from "@/components/chat/voice-message-player";
@@ -58,7 +57,7 @@ export function ChatWidgetMessageItem({
           />
         ) : null}
         {message.isDeleted ? (
-          <p className="italic opacity-70">РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ</p>
+          <p className="italic opacity-70">Р РЋР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•</p>
         ) : voiceMessage ? (
           <VoiceMessagePlayer payload={voiceMessage} tone={isSystem ? "system" : isVisitor ? "visitor" : "admin"} />
         ) : (
@@ -70,30 +69,16 @@ export function ChatWidgetMessageItem({
           }`}
         >
           {new Date(message.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-          {message.isEdited ? " В· РёР·РјРµРЅРµРЅРѕ" : ""}
+          {message.isEdited ? " Р’В· Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С•" : ""}
         </div>
       </div>
       {!isSystem ? (
-        <div className="mb-1 ml-2 mr-2 flex self-end flex-col gap-2">
-          {canEdit ? (
-            <button
-              type="button"
-              onClick={() => onEdit(message)}
-              className="rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:bg-white hover:text-forest"
-              aria-label="Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => onReply(message)}
-            className="rounded-full border border-sage-light/20 bg-white/90 p-2 text-forest/45 transition hover:bg-white hover:text-forest"
-            aria-label="РћС‚РІРµС‚РёС‚СЊ"
-          >
-            <CornerUpLeft className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <ChatWidgetMessageActions
+          canEdit={canEdit}
+          message={message}
+          onReply={onReply}
+          onEdit={onEdit}
+        />
       ) : null}
     </div>
   );
