@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 
-import { sendChatWidgetComposerMessage } from "@/components/chat/chat-widget/composer-send-message";
+import { useChatWidgetHandleSend } from "@/components/chat/chat-widget/use-chat-widget-handle-send";
 import { useChatWidgetStopVoiceCapture } from "@/components/chat/chat-widget/use-chat-widget-stop-voice-capture";
 import { useChatWidgetToggleVoiceRecording } from "@/components/chat/chat-widget/use-chat-widget-toggle-voice-recording";
 import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
@@ -87,38 +87,20 @@ export function useChatWidgetComposer({
     uploadVoiceMessage,
   });
 
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || !sessionId || sending) {
-      return;
-    }
-
-    await sendChatWidgetComposerMessage({
-      editingMessageId,
-      input,
-      lastMsgIdRef,
-      replyTarget,
-      sessionId,
-      setEditingMessageId,
-      setError,
-      setInput,
-      setMessages,
-      setReplyTarget,
-      setSending,
-    });
-  }, [
-    editingMessageId,
-    input,
-    lastMsgIdRef,
-    replyTarget,
-    sending,
+  const handleSend = useChatWidgetHandleSend({
     sessionId,
+    input,
+    sending,
+    editingMessageId,
+    replyTarget,
+    lastMsgIdRef,
     setEditingMessageId,
     setError,
     setInput,
     setMessages,
     setReplyTarget,
     setSending,
-  ]);
+  });
 
   return {
     handleSend,
