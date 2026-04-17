@@ -5,8 +5,9 @@ import {
   fetchChatWidgetVoiceInvite,
 } from "@/components/chat/chat-widget/session-data-api";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
+import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
-import { getStoredVisitorName, getVisitorId, getVoiceSessionStorageKey } from "@/components/chat/chat-widget/utils";
+import { getStoredVisitorName, getVisitorId } from "@/components/chat/chat-widget/utils";
 
 type UseChatWidgetSessionDataParams = {
   isOpen: boolean;
@@ -77,20 +78,6 @@ export function useChatWidgetSessionData({
     setPendingVisitorName(storedName);
   }, [setPendingVisitorName, setVisitorName]);
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !sessionId) {
-      return;
-    }
-
-    const storageKey = getVoiceSessionStorageKey(sessionId);
-    if (activeVoiceToken) {
-      sessionStorage.setItem(storageKey, activeVoiceToken);
-      return;
-    }
-
-    sessionStorage.removeItem(storageKey);
-  }, [activeVoiceToken, sessionId]);
-
   const initSession = useCallback(async (nameOverride?: string) => {
     const resolvedName = (nameOverride ?? visitorName).trim();
     if (!resolvedName) {
@@ -127,56 +114,17 @@ export function useChatWidgetSessionData({
     syncVoiceInvite,
   });
 
-  useEffect(() => {
-    if (!availableVoiceInvite) {
-      return;
-    }
-
-    setVoiceCountdownNow(Date.now());
-    const interval = setInterval(() => {
-      setVoiceCountdownNow(Date.now());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [availableVoiceInvite, setVoiceCountdownNow]);
-
-  useEffect(() => {
-    if (!availableVoiceInvite) {
-      return;
-    }
-
-    if (new Date(availableVoiceInvite.expiresAt).getTime() <= voiceCountdownNow) {
-      setAvailableVoiceInvite(null);
-      if (activeVoiceToken === availableVoiceInvite.token) {
-        setActiveVoiceToken(null);
-      }
-    }
-  }, [activeVoiceToken, availableVoiceInvite, setActiveVoiceToken, setAvailableVoiceInvite, voiceCountdownNow]);
-
-  useEffect(() => {
-    if (!sessionId || !isOpen || activeVoiceToken || !availableVoiceInvite) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      void syncVoiceInvite(sessionId);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !sessionId || activeVoiceToken) {
-      return;
-    }
-
-    const storedToken = sessionStorage.getItem(getVoiceSessionStorageKey(sessionId));
-    if (!storedToken) {
-      return;
-    }
-
-    setActiveVoiceToken(storedToken);
-  }, [activeVoiceToken, sessionId, setActiveVoiceToken]);
+  useChatWidgetVoiceInvite({
+    isOpen,
+    sessionId,
+    activeVoiceToken,
+    availableVoiceInvite,
+    voiceCountdownNow,
+    setAvailableVoiceInvite,
+    setActiveVoiceToken,
+    setVoiceCountdownNow,
+    syncVoiceInvite,
+  });
 
   const handleOpen = useCallback(() => {
     setHasUnread(false);
