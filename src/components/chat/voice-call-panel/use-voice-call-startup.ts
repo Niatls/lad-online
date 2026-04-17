@@ -2,10 +2,8 @@
 
 import { useEffect } from "react";
 
-import { defaultIceServers } from "./constants";
-import { createVoiceOfferSender, createVoicePeer } from "./peer";
-import { startVoiceCall } from "./startup";
-import { resetVoiceConnectionStats } from "./stats";
+import { createVoicePeerFactory } from "./create-voice-peer-factory";
+import { startVoiceCallSession } from "./start-voice-call-session";
 import type { VoicePeerDiagnostics } from "./types";
 
 type UseVoiceCallStartupParams = {
@@ -116,87 +114,72 @@ export function useVoiceCallStartup({
   useEffect(() => {
     mountedRef.current = true;
 
-    createPeerRef.current = async () => {
-      const currentStream = localStreamRef.current;
-      if (!currentStream) {
-        return null;
-      }
-
-      return createVoicePeer({
-        currentStream,
-        reconnecting: reconnectingRef.current,
-        token,
-        defaultIceServers,
-        peerRef,
-        remoteAudioRef,
-        closedRef,
-        endingRef,
-        callEstablishedRef,
-        pendingCandidatesRef,
-        setStatus,
-        setError,
-        setIsReconnecting,
-        setConnecting,
-        updateLastEvent,
-        resetDurationTracking,
-        destroyPeerConnection,
-        markCallActive,
-        pauseDurationTracking,
-        resumeDurationTracking,
-        attemptReconnect,
-        collectPeerDiagnostics,
-        postVoiceEvent,
-        postSignal,
-        resetConnectionStats: () => {
-          resetVoiceConnectionStats(setUsageBytes, setIceRoute, setTrafficRouteLabel);
-        },
-      });
-    };
-
-    sendOfferRef.current = createVoiceOfferSender({
+    createVoicePeerFactory({
+      attemptReconnect,
+      callEstablishedRef,
+      closedRef,
+      collectPeerDiagnostics,
+      createPeerRef,
+      currentStreamRef: localStreamRef,
+      destroyPeerConnection,
+      endingRef,
+      markCallActive,
+      pauseDurationTracking,
       peerRef,
-      createPeer: async () => createPeerRef.current?.() ?? null,
+      pendingCandidatesRef,
       postSignal,
-      setStatus,
-      updateLastEvent,
       postVoiceEvent,
+      reconnectingRef,
+      remoteAudioRef,
+      resetDurationTracking,
+      resumeDurationTracking,
+      setConnecting,
+      setError,
+      setIceRoute,
+      setIsReconnecting,
+      setStatus,
+      setTrafficRouteLabel,
+      setUsageBytes,
+      token,
+      updateLastEvent,
     });
 
-    void startVoiceCall({
-      mountedRef,
-      token,
-      role,
-      counterpartLabel,
-      startupJoinSentRef,
-      initialOfferSentRef,
-      joinedRef,
-      closedRef,
-      endingRef,
-      reconnectingRef,
-      reconnectAttemptsRef,
-      pendingVisitorRejoinRef,
-      rejoinHandledAtRef,
-      reconnectAllowedRef,
-      lastSignalIdRef,
-      pollRef,
-      setStatus,
-      setError,
-      setConnecting,
-      updateLastEvent,
-      postVoiceEvent,
-      requestWakeLock,
-      startKeepAliveAudio,
-      syncMediaSession,
-      acquireLocalAudioStream: async () => {
-        const stream = await acquireLocalAudioStream();
-        localStreamRef.current = stream;
-        return stream;
-      },
+    startVoiceCallSession({
+      acquireLocalAudioStream,
       bindLocalTrackLifecycle,
-      createPeer: async () => invokeCreatePeer(),
-      sendOffer: async (iceRestart = false) => invokeSendOffer(iceRestart),
+      closedRef,
+      counterpartLabel,
+      createPeerRef,
+      endingRef,
       handleVisitorRejoinRequest,
+      initialOfferSentRef,
+      invokeCreatePeer,
+      invokeSendOffer,
+      joinedRef,
+      lastSignalIdRef,
+      localStreamRef,
+      mountedRef,
+      pendingVisitorRejoinRef,
+      peerRef,
+      pollRef,
       pollSignals,
+      postSignal,
+      postVoiceEvent,
+      reconnectAllowedRef,
+      reconnectAttemptsRef,
+      reconnectingRef,
+      rejoinHandledAtRef,
+      requestWakeLock,
+      role,
+      sendOfferRef,
+      setConnecting,
+      setError,
+      setStatus,
+      startKeepAliveAudio,
+      startupJoinSentRef,
+      syncMediaSession,
+      token,
+      updateLastEvent,
     });
 
     return () => {
