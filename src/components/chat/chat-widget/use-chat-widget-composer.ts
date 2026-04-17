@@ -2,6 +2,7 @@ import { useCallback, useEffect } from "react";
 
 import { sendChatWidgetComposerMessage } from "@/components/chat/chat-widget/composer-send-message";
 import { startChatWidgetVoiceRecording } from "@/components/chat/chat-widget/composer-voice-recording";
+import { useChatWidgetStopVoiceCapture } from "@/components/chat/chat-widget/use-chat-widget-stop-voice-capture";
 import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
@@ -54,14 +55,10 @@ export function useChatWidgetComposer({
   recordingStartedAtRef,
   voiceChunksRef,
 }: UseChatWidgetComposerParams) {
-  const stopVoiceCapture = useCallback(() => {
-    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-    mediaRecorderRef.current = null;
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    mediaStreamRef.current = null;
-  }, [mediaRecorderRef, mediaStreamRef]);
-
-  useEffect(() => () => stopVoiceCapture(), [stopVoiceCapture]);
+  const stopVoiceCapture = useChatWidgetStopVoiceCapture({
+    mediaRecorderRef,
+    mediaStreamRef,
+  });
 
   const uploadVoiceMessage = useChatWidgetUploadVoiceMessage({
     sessionId,
