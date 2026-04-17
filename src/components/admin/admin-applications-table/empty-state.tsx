@@ -1,0 +1,16 @@
+export function EmptyApplicationsState() {
+  return (
+    <div className="px-6 py-14 sm:px-8 sm:py-20">
+      <div className="rounded-[2rem] border border-dashed border-sage-light/30 bg-gradient-to-br from-cream to-white px-6 py-16 text-center">
+        <p className="text-2xl font-bold text-forest">
+          {"\u0417\u0430\u044f\u0432\u043e\u043a \u043f\u043e\u043a\u0430 \u043d\u0435\u0442"}
+        </p>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-forest/55">
+          {
+            "\u041a\u043e\u0433\u0434\u0430 \u043f\u043e\u044f\u0432\u044f\u0442\u0441\u044f \u043d\u043e\u0432\u044b\u0435 \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u044f, \u0437\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u0430\u043a\u043a\u0443\u0440\u0430\u0442\u043d\u044b\u0435 \u043a\u0430\u0440\u0442\u043e\u0447\u043a\u0438 \u0441 \u043d\u043e\u043c\u0435\u0440\u043e\u043c \u0437\u0430\u044f\u0432\u043a\u0438, \u043a\u0430\u043d\u0430\u043b\u043e\u043c \u0441\u0432\u044f\u0437\u0438, \u0432\u0440\u0435\u043c\u0435\u043d\u0435\u043c \u0437\u0430\u043f\u0438\u0441\u0438 \u0438 \u0431\u044b\u0441\u0442\u0440\u044b\u043c \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435\u043c \u0441\u0442\u0430\u0442\u0443\u0441\u043e\u043c."
+          }
+        </p>
+      </div>
+    </div>
+  );
+}
