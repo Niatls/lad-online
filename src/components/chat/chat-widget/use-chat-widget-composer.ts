@@ -1,8 +1,8 @@
 import { useCallback, useEffect } from "react";
 
 import { sendChatWidgetComposerMessage } from "@/components/chat/chat-widget/composer-send-message";
-import { startChatWidgetVoiceRecording } from "@/components/chat/chat-widget/composer-voice-recording";
 import { useChatWidgetStopVoiceCapture } from "@/components/chat/chat-widget/use-chat-widget-stop-voice-capture";
+import { useChatWidgetToggleVoiceRecording } from "@/components/chat/chat-widget/use-chat-widget-toggle-voice-recording";
 import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
@@ -70,44 +70,22 @@ export function useChatWidgetComposer({
     setSendingVoice,
   });
 
-  const handleToggleVoiceRecording = useCallback(async () => {
-    if (!sessionId || needsName || sendingVoice || editingMessageId) {
-      return;
-    }
-
-    if (isRecordingVoice) {
-      mediaRecorderRef.current?.stop();
-      setIsRecordingVoice(false);
-      return;
-    }
-
-    await startChatWidgetVoiceRecording({
-      mediaRecorderRef,
-      mediaStreamRef,
-      recordingStartedAtRef,
-      setError,
-      setIsRecordingVoice,
-      setRecordingStartedAt,
-      stopVoiceCapture,
-      uploadVoiceMessage,
-      voiceChunksRef,
-    });
-  }, [
-    editingMessageId,
+  const handleToggleVoiceRecording = useChatWidgetToggleVoiceRecording({
+    needsName,
+    sessionId,
+    sendingVoice,
     isRecordingVoice,
+    editingMessageId,
     mediaRecorderRef,
     mediaStreamRef,
-    needsName,
     recordingStartedAtRef,
-    sendingVoice,
-    sessionId,
+    voiceChunksRef,
     setError,
     setIsRecordingVoice,
     setRecordingStartedAt,
     stopVoiceCapture,
     uploadVoiceMessage,
-    voiceChunksRef,
-  ]);
+  });
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || !sessionId || sending) {
