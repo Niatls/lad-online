@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-
 import { formatCallDuration, formatUsageBytes } from "./formatters";
-import { acquireVoiceAudioStream } from "./media";
 import { useVoiceCallActions } from "./use-voice-call-actions";
 import { useVoiceCallAudioRecovery } from "./use-voice-call-audio-recovery";
+import { useVoiceCallClearTimeout } from "./use-voice-call-clear-timeout";
 import { useVoiceCallConnection } from "./use-voice-call-connection";
+import { useVoiceCallCounterpartLabel } from "./use-voice-call-counterpart-label";
 import { useVoiceCallDuration } from "./use-voice-call-duration";
+import { useVoiceCallLocalAudioStream } from "./use-voice-call-local-audio-stream";
 import { useVoiceCallMediaControls } from "./use-voice-call-media-controls";
 import { useVoiceCallRecoveryHandlers } from "./use-voice-call-recovery-handlers";
 import { useVoiceCallRuntimeRefs } from "./use-voice-call-runtime-refs";
@@ -87,10 +87,7 @@ export function useVoiceCallPanel({
     mountedRef,
   } = useVoiceCallRuntimeRefs(onClose);
 
-  const counterpartLabel = useMemo(
-    () => (role === "admin" ? "\u043f\u043e\u0441\u0435\u0442\u0438\u0442\u0435\u043b\u044f" : "\u0441\u043f\u0435\u0446\u0438\u0430\u043b\u0438\u0441\u0442\u0430"),
-    [role],
-  );
+  const counterpartLabel = useVoiceCallCounterpartLabel(role);
 
   useVoiceCallSessionReset({
     initialOfferSentRef,
@@ -100,7 +97,7 @@ export function useVoiceCallPanel({
     token,
   });
 
-  const acquireLocalAudioStream = useCallback(async () => acquireVoiceAudioStream(), []);
+  const acquireLocalAudioStream = useVoiceCallLocalAudioStream();
 
   const {
     stopKeepAliveAudio,
@@ -124,12 +121,7 @@ export function useVoiceCallPanel({
     wakeLockRef,
   });
 
-  const clearReconnectTimeout = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = undefined;
-    }
-  }, [reconnectTimeoutRef]);
+  const clearReconnectTimeout = useVoiceCallClearTimeout(reconnectTimeoutRef);
 
   const {
     invokeCreatePeer,
