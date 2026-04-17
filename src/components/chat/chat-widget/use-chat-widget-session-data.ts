@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from "react";
 
-import { createChatWidgetSession } from "@/components/chat/chat-widget/session-data-api";
+import { useChatWidgetInitSession } from "@/components/chat/chat-widget/use-chat-widget-init-session";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
 import { useChatWidgetSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
-import { getStoredVisitorName, getVisitorId } from "@/components/chat/chat-widget/utils";
+import { getStoredVisitorName } from "@/components/chat/chat-widget/utils";
 
 type UseChatWidgetSessionDataParams = {
   isOpen: boolean;
@@ -28,9 +28,6 @@ type UseChatWidgetSessionDataParams = {
   lastMsgIdRef: React.MutableRefObject<number>;
   pollRef: React.MutableRefObject<ReturnType<typeof setInterval> | undefined>;
 };
-
-const CHAT_CONNECT_ERROR = "РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґРєР»СЋС‡РёС‚СЊСЃСЏ Рє С‡Р°С‚Сѓ. РџРѕР¶Р°Р»СѓР№СЃС‚Р°, РїРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ.";
-const CHAT_NETWORK_ERROR = "РћС€РёР±РєР° СЃРµС‚Рё. РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ.";
 
 export function useChatWidgetSessionData({
   isOpen,
@@ -65,30 +62,15 @@ export function useChatWidgetSessionData({
     setPendingVisitorName(storedName);
   }, [setPendingVisitorName, setVisitorName]);
 
-  const initSession = useCallback(async (nameOverride?: string) => {
-    const resolvedName = (nameOverride ?? visitorName).trim();
-    if (!resolvedName) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const visitorId = getVisitorId();
-      const session = await createChatWidgetSession({ visitorId, visitorName: resolvedName });
-      setSessionId(session.id);
-      setMessages(session.messages || []);
-      if (session.messages?.length) {
-        lastMsgIdRef.current = session.messages[session.messages.length - 1].id;
-      }
-      void syncVoiceInvite(session.id);
-    } catch (err) {
-      console.error("Failed to init chat:", err);
-      setError(err instanceof Error && err.message === "Failed to create session" ? CHAT_CONNECT_ERROR : CHAT_NETWORK_ERROR);
-    } finally {
-      setLoading(false);
-    }
-  }, [lastMsgIdRef, setError, setLoading, setMessages, setSessionId, syncVoiceInvite, visitorName]);
+  const initSession = useChatWidgetInitSession({
+    visitorName,
+    lastMsgIdRef,
+    setError,
+    setLoading,
+    setMessages,
+    setSessionId,
+    syncVoiceInvite,
+  });
 
   useChatWidgetMessagePolling({
     isOpen,
