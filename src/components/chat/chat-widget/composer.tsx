@@ -1,5 +1,6 @@
 import { Loader2, Mic, Phone, Send, Square, X } from "lucide-react";
 
+import { ChatWidgetComposerErrorBanner } from "@/components/chat/chat-widget/composer-error-banner";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 
 type ChatWidgetComposerProps = {
@@ -54,14 +55,12 @@ export function ChatWidgetComposer({
   onSend,
 }: ChatWidgetComposerProps) {
   return (
-    <div className="shrink-0 p-4 bg-white relative">
+    <div className="relative shrink-0 bg-white p-4">
       {error && sessionId ? (
-        <div className="absolute -top-10 left-4 right-4 bg-red-50 text-red-600 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-red-100 flex items-center justify-between animate-in slide-in-from-bottom-2">
-          <span>{error}</span>
-          <button onClick={onDismissError} className="p-0.5 hover:bg-red-100 rounded">
-            <X className="h-3 w-3" />
-          </button>
-        </div>
+        <ChatWidgetComposerErrorBanner
+          error={error}
+          onDismissError={onDismissError}
+        />
       ) : null}
 
       {availableVoiceInvite && !activeVoiceToken ? (
@@ -72,12 +71,12 @@ export function ChatWidgetComposer({
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-white/12 flex items-center justify-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/12">
                 <Phone className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-bold">Голосовое общение</p>
-                <p className="text-[11px] text-white/70">Кнопка доступна ещё {voiceExpiresIn}</p>
+                <p className="text-sm font-bold">Р“РѕР»РѕСЃРѕРІРѕРµ РѕР±С‰РµРЅРёРµ</p>
+                <p className="text-[11px] text-white/70">РљРЅРѕРїРєР° РґРѕСЃС‚СѓРїРЅР° РµС‰С‘ {voiceExpiresIn}</p>
               </div>
             </div>
             <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">voice</span>
@@ -89,9 +88,9 @@ export function ChatWidgetComposer({
         <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Ответ</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">РћС‚РІРµС‚</p>
               <p className="mt-1 text-xs font-bold text-forest">
-                {replyTarget.sender === "visitor" ? "Вы" : replyTarget.sender === "admin" ? "Поддержка" : "Система"}
+                {replyTarget.sender === "visitor" ? "Р’С‹" : replyTarget.sender === "admin" ? "РџРѕРґРґРµСЂР¶РєР°" : "РЎРёСЃС‚РµРјР°"}
               </p>
               <p className="mt-1 truncate text-xs text-forest/55">{getMessagePreview(replyTarget)}</p>
             </div>
@@ -106,8 +105,8 @@ export function ChatWidgetComposer({
         <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Редактирование</p>
-              <p className="mt-1 text-xs text-forest/55">Измените текст и отправьте повторно.</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ</p>
+              <p className="mt-1 text-xs text-forest/55">РР·РјРµРЅРёС‚Рµ С‚РµРєСЃС‚ Рё РѕС‚РїСЂР°РІСЊС‚Рµ РїРѕРІС‚РѕСЂРЅРѕ.</p>
             </div>
             <button
               type="button"
@@ -120,48 +119,48 @@ export function ChatWidgetComposer({
         </div>
       ) : null}
 
-      <div className="p-2 rounded-[1.75rem] bg-cream/30 border border-sage-light/20 flex items-end gap-2 focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 transition-all">
+      <div className="flex items-end gap-2 rounded-[1.75rem] border border-sage-light/20 bg-cream/30 p-2 transition-all focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5">
         <textarea
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={error && !sessionId ? "Чат недоступен..." : "Ваше сообщение..."}
+          placeholder={error && !sessionId ? "Р§Р°С‚ РЅРµРґРѕСЃС‚СѓРїРµРЅ..." : "Р’Р°С€Рµ СЃРѕРѕР±С‰РµРЅРёРµ..."}
           disabled={needsName || (!sessionId && !loading)}
           rows={1}
-          className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest placeholder:text-forest/30 outline-none max-h-[120px] disabled:opacity-50"
+          className="max-h-[120px] flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest outline-none placeholder:text-forest/30 disabled:opacity-50"
         />
         <button
           type="button"
           onClick={onToggleVoiceRecording}
           disabled={needsName || sending || sendingVoice || (!sessionId && !loading) || Boolean(editingMessageId)}
-          className={`mb-1 p-3 rounded-2xl transition-all shadow-lg active:scale-95 ${
+          className={`mb-1 rounded-2xl p-3 shadow-lg transition-all active:scale-95 ${
             isRecordingVoice
               ? "bg-red-500 text-white shadow-red-500/20"
-              : "bg-white text-forest border border-sage-light/20 hover:bg-cream/60"
-          } disabled:opacity-30 disabled:cursor-not-allowed`}
-          aria-label={isRecordingVoice ? "Остановить запись" : "Записать голосовое"}
+              : "border border-sage-light/20 bg-white text-forest hover:bg-cream/60"
+          } disabled:cursor-not-allowed disabled:opacity-30`}
+          aria-label={isRecordingVoice ? "РћСЃС‚Р°РЅРѕРІРёС‚СЊ Р·Р°РїРёСЃСЊ" : "Р—Р°РїРёСЃР°С‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ"}
         >
           {sendingVoice ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecordingVoice ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </button>
         <button
           onClick={onSend}
           disabled={needsName || !input.trim() || sending || (!sessionId && !loading)}
-          className="mb-1 p-3 rounded-2xl bg-forest text-white hover:bg-forest/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-forest/20 active:scale-95"
+          className="mb-1 rounded-2xl bg-forest p-3 text-white shadow-lg shadow-forest/20 transition-all active:scale-95 hover:bg-forest/90 disabled:cursor-not-allowed disabled:opacity-30"
         >
           {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </button>
       </div>
       {isRecordingVoice ? (
-        <p className="mt-2 text-[11px] text-center font-bold text-red-500">
-          Идёт запись. Нажмите квадрат, чтобы отправить голосовое.
+        <p className="mt-2 text-center text-[11px] font-bold text-red-500">
+          РРґС‘С‚ Р·Р°РїРёСЃСЊ. РќР°Р¶РјРёС‚Рµ РєРІР°РґСЂР°С‚, С‡С‚РѕР±С‹ РѕС‚РїСЂР°РІРёС‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ.
         </p>
       ) : recordingStartedAt ? (
-        <p className="mt-2 text-[11px] text-center text-forest/40">
-          Начало записи: {new Date(recordingStartedAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+        <p className="mt-2 text-center text-[11px] text-forest/40">
+          РќР°С‡Р°Р»Рѕ Р·Р°РїРёСЃРё: {new Date(recordingStartedAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
         </p>
       ) : null}
-      <p className="text-[10px] text-center text-forest/30 mt-3 font-medium tracking-wide uppercase">
-        Безопасный чат • Лад
+      <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-wide text-forest/30">
+        Р‘РµР·РѕРїР°СЃРЅС‹Р№ С‡Р°С‚ вЂў Р›Р°Рґ
       </p>
     </div>
   );
