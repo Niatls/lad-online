@@ -1,10 +1,8 @@
 import { useCallback, useEffect } from "react";
 
-import {
-  uploadChatWidgetVoiceMessage,
-} from "@/components/chat/chat-widget/composer-message-api";
 import { sendChatWidgetComposerMessage } from "@/components/chat/chat-widget/composer-send-message";
 import { startChatWidgetVoiceRecording } from "@/components/chat/chat-widget/composer-voice-recording";
+import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetComposerParams = {
@@ -65,33 +63,15 @@ export function useChatWidgetComposer({
 
   useEffect(() => () => stopVoiceCapture(), [stopVoiceCapture]);
 
-  const uploadVoiceMessage = useCallback(
-    async (blob: Blob, durationMs: number) => {
-      if (!sessionId) {
-        return;
-      }
-
-      setSendingVoice(true);
-      setReplyTarget(null);
-
-      try {
-        const message = await uploadChatWidgetVoiceMessage({
-          blob,
-          durationMs,
-          replyToId: replyTarget?.id ?? null,
-          sessionId,
-        });
-        setMessages((prev) => [...prev, message]);
-        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-      } catch (err) {
-        console.error("Failed to upload voice message:", err);
-        setError(err instanceof Error ? `Р“РѕР»РѕСЃРѕРІРѕРµ: ${err.message}` : "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ.");
-      } finally {
-        setSendingVoice(false);
-      }
-    },
-    [lastMsgIdRef, replyTarget, sessionId, setError, setMessages, setReplyTarget, setSendingVoice],
-  );
+  const uploadVoiceMessage = useChatWidgetUploadVoiceMessage({
+    sessionId,
+    replyTarget,
+    lastMsgIdRef,
+    setError,
+    setMessages,
+    setReplyTarget,
+    setSendingVoice,
+  });
 
   const handleToggleVoiceRecording = useCallback(async () => {
     if (!sessionId || needsName || sendingVoice || editingMessageId) {
@@ -136,6 +116,7 @@ export function useChatWidgetComposer({
     if (!input.trim() || !sessionId || sending) {
       return;
     }
+
     await sendChatWidgetComposerMessage({
       editingMessageId,
       input,
