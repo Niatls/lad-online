@@ -1,5 +1,6 @@
 import { ChatWidgetComposerEditingBanner } from "@/components/chat/chat-widget/composer-editing-banner";
 import { ChatWidgetComposerErrorBanner } from "@/components/chat/chat-widget/composer-error-banner";
+import { ChatWidgetComposerFooter } from "@/components/chat/chat-widget/composer-footer";
 import { ChatWidgetComposerInputBar } from "@/components/chat/chat-widget/composer-input-bar";
 import { ChatWidgetComposerRecordingStatus } from "@/components/chat/chat-widget/composer-recording-status";
 import { ChatWidgetComposerReplyBanner } from "@/components/chat/chat-widget/composer-reply-banner";
@@ -107,9 +108,7 @@ export function ChatWidgetComposer({
         recordingStartedAt={recordingStartedAt}
       />
 
-      <p className="mt-3 text-center text-[10px] font-medium uppercase tracking-wide text-forest/30">
-        Р‘РµР·РѕРїР°СЃРЅС‹Р№ С‡Р°С‚ вЂў Р›Р°Рґ
-      </p>
+      <ChatWidgetComposerFooter />
     </div>
   );
 }
