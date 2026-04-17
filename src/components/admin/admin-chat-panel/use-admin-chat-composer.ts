@@ -1,7 +1,13 @@
-import { useCallback, useEffect } from "react";
+﻿import { useCallback, useEffect } from "react";
 
-import { getSupportedRecorderMimeType } from "@/components/admin/admin-chat-panel/utils";
+import {
+  createOptimisticAdminMessage,
+  editAdminMessage,
+  sendAdminMessage,
+  uploadAdminVoiceMessage,
+} from "@/components/admin/admin-chat-panel/composer-message-api";
 import type { Message } from "@/components/admin/admin-chat-panel/types";
+import { getSupportedRecorderMimeType } from "@/components/admin/admin-chat-panel/utils";
 
 type UseAdminChatComposerParams = {
   selectedId: number | null;
@@ -57,49 +63,41 @@ export function useAdminChatComposer({
     mediaStreamRef.current = null;
   }, [mediaRecorderRef, mediaStreamRef]);
 
-  useEffect(() => () => {
-    mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-  }, [mediaRecorderRef, mediaStreamRef]);
+  useEffect(
+    () => () => {
+      mediaRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    },
+    [mediaRecorderRef, mediaStreamRef]
+  );
 
-  const uploadVoiceMessage = useCallback(async (blob: Blob, durationMs: number) => {
-    if (!selectedId) {
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("sender", "admin");
-    formData.append("durationMs", String(durationMs));
-    if (replyTarget?.id) {
-      formData.append("replyToId", String(replyTarget.id));
-    }
-    const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
-    formData.append("file", new File([blob], `voice-message.${extension}`, { type: blob.type || "audio/webm" }));
-
-    setSendingVoice(true);
-    setReplyTarget(null);
-
-    try {
-      const res = await fetch(`/api/chat/sessions/${selectedId}/voice-message`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(typeof payload?.error === "string" ? payload.error : "Failed to upload voice message");
+  const uploadVoiceMessage = useCallback(
+    async (blob: Blob, durationMs: number) => {
+      if (!selectedId) {
+        return;
       }
 
-      const message = await res.json();
-      setMessages((prev) => [...prev, message]);
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-      await loadSessions();
-    } catch (err) {
-      console.error("Failed to upload voice message:", err);
-    } finally {
-      setSendingVoice(false);
-    }
-  }, [lastMsgIdRef, loadSessions, replyTarget, selectedId, setMessages, setReplyTarget, setSendingVoice]);
+      setSendingVoice(true);
+      setReplyTarget(null);
+
+      try {
+        const message = await uploadAdminVoiceMessage({
+          blob,
+          durationMs,
+          replyToId: replyTarget?.id ?? null,
+          selectedId,
+        });
+        setMessages((prev) => [...prev, message]);
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
+        await loadSessions();
+      } catch (err) {
+        console.error("Failed to upload voice message:", err);
+      } finally {
+        setSendingVoice(false);
+      }
+    },
+    [lastMsgIdRef, loadSessions, replyTarget, selectedId, setMessages, setReplyTarget, setSendingVoice]
+  );
 
   const handleToggleVoiceRecording = useCallback(async () => {
     if (!selectedId || sendingVoice || editingMessageId) {
@@ -185,17 +183,7 @@ export function useAdminChatComposer({
     if (editingMessageId) {
       setSending(true);
       try {
-        const res = await fetch(`/api/chat/sessions/${selectedId}/messages`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messageId: editingMessageId, content: text, sender: "admin" }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Failed to edit");
-        }
-
-        const updated = await res.json();
+        const updated = await editAdminMessage(selectedId, editingMessageId, text);
         setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
         setEditingMessageId(null);
         setInput("");
@@ -208,45 +196,20 @@ export function useAdminChatComposer({
     }
 
     const currentReplyTarget = replyTarget;
+    const optimistic = createOptimisticAdminMessage(text, currentReplyTarget);
     setInput("");
     setSending(true);
-
-    const optimistic: Message = {
-      id: Date.now(),
-      sender: "admin",
-      content: text,
-      replyToId: currentReplyTarget?.id ?? null,
-      deletedAt: null,
-      deletedBy: null,
-      editedAt: null,
-      isEdited: false,
-      isDeleted: false,
-      replyTo: currentReplyTarget
-        ? {
-          id: currentReplyTarget.id,
-          sender: currentReplyTarget.sender,
-          content: currentReplyTarget.isDeleted ? "Сообщение удалено" : currentReplyTarget.content,
-          isDeleted: currentReplyTarget.isDeleted,
-        }
-        : null,
-      createdAt: new Date().toISOString(),
-    };
     setMessages((prev) => [...prev, optimistic]);
     setReplyTarget(null);
 
     try {
-      const res = await fetch(`/api/chat/sessions/${selectedId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, sender: "admin", replyToId: currentReplyTarget?.id ?? null }),
+      const message = await sendAdminMessage({
+        content: text,
+        replyToId: currentReplyTarget?.id ?? null,
+        selectedId,
       });
-      if (res.ok) {
-        const msg = await res.json();
-        setMessages((prev) => prev.map((message) => (message.id === optimistic.id ? msg : message)));
-        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, msg.id);
-      } else {
-        throw new Error("Failed to send");
-      }
+      setMessages((prev) => prev.map((entry) => (entry.id === optimistic.id ? message : entry)));
+      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
     } catch (err) {
       console.error("Failed to send:", err);
       setReplyTarget(currentReplyTarget);
