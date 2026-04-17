@@ -2,13 +2,10 @@
 
 import { useCallback, useMemo } from "react";
 
-import {
-  bindVoiceLocalTrackLifecycle,
-  restoreVoiceAudioAfterInterruption,
-} from "./audio-lifecycle";
 import { formatCallDuration, formatUsageBytes } from "./formatters";
 import { acquireVoiceAudioStream } from "./media";
 import { useVoiceCallActions } from "./use-voice-call-actions";
+import { useVoiceCallAudioRecovery } from "./use-voice-call-audio-recovery";
 import { useVoiceCallConnection } from "./use-voice-call-connection";
 import { useVoiceCallDuration } from "./use-voice-call-duration";
 import { useVoiceCallMediaControls } from "./use-voice-call-media-controls";
@@ -19,6 +16,7 @@ import { useVoiceCallSessionReset } from "./use-voice-call-session-reset";
 import { useVoiceCallStartup } from "./use-voice-call-startup";
 import { useVoiceCallState } from "./use-voice-call-state";
 import { useVoiceCallStatsChange } from "./use-voice-call-stats-change";
+import { useVoiceCallTrackLifecycle } from "./use-voice-call-track-lifecycle";
 import { useVoiceLastEvent } from "./use-voice-last-event";
 import type { VoiceCallPanelProps } from "./types";
 
@@ -166,57 +164,29 @@ export function useVoiceCallPanel({
     postVoiceEvent,
   });
 
-  const restoreAudioAfterInterruption = useCallback(
-    async (reason: string) => {
-      await restoreVoiceAudioAfterInterruption({
-        reason,
-        muted,
-        role,
-        localStreamRef,
-        peerRef,
-        closedRef,
-        endingRef,
-        restoringAudioRef,
-        reconnectAllowedRef,
-        setStatus,
-        setError,
-        updateLastEvent,
-        postVoiceEvent,
-        acquireLocalAudioStream,
-        invokeSendOffer,
-        postSignal,
-      });
-    },
-    [
-      acquireLocalAudioStream,
-      closedRef,
-      endingRef,
-      invokeSendOffer,
-      localStreamRef,
-      muted,
-      peerRef,
-      postSignal,
-      postVoiceEvent,
-      reconnectAllowedRef,
-      restoringAudioRef,
-      role,
-      setError,
-      setStatus,
-      updateLastEvent,
-    ],
-  );
+  const restoreAudioAfterInterruption = useVoiceCallAudioRecovery({
+    acquireLocalAudioStream,
+    closedRef,
+    endingRef,
+    invokeSendOffer,
+    localStreamRef,
+    muted,
+    peerRef,
+    postSignal,
+    postVoiceEvent,
+    reconnectAllowedRef,
+    restoringAudioRef,
+    role,
+    setError,
+    setStatus,
+    updateLastEvent,
+  });
 
-  const bindLocalTrackLifecycle = useCallback(
-    (stream: MediaStream) => {
-      bindVoiceLocalTrackLifecycle({
-        stream,
-        updateLastEvent,
-        postVoiceEvent,
-        restoreAudioAfterInterruption,
-      });
-    },
-    [postVoiceEvent, restoreAudioAfterInterruption, updateLastEvent],
-  );
+  const bindLocalTrackLifecycle = useVoiceCallTrackLifecycle({
+    postVoiceEvent,
+    restoreAudioAfterInterruption,
+    updateLastEvent,
+  });
 
   const {
     cleanup,
