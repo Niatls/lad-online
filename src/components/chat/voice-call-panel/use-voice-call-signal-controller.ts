@@ -1,15 +1,8 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-
-import { attemptVoiceReconnect, shouldAttemptVoiceRecovery } from "./recovery";
-import {
-  handleIncomingVoiceSignal,
-  handleVoiceVisitorRejoinRequest,
-} from "./signal-handlers";
-import { pollVoiceSignals } from "./polling";
-import { resetVoiceConnectionStats } from "./stats";
-import type { VoiceSignal } from "./types";
+import { useVoiceCallCleanup } from "./use-voice-call-cleanup";
+import { useVoiceCallReconnect } from "./use-voice-call-reconnect";
+import { useVoiceCallSignalPolling } from "./use-voice-call-signal-polling";
 
 type UseVoiceCallSignalControllerParams = {
   attemptReconnectRef: React.MutableRefObject<(() => Promise<void>) | null>;
@@ -104,41 +97,7 @@ export function useVoiceCallSignalController({
   token,
   updateLastEvent,
 }: UseVoiceCallSignalControllerParams) {
-  const cleanup = useCallback(() => {
-    if (closedRef.current) {
-      return;
-    }
-
-    closedRef.current = true;
-    clearReconnectTimeout();
-    clearPendingLastEvent();
-
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = undefined;
-    }
-
-    if (statsRef.current) {
-      clearInterval(statsRef.current);
-      statsRef.current = undefined;
-    }
-
-    reconnectingRef.current = false;
-    setIsReconnecting(false);
-    cleanupDestroyPeerConnection();
-    void releaseWakeLock();
-    stopKeepAliveAudio();
-    syncMediaSession("none");
-
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop());
-      localStreamRef.current = null;
-    }
-
-    callEstablishedRef.current = false;
-    resetDurationTracking();
-    resetVoiceConnectionStats(setUsageBytes, setIceRoute, setTrafficRouteLabel);
-  }, [
+  const cleanup = useVoiceCallCleanup({
     callEstablishedRef,
     clearPendingLastEvent,
     clearReconnectTimeout,
@@ -156,110 +115,34 @@ export function useVoiceCallSignalController({
     statsRef,
     stopKeepAliveAudio,
     syncMediaSession,
-  ]);
+  });
 
-  const handleVisitorRejoinRequest = useCallback(async () => {
-    await handleVoiceVisitorRejoinRequest({
-      ...handleVisitorRejoinRequestDeps,
-      startedReconnectRecently,
-      setStatus,
-      updateLastEvent,
-      invokeCreatePeer,
-      invokeSendOffer,
-    });
-  }, [handleVisitorRejoinRequestDeps, invokeCreatePeer, invokeSendOffer, setStatus, startedReconnectRecently, updateLastEvent]);
-
-  const handleSignal = useCallback(async (signal: VoiceSignal) => {
-    await handleIncomingVoiceSignal({
-      signal,
-      role,
-      peerRef,
-      reconnectAllowedRef,
-      pendingCandidatesRef,
-      setStatus,
-      setConnecting,
-      updateLastEvent,
-      postVoiceEvent,
-      pauseDurationTracking,
-      cleanup,
-      onClose: onCloseRef.current,
-      invokeCreatePeer,
-      postSignal,
-      flushPendingCandidates: async () => flushPendingCandidates(pendingCandidatesRef),
-      handleVisitorRejoinRequest,
-    });
-  }, [
+  const { handleVisitorRejoinRequest, handleSignal, pollSignals } = useVoiceCallSignalPolling({
     cleanup,
     flushPendingCandidates,
-    handleVisitorRejoinRequest,
+    handleVisitorRejoinRequestDeps,
     invokeCreatePeer,
+    invokeSendOffer,
+    lastSignalIdRef,
     onCloseRef,
     pauseDurationTracking,
-    peerRef,
     pendingCandidatesRef,
+    peerRef,
+    pollRole: role,
+    pollToken: token,
     postSignal,
     postVoiceEvent,
     reconnectAllowedRef,
     role,
     setConnecting,
     setStatus,
+    startedReconnectRecently,
     updateLastEvent,
-  ]);
+  });
 
-  const pollSignals = useCallback(async () => {
-    await pollVoiceSignals({
-      token,
-      role,
-      lastSignalIdRef,
-      handleSignal,
-      setStatus,
-      setConnecting,
-      updateLastEvent,
-      pauseDurationTracking,
-      cleanup,
-      onClose: onCloseRef.current,
-    });
-  }, [
-    cleanup,
-    handleSignal,
-    lastSignalIdRef,
-    onCloseRef,
-    pauseDurationTracking,
-    role,
-    setConnecting,
-    setStatus,
-    token,
-    updateLastEvent,
-  ]);
-
-  const attemptReconnect = useCallback(async () => {
-    await attemptVoiceReconnect({
-      role,
-      closedRef,
-      endingRef,
-      reconnectingRef,
-      reconnectAllowedRef,
-      reconnectAttemptsRef,
-      lastReconnectStartedAtRef,
-      reconnectTimeoutRef,
-      setStatus,
-      setError,
-      setIsReconnecting,
-      setConnecting,
-      updateLastEvent,
-      postVoiceEvent,
-      pauseDurationTracking,
-      invokeCreatePeer,
-      invokeSendOffer,
-      postSignal,
-      startedReconnectRecently,
-      clearReconnectTimeout,
-      retry: () => {
-        void attemptReconnectRef.current?.();
-      },
-    });
-  }, [
+  const { attemptReconnect, shouldAttemptRecovery } = useVoiceCallReconnect({
     attemptReconnectRef,
+    callEstablishedRef,
     clearReconnectTimeout,
     closedRef,
     endingRef,
@@ -267,6 +150,7 @@ export function useVoiceCallSignalController({
     invokeSendOffer,
     lastReconnectStartedAtRef,
     pauseDurationTracking,
+    peerRef,
     postSignal,
     postVoiceEvent,
     reconnectAllowedRef,
@@ -280,15 +164,7 @@ export function useVoiceCallSignalController({
     setStatus,
     startedReconnectRecently,
     updateLastEvent,
-  ]);
-
-  useEffect(() => {
-    attemptReconnectRef.current = attemptReconnect;
-  }, [attemptReconnect, attemptReconnectRef]);
-
-  const shouldAttemptRecovery = useCallback(() => {
-    return shouldAttemptVoiceRecovery(peerRef, callEstablishedRef, reconnectAllowedRef);
-  }, [callEstablishedRef, peerRef, reconnectAllowedRef]);
+  });
 
   return {
     cleanup,
