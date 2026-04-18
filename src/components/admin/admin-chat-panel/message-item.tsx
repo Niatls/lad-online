@@ -122,7 +122,7 @@ export function AdminChatMessageItem({
           ) : voiceMessage ? (
             <VoiceMessagePlayer
               payload={voiceMessage}
-              tone={isAdmin ? "admin" : "visitor"}
+              tone={isAdmin ? "visitor" : "admin"}
             />
           ) : (
             <p>{message.content}</p>
