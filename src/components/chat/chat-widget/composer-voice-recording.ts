@@ -1,3 +1,4 @@
+import { attachChatWidgetVoiceDataHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-data-handler";
 import { attachChatWidgetVoiceErrorHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-error-handler";
 import { attachChatWidgetVoiceStopHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-stop-handler";
 import { createChatWidgetVoiceRecorder } from "@/components/chat/chat-widget/create-chat-widget-voice-recorder";
@@ -28,7 +29,7 @@ export async function startChatWidgetVoiceRecording({
 }: StartChatWidgetVoiceRecordingParams) {
   const mimeType = getSupportedRecorderMimeType();
   if (mimeType === null) {
-    setError("Р В РІР‚СљР В РЎвЂўР В Р’В»Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р РЋР С“Р В РЎвЂўР В РЎвЂўР В Р’В±Р РЋРІР‚В°Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р В Р вЂ¦Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В РўвЂР В РўвЂР В Р’ВµР РЋР вЂљР В Р’В¶Р В РЎвЂР В Р вЂ Р В Р’В°Р РЋР вЂ№Р РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ  Ռ РЋР РЉР РЋРІР‚С™Р В РЎвЂўР В РЎВ Ռ В Р’В±Р РЋР вЂљР В Р’В°Р РЋРЎвЂњР В Р’В·Р В Р’ВµР РЋР вЂљР В Р’Вµ.");
+    setError("Р В Р’В Р Р†Р вЂљРЎС™Р В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В»Р В Р’В Р РЋРІР‚СћР В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СћР В Р’В Р В РІР‚В Р В Р Р‹Р Р†Р вЂљРІвЂћвЂ“Р В Р’В Р вЂ™Р’Вµ Р В Р Р‹Р В РЎвЂњР В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРІР‚ВР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В¦Р В Р’В Р вЂ™Р’Вµ Р В Р’В Р РЋРІР‚вЂќР В Р’В Р РЋРІР‚СћР В Р’В Р СћРІР‚ВР В Р’В Р СћРІР‚ВР В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В¶Р В Р’В Р РЋРІР‚ВР В Р’В Р В РІР‚В Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р В РІР‚в„–Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р Р‹Р В РЎвЂњР В Р Р‹Р В Р РЏ Р В Р’В Р В РІР‚В  ХЊВ Р Р‹Р В Р Р‰Р В Р Р‹Р Р†Р вЂљРЎв„ўР В Р’В Р РЋРІР‚СћР В Р’В Р РЋР’В ХЊВ Р’В Р вЂ™Р’В±Р В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’В°Р В Р Р‹Р РЋРІР‚СљР В Р’В Р вЂ™Р’В·Р В Р’В Р вЂ™Р’ВµР В Р Р‹Р В РІР‚С™Р В Р’В Р вЂ™Р’Вµ.");
     return;
   }
 
@@ -42,11 +43,10 @@ export async function startChatWidgetVoiceRecording({
     recordingStartedAtRef.current = startedAt;
     setRecordingStartedAt(startedAt);
 
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        voiceChunksRef.current.push(event.data);
-      }
-    };
+    attachChatWidgetVoiceDataHandler({
+      recorder,
+      voiceChunksRef,
+    });
 
     attachChatWidgetVoiceErrorHandler({
       recorder,
@@ -72,7 +72,7 @@ export async function startChatWidgetVoiceRecording({
     setIsRecordingVoice(true);
   } catch (err) {
     console.error("Failed to start voice recording:", err);
-    setError("Р В РЎСљР В Р’Вµ Ռ ՌЋРЎвЂњР Վ ՌўвЂР Վ Ռ’В°Р Վ Ռ’В»Р Վ ՌЎвЂўР ՌЋՌС“Ռ ՌЋՌР‰ Ռ Վ ՌЎвЂ”Ռ Վ ՌЎвЂўՌ Վ Ռ’В»Ռ ՌЋՌЎвЂњՌ ՌЋՌІР‚ՌЋՌ Վ ՌЎвЂՌ ՌЋՌІՌ‚Ս™Ռ ՌЋՌР‰ Ռ Վ ՌўвЂՌ Վ ՌЎвЂўՌ ՌЋՌС“Ռ ՌЋՌІՌ‚Ս™Ռ ՌЋՌЎвЂњՌ Վ ՌЎвЂ” Ռ Վ ՌЎвЂќ Ռ Վ ՌЎВՌ Վ ՌЎвЂՌ Վ ՌЎвЂќՌ ՌЋՌвЂљՌ Վ ՌЎвЂўՌ ՌЋՌІՌ‚Ս›Ռ Վ ՌЎвЂўՌ Վ Ռ вЂ¦Ռ ՌЋՌЎвЂњ.");
+    setError("Р В Р’В Р РЋРЎС™Р В Р’В Р вЂ™Р’Вµ ХЊВ ХЊР‹Р РЋРІР‚СљР В ХЋВ ХЊСћРІР‚ВР В ХЋВ ХЊвЂ™Р’В°Р В ХЋВ ХЊвЂ™Р’В»Р В ХЋВ ХЊРЋРІР‚СћР В ХЊР‹ХЊРЎвЂњХЊВ ХЊР‹ХЊР вЂ° ХЊВ ХЋВ ХЊРЋРІР‚вЂќХЊВ ХЋВ ХЊРЋРІР‚СћХЊВ ХЋВ ХЊвЂ™Р’В»ХЊВ ХЊР‹ХЊРЋРІР‚СљХЊВ ХЊР‹ХЊР†Р вЂљХЊР‹ХЊВ ХЋВ ХЊРЋРІР‚ВХЊВ ХЊР‹ХЊР†ХЊвЂљХЌв„ўХЊВ ХЊР‹ХЊР вЂ° ХЊВ ХЋВ ХЊСћРІР‚ВХЊВ ХЋВ ХЊРЋРІР‚СћХЊВ ХЊР‹ХЊРЎвЂњХЊВ ХЊР‹ХЊР†ХЊвЂљХЌв„ўХЊВ ХЊР‹ХЊРЋРІР‚СљХЊВ ХЋВ ХЊРЋРІР‚вЂќ ХЊВ ХЋВ ХЊРЋРІР‚Сњ ХЊВ ХЋВ ХЊРЋР’ВХЊВ ХЋВ ХЊРЋРІР‚ВХЊВ ХЋВ ХЊРЋРІР‚СњХЊВ ХЊР‹ХЊРІР‚С™ХЊВ ХЋВ ХЊРЋРІР‚СћХЊВ ХЊР‹ХЊР†ХЊвЂљХЌвЂєХЊВ ХЋВ ХЊРЋРІР‚СћХЊВ ХЋВ ХЊВ РІР‚В¦ХЊВ ХЊР‹ХЊРЋРІР‚Сљ.");
     stopVoiceCapture();
   }
 }
