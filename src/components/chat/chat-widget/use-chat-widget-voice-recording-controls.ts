@@ -1,21 +1,17 @@
-import { useChatWidgetHandleSend } from "@/components/chat/chat-widget/use-chat-widget-handle-send";
-import { useChatWidgetVoiceRecordingControls } from "@/components/chat/chat-widget/use-chat-widget-voice-recording-controls";
+import { useChatWidgetStopVoiceCapture } from "@/components/chat/chat-widget/use-chat-widget-stop-voice-capture";
+import { useChatWidgetToggleVoiceRecording } from "@/components/chat/chat-widget/use-chat-widget-toggle-voice-recording";
+import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
-type UseChatWidgetComposerParams = {
+type UseChatWidgetVoiceRecordingControlsParams = {
   needsName: boolean;
   sessionId: number | null;
-  input: string;
-  sending: boolean;
   sendingVoice: boolean;
   isRecordingVoice: boolean;
   editingMessageId: number | null;
   replyTarget: Message | null;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
-  setSending: React.Dispatch<React.SetStateAction<boolean>>;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setReplyTarget: React.Dispatch<React.SetStateAction<Message | null>>;
-  setEditingMessageId: React.Dispatch<React.SetStateAction<number | null>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setSendingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
@@ -27,20 +23,15 @@ type UseChatWidgetComposerParams = {
   voiceChunksRef: React.MutableRefObject<Blob[]>;
 };
 
-export function useChatWidgetComposer({
+export function useChatWidgetVoiceRecordingControls({
   needsName,
   sessionId,
-  input,
-  sending,
   sendingVoice,
   isRecordingVoice,
   editingMessageId,
   replyTarget,
-  setInput,
-  setSending,
   setMessages,
   setReplyTarget,
-  setEditingMessageId,
   setError,
   setSendingVoice,
   setIsRecordingVoice,
@@ -50,44 +41,36 @@ export function useChatWidgetComposer({
   mediaStreamRef,
   recordingStartedAtRef,
   voiceChunksRef,
-}: UseChatWidgetComposerParams) {
-  const handleToggleVoiceRecording = useChatWidgetVoiceRecordingControls({
+}: UseChatWidgetVoiceRecordingControlsParams) {
+  const stopVoiceCapture = useChatWidgetStopVoiceCapture({
+    mediaRecorderRef,
+    mediaStreamRef,
+  });
+
+  const uploadVoiceMessage = useChatWidgetUploadVoiceMessage({
+    sessionId,
+    replyTarget,
+    lastMsgIdRef,
+    setError,
+    setMessages,
+    setReplyTarget,
+    setSendingVoice,
+  });
+
+  return useChatWidgetToggleVoiceRecording({
     needsName,
     sessionId,
     sendingVoice,
     isRecordingVoice,
     editingMessageId,
-    replyTarget,
-    setMessages,
-    setReplyTarget,
-    setError,
-    setSendingVoice,
-    setIsRecordingVoice,
-    setRecordingStartedAt,
-    lastMsgIdRef,
     mediaRecorderRef,
     mediaStreamRef,
     recordingStartedAtRef,
     voiceChunksRef,
-  });
-
-  const handleSend = useChatWidgetHandleSend({
-    sessionId,
-    input,
-    sending,
-    editingMessageId,
-    replyTarget,
-    lastMsgIdRef,
-    setEditingMessageId,
     setError,
-    setInput,
-    setMessages,
-    setReplyTarget,
-    setSending,
+    setIsRecordingVoice,
+    setRecordingStartedAt,
+    stopVoiceCapture,
+    uploadVoiceMessage,
   });
-
-  return {
-    handleSend,
-    handleToggleVoiceRecording,
-  };
 }
