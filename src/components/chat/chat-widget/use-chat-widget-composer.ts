@@ -1,4 +1,4 @@
-import { useChatWidgetHandleSend } from "@/components/chat/chat-widget/use-chat-widget-handle-send";
+import { useChatWidgetComposerHandleSend } from "@/components/chat/chat-widget/use-chat-widget-composer-handle-send";
 import { useChatWidgetVoiceRecordingControls } from "@/components/chat/chat-widget/use-chat-widget-voice-recording-controls";
 import type { Message } from "@/components/chat/chat-widget/types";
 
@@ -71,7 +71,7 @@ export function useChatWidgetComposer({
     voiceChunksRef,
   });
 
-  const handleSend = useChatWidgetHandleSend({
+  const handleSend = useChatWidgetComposerHandleSend({
     sessionId,
     input,
     sending,
