@@ -1,10 +1,7 @@
-import { ChatWidgetComposerEditingBanner } from "@/components/chat/chat-widget/composer-editing-banner";
-import { ChatWidgetComposerErrorBanner } from "@/components/chat/chat-widget/composer-error-banner";
 import { ChatWidgetComposerFooter } from "@/components/chat/chat-widget/composer-footer";
 import { ChatWidgetComposerInputBar } from "@/components/chat/chat-widget/composer-input-bar";
 import { ChatWidgetComposerRecordingStatus } from "@/components/chat/chat-widget/composer-recording-status";
-import { ChatWidgetComposerReplyBanner } from "@/components/chat/chat-widget/composer-reply-banner";
-import { ChatWidgetComposerVoiceInvite } from "@/components/chat/chat-widget/composer-voice-invite";
+import { ChatWidgetComposerTopBanners } from "@/components/chat/chat-widget/composer-top-banners";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 
 type ChatWidgetComposerProps = {
@@ -60,32 +57,20 @@ export function ChatWidgetComposer({
 }: ChatWidgetComposerProps) {
   return (
     <div className="relative shrink-0 bg-white p-4">
-      {error && sessionId ? (
-        <ChatWidgetComposerErrorBanner
-          error={error}
-          onDismissError={onDismissError}
-        />
-      ) : null}
-
-      {availableVoiceInvite && !activeVoiceToken ? (
-        <ChatWidgetComposerVoiceInvite
-          availableVoiceInvite={availableVoiceInvite}
-          voiceExpiresIn={voiceExpiresIn}
-          onJoinVoice={onJoinVoice}
-        />
-      ) : null}
-
-      {replyTarget ? (
-        <ChatWidgetComposerReplyBanner
-          replyTarget={replyTarget}
-          getMessagePreview={getMessagePreview}
-          onClearReply={onClearReply}
-        />
-      ) : null}
-
-      {editingMessageId ? (
-        <ChatWidgetComposerEditingBanner onCancelEditing={onCancelEditing} />
-      ) : null}
+      <ChatWidgetComposerTopBanners
+        activeVoiceToken={activeVoiceToken}
+        availableVoiceInvite={availableVoiceInvite}
+        editingMessageId={editingMessageId}
+        error={error}
+        getMessagePreview={getMessagePreview}
+        replyTarget={replyTarget}
+        sessionId={sessionId}
+        voiceExpiresIn={voiceExpiresIn}
+        onCancelEditing={onCancelEditing}
+        onClearReply={onClearReply}
+        onDismissError={onDismissError}
+        onJoinVoice={onJoinVoice}
+      />
 
       <ChatWidgetComposerInputBar
         error={error}
