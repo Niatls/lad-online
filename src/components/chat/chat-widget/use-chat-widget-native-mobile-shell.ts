@@ -9,7 +9,7 @@ type CapacitorWindow = typeof window & {
   };
 };
 
-function isNativeAndroidShell() {
+function isNativeMobileShell() {
   if (typeof window === "undefined") {
     return false;
   }
@@ -17,15 +17,15 @@ function isNativeAndroidShell() {
   const capacitor = (window as CapacitorWindow).Capacitor;
   const platform = capacitor?.getPlatform?.() ?? capacitor?.platform;
 
-  return platform === "android";
+  return platform === "android" || platform === "ios";
 }
 
-export function useChatWidgetNativeAndroidShell() {
-  const [isNativeAndroid, setIsNativeAndroid] = useState(false);
+export function useChatWidgetNativeMobileShell() {
+  const [isNativeMobile, setIsNativeMobile] = useState(false);
 
   useEffect(() => {
-    setIsNativeAndroid(isNativeAndroidShell());
+    setIsNativeMobile(isNativeMobileShell());
   }, []);
 
-  return isNativeAndroid;
+  return isNativeMobile;
 }
