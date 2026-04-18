@@ -10,7 +10,7 @@ export function ChatWidgetComposerRecordingStatus({
   if (isRecordingVoice) {
     return (
       <p className="mt-2 text-center text-[11px] font-bold text-red-500">
-        Идёт запись. Нажмите квадрат, чтобы отправить голосовое.
+        Идёт запись. Нажмите квадрат, чтобы отправить голосовое сообщение.
       </p>
     );
   }
