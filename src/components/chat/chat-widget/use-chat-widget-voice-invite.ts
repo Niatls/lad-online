@@ -1,7 +1,6 @@
-import { useEffect } from "react";
-
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
 import { useChatWidgetExpireVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-expire-voice-invite";
+import { useChatWidgetPollVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-poll-voice-invite";
 import { useChatWidgetRestoreVoiceToken } from "@/components/chat/chat-widget/use-chat-widget-restore-voice-token";
 import { useChatWidgetVoiceInviteCountdown } from "@/components/chat/chat-widget/use-chat-widget-voice-invite-countdown";
 import { useChatWidgetVoiceTokenStorage } from "@/components/chat/chat-widget/use-chat-widget-voice-token-storage";
@@ -53,15 +52,11 @@ export function useChatWidgetVoiceInvite({
     voiceCountdownNow,
   });
 
-  useEffect(() => {
-    if (!sessionId || !isOpen || activeVoiceToken || !availableVoiceInvite) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      void syncVoiceInvite(sessionId);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);
+  useChatWidgetPollVoiceInvite({
+    isOpen,
+    sessionId,
+    activeVoiceToken,
+    availableVoiceInvite,
+    syncVoiceInvite,
+  });
 }
