@@ -5,7 +5,7 @@ export const BACK_TO_MENU_TEXT = "Вернуться в меню";
 export const BOOKING_SKIP_TEXT = "Пропустить";
 
 export const MAIN_MENU_TEXT = [
-  "Здравствуйте! Вы попали в бот сайта психологических консультаций «Лад».",
+  "Здравствуйте! Вы в боте сайта психологических консультаций «Лад».",
   "",
   "Чем мы можем вам помочь?",
   `• ${START_QUESTION_TEXT}`,
@@ -26,13 +26,13 @@ export const PRICES_TEXT = `
 • Групповой сеанс: 1 500 - 3 000 ₽
 • Свободная тематика: 500 - 1 500 ₽
 
-Все консультации проводятся в онлайн-формате.
+Все консультации проводятся онлайн.
 `.trim();
 
-export const QUESTION_NAME_PROMPT = "Как нам к вам обращаться?";
+export const QUESTION_NAME_PROMPT = "Как к вам обращаться?";
 
 export const QUESTION_CONTACT_PROMPT =
-  "Укажите ваш номер телефона или другой способ связи, например Telegram username:";
+  "Укажите номер телефона или другой способ связи, например Telegram username:";
 
 export const QUESTION_BODY_PROMPT = "Опишите ваш вопрос:";
 

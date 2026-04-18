@@ -21,7 +21,7 @@ export async function handleDiscordModalSubmit(interaction: {
 
   if (!name || !contact) {
     return createMessageResponse(
-      "Не удалось прочитать поля формы. Попробуйте еще раз."
+      "Не удалось прочитать поля формы. Попробуйте ещё раз."
     );
   }
 

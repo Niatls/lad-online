@@ -2,11 +2,10 @@ import type { Context } from "grammy";
 
 import { createApplicationSubmission } from "@/lib/application-submission";
 import { applicationFormSchema } from "@/lib/applications";
-import {
-  MAIN_KEYBOARD,
-} from "./keyboards";
 import { createBotApplication } from "@/lib/bot-applications";
+
 import { getBookingDraft } from "./draft";
+import { MAIN_KEYBOARD } from "./keyboards";
 import { resetSession } from "./session";
 import type { TelegramSessionRecord } from "./session";
 
