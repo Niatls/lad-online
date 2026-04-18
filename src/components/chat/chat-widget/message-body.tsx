@@ -1,8 +1,7 @@
+import { ChatWidgetMessageContent } from "@/components/chat/chat-widget/message-content";
 import { ChatWidgetMessageMeta } from "@/components/chat/chat-widget/message-meta";
 import { ChatWidgetMessageReplyPreview } from "@/components/chat/chat-widget/message-reply-preview";
-import { resolveChatWidgetMessageState } from "@/components/chat/chat-widget/resolve-chat-widget-message-state";
 import type { Message } from "@/components/chat/chat-widget/types";
-import { VoiceMessagePlayer } from "@/components/chat/voice-message-player";
 
 type ChatWidgetMessageBodyProps = {
   isSystem: boolean;
@@ -17,8 +16,6 @@ export function ChatWidgetMessageBody({
   message,
   onJumpToMessage,
 }: ChatWidgetMessageBodyProps) {
-  const { voiceMessage } = resolveChatWidgetMessageState(message);
-
   return (
     <div
       className={`max-w-[85%] rounded-[1.5rem] px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
@@ -37,13 +34,12 @@ export function ChatWidgetMessageBody({
           onJumpToMessage={onJumpToMessage}
         />
       ) : null}
-      {message.isDeleted ? (
-        <p className="italic opacity-70">Р В Р’В Р вЂ™Р’В Р В Р’В Р В РІР‚в„–Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В±Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В Р Р‹Р С–РІР‚С™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’Вµ Р ՌЋՌЎвЂњՌ Վ ՌўвЂՌ Վ Ռ’В°Ռ Վ Ռ’В»Ռ Վ Ռ’ВµՌ Վ Ռ вЂ¦Ռ Վ ՌЎвЂў</p>
-      ) : voiceMessage ? (
-        <VoiceMessagePlayer payload={voiceMessage} tone={isSystem ? "system" : isVisitor ? "visitor" : "admin"} />
-      ) : (
-        <p>{message.content}</p>
-      )}
+
+      <ChatWidgetMessageContent
+        isSystem={isSystem}
+        isVisitor={isVisitor}
+        message={message}
+      />
 
       <ChatWidgetMessageMeta
         isSystem={isSystem}
