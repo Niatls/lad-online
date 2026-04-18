@@ -32,21 +32,21 @@ export function VoiceInfoPanel({
   usageLabel,
 }: VoiceInfoPanelProps) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center">
-      <div className="w-24 h-24 rounded-full bg-forest text-white flex items-center justify-center shadow-[0_24px_60px_rgba(45,63,45,0.18)] mb-6">
+    <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-forest text-white shadow-[0_24px_60px_rgba(45,63,45,0.18)]">
         {connecting ? (
           <Loader2 className="h-10 w-10 animate-spin" />
         ) : (
           <Radio className="h-10 w-10" />
         )}
       </div>
-      <p className="text-xs font-bold uppercase tracking-[0.35em] text-forest/35 mb-3">
+      <p className="mb-3 text-xs font-bold uppercase tracking-[0.35em] text-forest/35">
         Voice Mode
       </p>
-      <h4 className="text-2xl font-bold text-forest tracking-tight mb-2">
+      <h4 className="mb-2 text-2xl font-bold tracking-tight text-forest">
         {title}
       </h4>
-      <p className="text-sm text-forest/55 max-w-xs leading-relaxed">
+      <p className="max-w-xs text-sm leading-relaxed text-forest/55">
         {error ?? status}
       </p>
       {isReconnecting ? (
@@ -74,7 +74,8 @@ export function VoiceInfoPanel({
                 {usageLabel}
               </p>
               <p className="mt-1 text-[11px] text-forest/45">
-                {((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB
+                {((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000
+                GB
               </p>
             </div>
           </div>
@@ -105,7 +106,7 @@ export function VoiceInfoPanel({
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest/35">
                 ICE Route
               </p>
-              <p className="mt-1 text-sm font-medium text-forest break-all">
+              <p className="mt-1 break-all text-sm font-medium text-forest">
                 {iceRoute}
               </p>
             </div>

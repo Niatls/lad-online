@@ -40,7 +40,10 @@ export function HomeContentSection({
       icon={LayoutTemplate}
     >
       {mode === "main" ? (
-        <HomeContentMainSections homeForm={homeForm} setHomeField={setHomeField} />
+        <HomeContentMainSections
+          homeForm={homeForm}
+          setHomeField={setHomeField}
+        />
       ) : (
         <HomeContentSettingsSections
           homeForm={homeForm}

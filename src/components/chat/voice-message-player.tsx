@@ -1,6 +1,7 @@
 "use client";
 
 import { PlayCircle } from "lucide-react";
+
 import { VoiceMessagePayload } from "@/lib/chat-message-format";
 
 function formatDuration(durationMs?: number | null) {
@@ -19,7 +20,10 @@ type VoiceMessagePlayerProps = {
   tone: "visitor" | "admin" | "system";
 };
 
-export function VoiceMessagePlayer({ payload, tone }: VoiceMessagePlayerProps) {
+export function VoiceMessagePlayer({
+  payload,
+  tone,
+}: VoiceMessagePlayerProps) {
   const isVisitor = tone === "visitor";
   const shellClassName =
     tone === "system"
@@ -34,9 +38,16 @@ export function VoiceMessagePlayer({ payload, tone }: VoiceMessagePlayerProps) {
       <div className="mb-2 flex items-center gap-2">
         <PlayCircle className="h-4 w-4 shrink-0" />
         <p className="text-xs font-bold">Голосовое сообщение</p>
-        <span className={`text-[10px] font-medium ${hintClassName}`}>{formatDuration(payload.durationMs)}</span>
+        <span className={`text-[10px] font-medium ${hintClassName}`}>
+          {formatDuration(payload.durationMs)}
+        </span>
       </div>
-      <audio controls preload="metadata" src={payload.url} className="h-10 w-full" />
+      <audio
+        controls
+        preload="metadata"
+        src={payload.url}
+        className="h-10 w-full"
+      />
     </div>
   );
 }
