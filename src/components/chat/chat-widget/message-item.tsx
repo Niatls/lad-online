@@ -197,7 +197,13 @@ export function ChatWidgetMessageItem({
         }}
       >
         <div
-          className="transition-transform duration-200 ease-out"
+          className={`flex w-full transition-transform duration-200 ease-out ${
+            isSystem
+              ? "justify-center"
+              : isVisitor
+                ? "justify-end"
+                : "justify-start"
+          }`}
           style={{
             transform: swipeOffset ? `translateX(${swipeOffset}px)` : undefined,
           }}
