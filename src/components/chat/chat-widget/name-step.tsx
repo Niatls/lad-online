@@ -21,9 +21,12 @@ export function ChatWidgetNameStep({
         <User className="h-10 w-10 text-sage" />
       </div>
       <div>
-        <h4 className="mb-2 text-xl font-bold text-forest">Как к вам обращаться?</h4>
+        <h4 className="mb-2 text-xl font-bold text-forest">
+          Как к вам обращаться?
+        </h4>
         <p className="max-w-[260px] text-sm leading-relaxed text-forest/50">
-          Укажите имя или псевдоним. Так специалист сможет обратиться к вам в чате и при голосовом общении.
+          Укажите имя или псевдоним. Так специалист сможет обратиться к вам в
+          чате и при голосовом общении.
         </p>
       </div>
       <ChatWidgetNameStepForm

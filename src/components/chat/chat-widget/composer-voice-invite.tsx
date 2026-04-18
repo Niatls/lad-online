@@ -25,11 +25,15 @@ export function ChatWidgetComposerVoiceInvite({
             <Phone className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-sm font-bold">Р“РѕР»РѕСЃРѕРІРѕРµ РѕР±С‰РµРЅРёРµ</p>
-            <p className="text-[11px] text-white/70">РљРЅРѕРїРєР° РґРѕСЃС‚СѓРїРЅР° РµС‰С‘ {voiceExpiresIn}</p>
+            <p className="text-sm font-bold">Голосовое общение</p>
+            <p className="text-[11px] text-white/70">
+              Кнопка доступна ещё {voiceExpiresIn}
+            </p>
           </div>
         </div>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">voice</span>
+        <span className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+          voice
+        </span>
       </div>
     </button>
   );

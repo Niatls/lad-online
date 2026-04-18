@@ -22,28 +22,43 @@ export function useChatWidgetUploadVoiceMessage({
   setReplyTarget,
   setSendingVoice,
 }: UseChatWidgetUploadVoiceMessageParams) {
-  return useCallback(async (blob: Blob, durationMs: number) => {
-    if (!sessionId) {
-      return;
-    }
+  return useCallback(
+    async (blob: Blob, durationMs: number) => {
+      if (!sessionId) {
+        return;
+      }
 
-    setSendingVoice(true);
-    setReplyTarget(null);
+      setSendingVoice(true);
+      setReplyTarget(null);
 
-    try {
-      const message = await uploadChatWidgetVoiceMessage({
-        blob,
-        durationMs,
-        replyToId: replyTarget?.id ?? null,
-        sessionId,
-      });
-      setMessages((prev) => [...prev, message]);
-      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
-    } catch (err) {
-      console.error("Failed to upload voice message:", err);
-      setError(err instanceof Error ? `Р вЂњР С•Р В»Р С•РЎРѓР С•Р Р†Р С•Р Вµ: ${err.message}` : "Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р С‘РЎвЂљРЎРЉ Р С–Р С•Р В»Р С•РЎРѓР С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ.");
-    } finally {
-      setSendingVoice(false);
-    }
-  }, [lastMsgIdRef, replyTarget, sessionId, setError, setMessages, setReplyTarget, setSendingVoice]);
+      try {
+        const message = await uploadChatWidgetVoiceMessage({
+          blob,
+          durationMs,
+          replyToId: replyTarget?.id ?? null,
+          sessionId,
+        });
+        setMessages((prev) => [...prev, message]);
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
+      } catch (err) {
+        console.error("Failed to upload voice message:", err);
+        setError(
+          err instanceof Error
+            ? `Голосовое: ${err.message}`
+            : "Не удалось отправить голосовое сообщение."
+        );
+      } finally {
+        setSendingVoice(false);
+      }
+    },
+    [
+      lastMsgIdRef,
+      replyTarget,
+      sessionId,
+      setError,
+      setMessages,
+      setReplyTarget,
+      setSendingVoice,
+    ]
+  );
 }

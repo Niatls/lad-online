@@ -3,7 +3,7 @@ import type { Message } from "@/components/chat/chat-widget/types";
 export function createOptimisticChatWidgetMessage(
   tempId: number,
   content: string,
-  replyTarget: Message | null,
+  replyTarget: Message | null
 ): Message {
   return {
     id: tempId,
@@ -19,7 +19,9 @@ export function createOptimisticChatWidgetMessage(
       ? {
           id: replyTarget.id,
           sender: replyTarget.sender,
-          content: replyTarget.isDeleted ? "Р РЋР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•" : replyTarget.content,
+          content: replyTarget.isDeleted
+            ? "Сообщение удалено"
+            : replyTarget.content,
           isDeleted: replyTarget.isDeleted,
         }
       : null,

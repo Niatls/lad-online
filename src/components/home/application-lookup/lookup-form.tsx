@@ -38,10 +38,7 @@ export function LookupForm({
   resultNumber,
 }: LookupFormProps) {
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]"
-    >
+    <form onSubmit={onSubmit} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]">
       <Input
         aria-label="Код заявки"
         placeholder="LAD-NG6GDW-K05"
@@ -75,7 +72,7 @@ export function LookupForm({
             {resultNumber}:{" "}
             {appointment
               ? `${appointment.day} ${calendarMonthName}, ${appointment.time} МСК`
-              : "дата еще уточняется"}
+              : "дата ещё уточняется"}
           </p>
           {contactHref && contactMethod ? (
             <a

@@ -11,8 +11,12 @@ export function ChatWidgetComposerEditingBanner({
     <div className="mb-3 rounded-[1.25rem] border border-sage-light/20 bg-cream/35 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ</p>
-          <p className="mt-1 text-xs text-forest/55">РР·РјРµРЅРёС‚Рµ С‚РµРєСЃС‚ Рё РѕС‚РїСЂР°РІСЊС‚Рµ РїРѕРІС‚РѕСЂРЅРѕ.</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-forest/35">
+            Редактирование
+          </p>
+          <p className="mt-1 text-xs text-forest/55">
+            Измените текст и отправьте повторно.
+          </p>
         </div>
         <button
           type="button"

@@ -29,7 +29,10 @@ export function ContactFields({
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="contactMethod" className="text-sm font-medium text-forest">
+        <Label
+          htmlFor="contactMethod"
+          className="text-sm font-medium text-forest"
+        >
           Способ связи
         </Label>
         <Select value={contactMethod} onValueChange={onContactMethodChange}>

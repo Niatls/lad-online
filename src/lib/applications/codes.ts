@@ -11,7 +11,7 @@ export function parseApplicationNumber(value: string) {
   const trimmed = value.trim();
   const match =
     trimmed.match(/^LAD[-\s]*[A-Z0-9]+[-\s]*K0*(\d+)$/i) ||
-    trimmed.match(/^LAD[-\s]*РєРѕРґ[-\s]*K0*(\d+)$/i) ||
+    trimmed.match(/^LAD[-\s]*код[-\s]*K0*(\d+)$/i) ||
     trimmed.match(/^LAD[-\s]*0*(\d+)$/i) ||
     trimmed.match(/^0*(\d+)$/);
 
@@ -39,5 +39,8 @@ export function generateApplicationVerificationCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = crypto.getRandomValues(new Uint8Array(6));
 
-  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("");
+  return Array.from(
+    bytes,
+    (byte) => alphabet[byte % alphabet.length]
+  ).join("");
 }

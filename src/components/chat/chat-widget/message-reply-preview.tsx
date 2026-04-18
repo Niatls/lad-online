@@ -28,10 +28,16 @@ export function ChatWidgetMessageReplyPreview({
       }`}
     >
       <p className="mb-0.5 font-bold">
-        {replyTo.sender === "visitor" ? "Р’С‹" : replyTo.sender === "admin" ? "РџРѕРґРґРµСЂР¶РєР°" : "РЎРёСЃС‚РµРјР°"}
+        {replyTo.sender === "visitor"
+          ? "Вы"
+          : replyTo.sender === "admin"
+            ? "Поддержка"
+            : "Система"}
       </p>
       <p className="truncate">
-        {replyTo.isDeleted ? "РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ" : getChatMessagePreviewText(replyTo.content) ?? "РЎРёСЃС‚РµРјРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ"}
+        {replyTo.isDeleted
+          ? "Сообщение удалено"
+          : getChatMessagePreviewText(replyTo.content) ?? "Системное сообщение"}
       </p>
     </button>
   );

@@ -8,7 +8,7 @@ export function formatApplicationDate(date: Date) {
 
 export function formatPreferredTime(value?: string | null) {
   if (!value) {
-    return "Р’СЂРµРјСЏ РЅРµ СѓРєР°Р·Р°РЅРѕ";
+    return "Время не указано";
   }
 
   const parsed = new Date(value);
@@ -27,10 +27,10 @@ export function formatPreferredTime(value?: string | null) {
 export function formatApplicationGender(value?: string | null) {
   switch (value?.trim().toLowerCase()) {
     case "male":
-      return "РњСѓР¶СЃРєРѕР№";
+      return "Мужской";
     case "female":
-      return "Р–РµРЅСЃРєРёР№";
+      return "Женский";
     default:
-      return "РџРѕР» РЅРµ СѓРєР°Р·Р°РЅ";
+      return "Пол не указан";
   }
 }

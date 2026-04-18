@@ -67,7 +67,7 @@ export function BookingSuccessState({
         onClick={onResetSuccess}
         className="rounded-xl border-sage-light/30 bg-white hover:bg-sage-light/10"
       >
-        Отправить еще одну заявку
+        Отправить ещё одну заявку
       </Button>
     </div>
   );

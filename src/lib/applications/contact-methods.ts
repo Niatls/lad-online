@@ -1,7 +1,7 @@
 export const applicationContactMethods = [
   {
     value: "site_chat",
-    label: "Р§Р°С‚ СЃР°Р№С‚Р°",
+    label: "Чат сайта",
     href: "#chat",
   },
   {

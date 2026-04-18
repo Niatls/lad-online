@@ -150,7 +150,9 @@ export function BookingDateTimeField({
               </span>
             </div>
 
-            {selectedDate && !isLoadingAvailability && availableTimes.length === 0 ? (
+            {selectedDate &&
+            !isLoadingAvailability &&
+            availableTimes.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-sage-light/30 bg-white/70 px-4 py-6 text-center text-sm text-forest/55">
                 На выбранную дату свободных слотов нет. Попробуйте другой день.
               </div>

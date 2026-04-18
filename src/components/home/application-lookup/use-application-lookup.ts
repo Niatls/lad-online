@@ -113,7 +113,9 @@ export function useApplicationLookup() {
       });
     } catch (lookupError) {
       setError(
-        lookupError instanceof Error ? lookupError.message : "Не удалось найти заявку"
+        lookupError instanceof Error
+          ? lookupError.message
+          : "Не удалось найти заявку"
       );
     } finally {
       setIsLoading(false);
