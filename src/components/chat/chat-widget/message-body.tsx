@@ -1,3 +1,4 @@
+import { ChatWidgetMessageMeta } from "@/components/chat/chat-widget/message-meta";
 import { ChatWidgetMessageReplyPreview } from "@/components/chat/chat-widget/message-reply-preview";
 import { resolveChatWidgetMessageState } from "@/components/chat/chat-widget/resolve-chat-widget-message-state";
 import type { Message } from "@/components/chat/chat-widget/types";
@@ -37,20 +38,18 @@ export function ChatWidgetMessageBody({
         />
       ) : null}
       {message.isDeleted ? (
-        <p className="italic opacity-70">Р В Р’В Р В Р вЂ№Р В Р’В Р РЋРІР‚СћР В Р’В Р РЋРІР‚СћР В Р’В Р вЂ™Р’В±Р В Р Р‹Р Р†Р вЂљР’В°Р В Р’В Р вЂ™Р’ВµР В Р’В Р В РІР‚В¦Р В Р’В Р РЋРівЂљВР В Р’В Р вЂ™Р’Вµ РЎС“Р Т‘Р В°Р В»Р ВµР Р…Р С•</p>
+        <p className="italic opacity-70">Р В Р’В Р вЂ™Р’В Р В Р’В Р В РІР‚в„–Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В Р Р‹Р Р†Р вЂљРЎС›Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’В±Р В Р’В Р В Р вЂ№Р В Р вЂ Р В РІР‚С™Р вЂ™Р’В°Р В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’ВµР В Р’В Р вЂ™Р’В Р В Р’В Р Р†Р вЂљР’В¦Р В Р’В Р вЂ™Р’В Р В Р Р‹Р С–РІР‚С™Р’ВР В Р’В Р вЂ™Р’В Р В РІР‚в„ўР вЂ™Р’Вµ Р ՌЋՌЎвЂњՌ Վ ՌўвЂՌ Վ Ռ’В°Ռ Վ Ռ’В»Ռ Վ Ռ’ВµՌ Վ Ռ вЂ¦Ռ Վ ՌЎвЂў</p>
       ) : voiceMessage ? (
         <VoiceMessagePlayer payload={voiceMessage} tone={isSystem ? "system" : isVisitor ? "visitor" : "admin"} />
       ) : (
         <p>{message.content}</p>
       )}
-      <div
-        className={`mt-1.5 text-[10px] font-medium ${
-          isSystem ? "text-forest/35" : isVisitor ? "text-white/40" : "text-forest/30"
-        }`}
-      >
-        {new Date(message.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-        {message.isEdited ? " Р’В· Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С•" : ""}
-      </div>
+
+      <ChatWidgetMessageMeta
+        isSystem={isSystem}
+        isVisitor={isVisitor}
+        message={message}
+      />
     </div>
   );
 }
