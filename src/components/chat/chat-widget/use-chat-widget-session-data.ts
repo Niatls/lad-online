@@ -1,12 +1,10 @@
-import { useEffect } from "react";
-
 import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-handle-open";
 import { useChatWidgetInitSession } from "@/components/chat/chat-widget/use-chat-widget-init-session";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
+import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/use-chat-widget-restore-visitor-name";
 import { useChatWidgetSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
-import { getStoredVisitorName } from "@/components/chat/chat-widget/utils";
 
 type UseChatWidgetSessionDataParams = {
   isOpen: boolean;
@@ -57,11 +55,10 @@ export function useChatWidgetSessionData({
     setActiveVoiceToken,
   });
 
-  useEffect(() => {
-    const storedName = getStoredVisitorName();
-    setVisitorName(storedName);
-    setPendingVisitorName(storedName);
-  }, [setPendingVisitorName, setVisitorName]);
+  useChatWidgetRestoreVisitorName({
+    setPendingVisitorName,
+    setVisitorName,
+  });
 
   const initSession = useChatWidgetInitSession({
     visitorName,
