@@ -64,7 +64,7 @@ export function ChatWidgetComposer({
   onSend,
 }: ChatWidgetComposerProps) {
   return (
-    <div className="relative shrink-0 bg-white p-4">
+    <div className="relative shrink-0 bg-white p-3 sm:p-4">
       <ChatWidgetComposerTopBanners
         activeVoiceToken={activeVoiceToken}
         availableVoiceInvite={availableVoiceInvite}
