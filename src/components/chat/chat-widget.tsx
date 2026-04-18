@@ -27,8 +27,13 @@ import {
   getChatMessagePreviewText,
   parseVoiceInviteToken,
 } from "@/lib/chat-message-format";
+import { cn } from "@/lib/utils";
 
-export function ChatWidget() {
+type ChatWidgetProps = {
+  nativeShell?: boolean;
+};
+
+export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -88,6 +93,15 @@ export function ChatWidget() {
     lastMsgIdRef,
     pollRef,
   });
+
+  useEffect(() => {
+    if (!nativeShell || isOpen) {
+      return;
+    }
+
+    setIsOpen(true);
+    handleOpen();
+  }, [handleOpen, isOpen, nativeShell]);
 
   useEffect(() => {
     scrollToBottom();
@@ -240,7 +254,7 @@ export function ChatWidget() {
 
   return (
     <>
-      {!isOpen ? (
+      {!isOpen && !nativeShell ? (
         <ChatWidgetLauncher
           hasUnread={hasUnread}
           onOpen={() => {
@@ -252,7 +266,12 @@ export function ChatWidget() {
 
       {isOpen && (
         <div
-          className="fixed bottom-6 right-6 z-50 flex h-[600px] max-h-[calc(100vh-96px)] w-[400px] max-w-[calc(100vw-48px)] flex-col overflow-hidden rounded-[2.5rem] border border-sage-light/20 bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 ease-out"
+          className={cn(
+            "fixed z-50 flex flex-col overflow-hidden bg-white",
+            nativeShell
+              ? "inset-0 h-[100dvh] w-screen rounded-none border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+              : "bottom-6 right-6 h-[600px] max-h-[calc(100vh-96px)] w-[400px] max-w-[calc(100vw-48px)] rounded-[2.5rem] border border-sage-light/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 ease-out",
+          )}
           onContextMenuCapture={(event) => {
             const target = event.target as HTMLElement;
             if (
@@ -295,7 +314,10 @@ export function ChatWidget() {
             </VoiceCallBoundary>
           ) : null}
 
-          <ChatWidgetHeader onClose={() => setIsOpen(false)} />
+          <ChatWidgetHeader
+            canClose={!nativeShell}
+            onClose={() => setIsOpen(false)}
+          />
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-[url('/bg-pattern.png')] bg-repeat bg-cream/10 px-6 py-6">
             {needsName ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 
 import { useAudioWaveform } from "@/components/chat/use-audio-waveform";
 import type { VoiceMessagePayload } from "@/lib/chat-message-format";
@@ -41,6 +41,7 @@ export function VoiceMessagePlayer({
     payload.durationMs ? payload.durationMs / 1000 : 0,
   );
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const levels = useAudioWaveform({
     barCount: 42,
     source: payload.url,
@@ -147,19 +148,43 @@ export function VoiceMessagePlayer({
             ))}
           </button>
 
-          <div className={`mt-1 flex items-center justify-between text-[11px] font-semibold ${metaClassName}`}>
+          <div className={`mt-1 flex items-center justify-between gap-3 text-[11px] font-semibold ${metaClassName}`}>
             <span className={labelClassName}>
               {formatDuration(currentTime)}
               {formatFileSize(payload.fileSize)
                 ? `, ${formatFileSize(payload.fileSize)}`
                 : ""}
             </span>
-            <span>{formatDuration(duration)}</span>
+            <span className="flex shrink-0 items-center gap-2">
+              {formatDuration(duration)}
+              {payload.transcript ? (
+                <button
+                  type="button"
+                  onClick={() => setIsTranscriptOpen((value) => !value)}
+                  className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold transition ${
+                    isVisitor
+                      ? "bg-white/12 text-white/85 hover:bg-white/20"
+                      : "bg-forest/5 text-forest/60 hover:bg-forest/10"
+                  }`}
+                  aria-expanded={isTranscriptOpen}
+                  aria-label={
+                    isTranscriptOpen ? "Скрыть расшифровку" : "Показать расшифровку"
+                  }
+                >
+                  Aa
+                  {isTranscriptOpen ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+              ) : null}
+            </span>
           </div>
         </div>
       </div>
 
-      {payload.transcript ? (
+      {payload.transcript && isTranscriptOpen ? (
         <p className={`text-xs font-medium leading-relaxed ${metaClassName}`}>
           {payload.transcript}
         </p>

@@ -50,10 +50,14 @@ export function useChatWidgetVoiceTranscription({
   voiceDraftExists,
 }: UseChatWidgetVoiceTranscriptionParams) {
   const finalTranscriptRef = useRef("");
+  const latestTranscriptRef = useRef("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     if (!isRecordingVoice) {
+      if (latestTranscriptRef.current) {
+        finalTranscriptRef.current = latestTranscriptRef.current;
+      }
       recognitionRef.current?.stop();
       recognitionRef.current = null;
       return;
@@ -66,9 +70,11 @@ export function useChatWidgetVoiceTranscription({
 
     if (!voiceDraftExists) {
       finalTranscriptRef.current = "";
+      latestTranscriptRef.current = "";
       setVoiceTranscript("");
     }
 
+    let active = true;
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -89,7 +95,9 @@ export function useChatWidgetVoiceTranscription({
         }
       }
 
-      setVoiceTranscript(`${finalTranscriptRef.current} ${interimTranscript}`.trim());
+      const nextTranscript = `${finalTranscriptRef.current} ${interimTranscript}`.trim();
+      latestTranscriptRef.current = nextTranscript;
+      setVoiceTranscript(nextTranscript);
     };
 
     recognition.onerror = () => {
@@ -97,7 +105,18 @@ export function useChatWidgetVoiceTranscription({
     };
 
     recognition.onend = () => {
+      if (latestTranscriptRef.current) {
+        finalTranscriptRef.current = latestTranscriptRef.current;
+      }
       recognitionRef.current = null;
+      if (active && isRecordingVoice) {
+        try {
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          recognitionRef.current = null;
+        }
+      }
     };
 
     try {
@@ -107,6 +126,10 @@ export function useChatWidgetVoiceTranscription({
     }
 
     return () => {
+      active = false;
+      if (latestTranscriptRef.current) {
+        finalTranscriptRef.current = latestTranscriptRef.current;
+      }
       recognition.onend = null;
       recognition.onerror = null;
       recognition.onresult = null;

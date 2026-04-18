@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, Pause, Play, Send, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Mic,
+  Pause,
+  Play,
+  Send,
+  Trash2,
+} from "lucide-react";
 
 import { useAudioWaveform } from "@/components/chat/use-audio-waveform";
 import type { VoiceDraft } from "@/components/chat/chat-widget/types";
@@ -71,6 +79,7 @@ export function ChatWidgetComposerVoicePanel({
   const [now, setNow] = useState(() => Date.now());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const [liveLevels, setLiveLevels] = useState<number[]>(() => getInitialBars());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useMemo(
@@ -152,6 +161,12 @@ export function ChatWidgetComposerVoicePanel({
   }, [isRecordingVoice, mediaStreamRef]);
 
   useEffect(() => {
+    if (isRecordingVoice || !voiceDraft) {
+      setIsTranscriptOpen(false);
+    }
+  }, [isRecordingVoice, voiceDraft]);
+
+  useEffect(() => {
     return () => {
       if (audioUrl) {
         URL.revokeObjectURL(audioUrl);
@@ -188,9 +203,6 @@ export function ChatWidgetComposerVoicePanel({
             <Send className="h-4 w-4" />
           </button>
         </div>
-        <p className="px-3 text-xs font-medium text-forest/45">
-          {voiceTranscript || "Распознаю речь..."}
-        </p>
       </div>
     );
   }
@@ -263,14 +275,35 @@ export function ChatWidgetComposerVoicePanel({
         </button>
       </div>
 
-      <div className="flex items-start justify-between gap-3 px-3 text-[11px] font-medium text-forest/55">
-        <span className="min-w-0 flex-1">
-          {voiceTranscript || "Голосовое сообщение"}
-        </span>
+      <div className="flex items-center justify-between gap-3 px-3 text-[11px] font-medium text-forest/55">
+        {voiceTranscript ? (
+          <button
+            type="button"
+            onClick={() => setIsTranscriptOpen((value) => !value)}
+            className="flex min-w-0 items-center gap-1 rounded-full text-forest/60 transition hover:text-forest"
+            aria-expanded={isTranscriptOpen}
+            aria-label={isTranscriptOpen ? "Скрыть расшифровку" : "Показать расшифровку"}
+          >
+            <span className="font-semibold">Aa</span>
+            {isTranscriptOpen ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+        ) : (
+          <span className="min-w-0 flex-1">Голосовое сообщение</span>
+        )}
         <span className="shrink-0">
           {formatDuration(currentTime * 1000)} / {formatDuration(voiceDraft.durationMs)}
         </span>
       </div>
+
+      {voiceTranscript && isTranscriptOpen ? (
+        <p className="px-3 text-xs font-medium leading-relaxed text-forest/70">
+          {voiceTranscript}
+        </p>
+      ) : null}
 
       <audio
         ref={audioRef}

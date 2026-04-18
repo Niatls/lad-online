@@ -1,10 +1,14 @@
 import { User, X } from "lucide-react";
 
 type ChatWidgetHeaderProps = {
+  canClose?: boolean;
   onClose: () => void;
 };
 
-export function ChatWidgetHeader({ onClose }: ChatWidgetHeaderProps) {
+export function ChatWidgetHeader({
+  canClose = true,
+  onClose,
+}: ChatWidgetHeaderProps) {
   return (
     <div className="relative shrink-0 select-none overflow-hidden bg-forest p-6 text-white">
       <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-sage-light/10 blur-3xl" />
@@ -25,13 +29,15 @@ export function ChatWidgetHeader({ onClose }: ChatWidgetHeaderProps) {
             </div>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          onContextMenu={(event) => event.preventDefault()}
-          className="rounded-2xl border border-white/10 bg-white/10 p-2 transition-all hover:bg-white/20"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        {canClose ? (
+          <button
+            onClick={onClose}
+            onContextMenu={(event) => event.preventDefault()}
+            className="rounded-2xl border border-white/10 bg-white/10 p-2 transition-all hover:bg-white/20"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        ) : null}
       </div>
     </div>
   );
