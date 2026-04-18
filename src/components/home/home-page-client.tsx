@@ -6,6 +6,7 @@ import { useLiveEditor } from "@/components/admin/live-editor-context";
 import { HomeHeader } from "@/components/home/home-header";
 import { HomeSectionsRenderer } from "@/components/home/home-sections-renderer";
 import { SiteFooter } from "@/components/home/site-footer";
+import { ScrollToTopButton } from "@/components/shared/scroll-to-top-button";
 import type { HomePageContent, ManagedContentPage } from "@/lib/content";
 
 import { useCopyContextMenu } from "./home-page/use-copy-context-menu";
@@ -83,6 +84,8 @@ export function HomePageClient({
         services={currentHomeContent.services}
         onScrollToSection={scrollToSection}
       />
+
+      <ScrollToTopButton />
 
       {copyContextMenu ? (
         <div

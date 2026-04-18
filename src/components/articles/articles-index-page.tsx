@@ -1,16 +1,54 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Leaf } from "lucide-react";
 
+import { HomeHeader } from "@/components/home/home-header";
+import { ScrollToTopButton } from "@/components/shared/scroll-to-top-button";
 import type { ManagedContentPage } from "@/lib/content";
+
+const articleNavLinks = [
+  { label: "О нас", target: "about" },
+  { label: "Как это работает", target: "process" },
+  { label: "Услуги", target: "services" },
+  { label: "Статьи", target: "articles" },
+  { label: "Цены", target: "pricing" },
+  { label: "Контакты", target: "contacts" },
+];
 
 type ArticlesIndexPageProps = {
   articles: ManagedContentPage[];
 };
 
 export function ArticlesIndexPage({ articles }: ArticlesIndexPageProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    onScroll();
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const handleScrollToSection = (id: string) => {
+    setMobileMenuOpen(false);
+    window.location.href = `/#${id}`;
+  };
+
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,_#f8f4ec_0%,_#ffffff_28%,_#f7f1e6_100%)]">
-      <section className="relative overflow-hidden pb-16 pt-16 sm:pb-20 sm:pt-24">
+      <HomeHeader
+        brandName="Лад"
+        mobileMenuOpen={mobileMenuOpen}
+        scrolled={scrolled}
+        navLinks={articleNavLinks}
+        onToggleMobileMenu={() => setMobileMenuOpen((current) => !current)}
+        onScrollToSection={handleScrollToSection}
+      />
+
+      <section className="relative overflow-hidden pb-16 pt-28 sm:pb-20 sm:pt-32">
         <div className="absolute inset-0">
           <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-sage-light/20 blur-3xl" />
           <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-cream-dark/30 blur-3xl" />
@@ -36,9 +74,8 @@ export function ArticlesIndexPage({ articles }: ArticlesIndexPageProps) {
               Полезные статьи и исследования
             </h1>
             <p className="max-w-3xl text-lg leading-8 text-forest/65">
-              Здесь собраны материалы, которые можно читать отдельно от главной
-              страницы: короткие выводы, полный текст и ссылки на исходные
-              публикации.
+              Здесь собраны материалы, которые можно читать отдельно от главной страницы:
+              короткие выводы, полный текст и ссылки на исходные публикации.
             </p>
           </div>
         </div>
@@ -101,6 +138,8 @@ export function ArticlesIndexPage({ articles }: ArticlesIndexPageProps) {
           ))}
         </div>
       </section>
+
+      <ScrollToTopButton />
     </main>
   );
 }

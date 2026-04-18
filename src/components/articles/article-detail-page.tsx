@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Leaf } from "lucide-react";
 
+import { ScrollToTopButton } from "@/components/shared/scroll-to-top-button";
 import type { ManagedContentPage } from "@/lib/content";
 
 import { RichMarkdown } from "./rich-markdown";
@@ -105,6 +106,8 @@ export function ArticleDetailPage({ article }: ArticleDetailPageProps) {
           </aside>
         </div>
       </section>
+
+      <ScrollToTopButton />
     </main>
   );
 }
