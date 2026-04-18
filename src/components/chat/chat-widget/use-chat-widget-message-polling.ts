@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 
-import { fetchChatWidgetMessages } from "@/components/chat/chat-widget/session-data-api";
+import { pollChatWidgetMessages } from "@/components/chat/chat-widget/poll-chat-widget-messages";
 import type { Message } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetMessagePollingParams = {
@@ -25,36 +25,15 @@ export function useChatWidgetMessagePolling({
   syncVoiceInvite,
 }: UseChatWidgetMessagePollingParams) {
   const pollMessages = useCallback(async () => {
-    if (!sessionId || !isOpen) {
-      return;
-    }
-
-    try {
-      const [newMessages] = await Promise.all([
-        fetchChatWidgetMessages(sessionId, lastMsgIdRef.current),
-        syncVoiceInvite(sessionId),
-      ]);
-      if (newMessages.length === 0) {
-        return;
-      }
-
-      setMessages((prev) => {
-        const existingIds = new Set(prev.map((message) => message.id));
-        const uniqueNew = newMessages.filter((message) => !existingIds.has(message.id));
-        if (uniqueNew.length === 0) {
-          return prev;
-        }
-
-        return [...prev, ...uniqueNew];
-      });
-      lastMsgIdRef.current = newMessages[newMessages.length - 1].id;
-      if (!isOpen && newMessages.some((message) => message.sender === "admin" || message.sender === "system")) {
-        setHasUnread(true);
-      }
-      scrollToBottom();
-    } catch {
-      // silent fail on polling
-    }
+    await pollChatWidgetMessages({
+      isOpen,
+      sessionId,
+      scrollToBottom,
+      lastMsgIdRef,
+      setMessages,
+      setHasUnread,
+      syncVoiceInvite,
+    });
   }, [isOpen, lastMsgIdRef, scrollToBottom, sessionId, setHasUnread, setMessages, syncVoiceInvite]);
 
   useEffect(() => {
