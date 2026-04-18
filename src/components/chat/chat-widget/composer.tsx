@@ -1,6 +1,4 @@
-import { ChatWidgetComposerFooter } from "@/components/chat/chat-widget/composer-footer";
-import { ChatWidgetComposerInputBar } from "@/components/chat/chat-widget/composer-input-bar";
-import { ChatWidgetComposerRecordingStatus } from "@/components/chat/chat-widget/composer-recording-status";
+import { ChatWidgetComposerBottomSection } from "@/components/chat/chat-widget/composer-bottom-section";
 import { ChatWidgetComposerTopBanners } from "@/components/chat/chat-widget/composer-top-banners";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 
@@ -72,28 +70,22 @@ export function ChatWidgetComposer({
         onJoinVoice={onJoinVoice}
       />
 
-      <ChatWidgetComposerInputBar
-        error={error}
-        sessionId={sessionId}
+      <ChatWidgetComposerBottomSection
         editingMessageId={editingMessageId}
+        error={error}
         input={input}
+        isRecordingVoice={isRecordingVoice}
         loading={loading}
         needsName={needsName}
+        recordingStartedAt={recordingStartedAt}
         sending={sending}
         sendingVoice={sendingVoice}
-        isRecordingVoice={isRecordingVoice}
+        sessionId={sessionId}
         onInputChange={onInputChange}
         onKeyDown={onKeyDown}
-        onToggleVoiceRecording={onToggleVoiceRecording}
         onSend={onSend}
+        onToggleVoiceRecording={onToggleVoiceRecording}
       />
-
-      <ChatWidgetComposerRecordingStatus
-        isRecordingVoice={isRecordingVoice}
-        recordingStartedAt={recordingStartedAt}
-      />
-
-      <ChatWidgetComposerFooter />
     </div>
   );
 }
