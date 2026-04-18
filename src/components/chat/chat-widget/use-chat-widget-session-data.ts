@@ -1,7 +1,7 @@
 import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-handle-open";
-import { useChatWidgetInitSession } from "@/components/chat/chat-widget/use-chat-widget-init-session";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
 import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/use-chat-widget-restore-visitor-name";
+import { useChatWidgetSessionInit } from "@/components/chat/chat-widget/use-chat-widget-session-init";
 import { useChatWidgetSessionSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
@@ -60,7 +60,7 @@ export function useChatWidgetSessionData({
     setVisitorName,
   });
 
-  const initSession = useChatWidgetInitSession({
+  const initSession = useChatWidgetSessionInit({
     visitorName,
     lastMsgIdRef,
     setError,
