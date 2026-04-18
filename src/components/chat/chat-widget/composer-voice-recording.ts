@@ -1,3 +1,4 @@
+import { attachChatWidgetVoiceStopHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-stop-handler";
 import { createChatWidgetVoiceRecorder } from "@/components/chat/chat-widget/create-chat-widget-voice-recorder";
 import { getSupportedRecorderMimeType } from "@/components/chat/chat-widget/utils";
 
@@ -26,7 +27,7 @@ export async function startChatWidgetVoiceRecording({
 }: StartChatWidgetVoiceRecordingParams) {
   const mimeType = getSupportedRecorderMimeType();
   if (mimeType === null) {
-    setError("Р“РѕР»РѕСЃРѕРІС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РЅРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ РІ СЌС‚РѕРј Р±СЂР°СѓР·РµСЂРµ.");
+    setError("Р вЂњР С•Р В»Р С•РЎРѓР С•Р Р†РЎвЂ№Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘РЎРЏ Р Р…Р Вµ Р С—Р С•Р Т‘Р Т‘Р ВµРЎР‚Р В¶Р С‘Р Р†Р В°РЎР‹РЎвЂљРЎРѓРЎРЏ Р Р† РЎРЊРЎвЂљР С•Р С Р В±РЎР‚Р В°РЎС“Р В·Р ВµРЎР‚Р Вµ.");
     return;
   }
 
@@ -47,34 +48,29 @@ export async function startChatWidgetVoiceRecording({
     };
 
     recorder.onerror = () => {
-      setError("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїРёСЃР°С‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ.");
+      setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С—Р С‘РЎРѓР В°РЎвЂљРЎРЉ Р С–Р С•Р В»Р С•РЎРѓР С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ.");
       setIsRecordingVoice(false);
       setRecordingStartedAt(null);
       recordingStartedAtRef.current = null;
       stopVoiceCapture();
     };
 
-    recorder.onstop = async () => {
-      const durationMs = Math.max(1000, Date.now() - (recordingStartedAtRef.current ?? Date.now()));
-      const blob = new Blob(voiceChunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
-      voiceChunksRef.current = [];
-      setRecordingStartedAt(null);
-      recordingStartedAtRef.current = null;
-      stopVoiceCapture();
-
-      if (blob.size === 0) {
-        setError("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р·Р°РїРёСЃСЊ.");
-        return;
-      }
-
-      await uploadVoiceMessage(blob, durationMs);
-    };
+    attachChatWidgetVoiceStopHandler({
+      mimeType,
+      recorder,
+      recordingStartedAtRef,
+      setError,
+      setRecordingStartedAt,
+      stopVoiceCapture,
+      uploadVoiceMessage,
+      voiceChunksRef,
+    });
 
     recorder.start();
     setIsRecordingVoice(true);
   } catch (err) {
     console.error("Failed to start voice recording:", err);
-    setError("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РґРѕСЃС‚СѓРї Рє РјРёРєСЂРѕС„РѕРЅСѓ.");
+    setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С—Р С•Р В»РЎС“РЎвЂЎР С‘РЎвЂљРЎРЉ Р Т‘Р С•РЎРѓРЎвЂљРЎС“Р С— Р С” Р СР С‘Р С”РЎР‚Р С•РЎвЂћР С•Р Р…РЎС“.");
     stopVoiceCapture();
   }
 }
