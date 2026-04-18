@@ -1,12 +1,7 @@
 import { createOptimisticChatWidgetMessage } from "@/components/chat/chat-widget/create-optimistic-chat-widget-message";
 import { editChatWidgetMessage } from "@/components/chat/chat-widget/edit-chat-widget-message";
+import { sendChatWidgetMessage } from "@/components/chat/chat-widget/send-chat-widget-message";
 import type { Message } from "@/components/chat/chat-widget/types";
-
-type SendChatWidgetMessageParams = {
-  content: string;
-  replyToId: number | null;
-  sessionId: number;
-};
 
 type UploadChatWidgetVoiceMessageParams = {
   blob: Blob;
@@ -15,25 +10,7 @@ type UploadChatWidgetVoiceMessageParams = {
   sessionId: number;
 };
 
-export { createOptimisticChatWidgetMessage, editChatWidgetMessage };
-
-export async function sendChatWidgetMessage({
-  content,
-  replyToId,
-  sessionId,
-}: SendChatWidgetMessageParams): Promise<Message> {
-  const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, sender: "visitor", replyToId }),
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to send");
-  }
-
-  return res.json();
-}
+export { createOptimisticChatWidgetMessage, editChatWidgetMessage, sendChatWidgetMessage };
 
 export async function uploadChatWidgetVoiceMessage({
   blob,
