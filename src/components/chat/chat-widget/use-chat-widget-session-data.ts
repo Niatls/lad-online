@@ -3,7 +3,7 @@ import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/u
 import { useChatWidgetSessionInit } from "@/components/chat/chat-widget/use-chat-widget-session-init";
 import { useChatWidgetSessionMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-session-message-polling";
 import { useChatWidgetSessionSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-sync-voice-invite";
-import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
+import { useChatWidgetSessionVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetSessionDataParams = {
@@ -81,7 +81,7 @@ export function useChatWidgetSessionData({
     syncVoiceInvite,
   });
 
-  useChatWidgetVoiceInvite({
+  useChatWidgetSessionVoiceInvite({
     isOpen,
     sessionId,
     activeVoiceToken,
