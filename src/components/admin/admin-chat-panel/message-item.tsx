@@ -1,6 +1,10 @@
 import { VoiceMessagePlayer } from "@/components/chat/voice-message-player";
 import type { Message } from "@/components/admin/admin-chat-panel/types";
-import { getChatMessagePreviewText, parseVoiceInviteToken, parseVoiceMessageContent } from "@/lib/chat-message-format";
+import {
+  getChatMessagePreviewText,
+  parseVoiceInviteToken,
+  parseVoiceMessageContent,
+} from "@/lib/chat-message-format";
 
 type AdminChatMessageItemProps = {
   message: Message;
@@ -50,7 +54,11 @@ export function AdminChatMessageItem({
         isSystem ? "justify-center" : isAdmin ? "justify-end" : "justify-start"
       }`}
     >
-      <div className={`flex flex-col ${isSystem ? "items-center" : isAdmin ? "items-end" : "items-start"} max-w-[70%]`}>
+      <div
+        className={`flex max-w-[70%] flex-col ${
+          isSystem ? "items-center" : isAdmin ? "items-end" : "items-start"
+        }`}
+      >
         <div
           onContextMenu={(event) => {
             if (!canSelect) {
@@ -68,18 +76,18 @@ export function AdminChatMessageItem({
               onToggleSelection(message.id);
             });
           }}
-          onMouseUp={onClearLongPress}
           onMouseLeave={onClearLongPress}
+          onMouseUp={onClearLongPress}
           className={`rounded-[1.75rem] px-5 py-4 text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${
             isSystem
-              ? "bg-cream text-forest border border-sage-light/20"
+              ? "border border-sage-light/20 bg-cream text-forest"
               : isAdmin
                 ? isSelected
-                  ? "bg-forest text-white rounded-br-none ring-2 ring-sage"
-                  : "bg-forest text-white rounded-br-none"
+                  ? "rounded-br-none bg-forest text-white ring-2 ring-sage"
+                  : "rounded-br-none bg-forest text-white"
                 : isSelected
-                  ? "bg-white text-forest border border-sage rounded-bl-none ring-2 ring-sage"
-                  : "bg-white text-forest border border-sage-light/20 rounded-bl-none"
+                  ? "rounded-bl-none border border-sage bg-white text-forest ring-2 ring-sage"
+                  : "rounded-bl-none border border-sage-light/20 bg-white text-forest"
           }`}
         >
           {message.replyTo ? (
@@ -98,24 +106,34 @@ export function AdminChatMessageItem({
                 {message.replyTo.sender === "admin"
                   ? "Вы"
                   : message.replyTo.sender === "visitor"
-                    ? (selectedSessionName || "Пользователь")
+                    ? selectedSessionName || "Пользователь"
                     : "Система"}
               </p>
               <p className="truncate">
-                {message.replyTo.isDeleted ? "Сообщение удалено" : getChatMessagePreviewText(message.replyTo.content) ?? "Системное сообщение"}
+                {message.replyTo.isDeleted
+                  ? "Сообщение удалено"
+                  : getChatMessagePreviewText(message.replyTo.content) ??
+                    "Системное сообщение"}
               </p>
             </button>
           ) : null}
           {message.isDeleted ? (
             <p className="italic opacity-70">Сообщение удалено</p>
           ) : voiceMessage ? (
-            <VoiceMessagePlayer payload={voiceMessage} tone={isAdmin ? "visitor" : "admin"} />
+            <VoiceMessagePlayer
+              payload={voiceMessage}
+              tone={isAdmin ? "admin" : "visitor"}
+            />
           ) : (
             <p>{message.content}</p>
           )}
         </div>
-        <div className={`mt-2 flex items-center gap-2 ${isAdmin ? "flex-row-reverse" : "flex-row"}`}>
-          <span className="text-[10px] font-bold text-forest/20 uppercase tracking-tighter">
+        <div
+          className={`mt-2 flex items-center gap-2 ${
+            isAdmin ? "flex-row-reverse" : "flex-row"
+          }`}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-tighter text-forest/20">
             {formatTime(message.createdAt)}
             {message.isEdited ? " · изменено" : ""}
           </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Waves } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 
 import { useAudioWaveform } from "@/components/chat/use-audio-waveform";
 import type { VoiceMessagePayload } from "@/lib/chat-message-format";
@@ -42,18 +42,23 @@ export function VoiceMessagePlayer({
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const levels = useAudioWaveform({
-    barCount: 32,
+    barCount: 36,
     source: payload.url,
   });
   const progress = duration > 0 ? currentTime / duration : 0;
   const isVisitor = tone === "visitor";
-  const subTextClassName = isVisitor ? "text-white/65" : "text-forest/45";
+  const isSystem = tone === "system";
+  const shellClassName = isVisitor
+    ? "bg-white/12"
+    : isSystem
+      ? "bg-forest/5"
+      : "bg-forest/6";
   const buttonClassName = isVisitor
     ? "bg-white text-forest hover:bg-white/90"
     : "bg-sage-dark text-white hover:bg-sage-dark/90";
-  const barIdleClassName = isVisitor ? "bg-white/28" : "bg-sage-light/35";
+  const barIdleClassName = isVisitor ? "bg-white/30" : "bg-sage-light/40";
   const barActiveClassName = isVisitor ? "bg-sage-light" : "bg-sage-dark";
-  const railClassName = isVisitor ? "bg-white/10" : "bg-forest/5";
+  const subTextClassName = isVisitor ? "text-white/72" : "text-forest/50";
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -86,16 +91,8 @@ export function VoiceMessagePlayer({
   }, [payload.durationMs]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Waves className="h-4 w-4 shrink-0" />
-        <p className="text-xs font-bold">Голосовое сообщение</p>
-        <span className={`text-[10px] font-medium ${subTextClassName}`}>
-          {formatDuration(duration || (payload.durationMs ?? 0) / 1000)}
-        </span>
-      </div>
-
-      <div className={`flex items-center gap-3 rounded-[1.15rem] px-3 py-2.5 ${railClassName}`}>
+    <div className={`rounded-[1.15rem] px-3 py-2.5 ${shellClassName}`}>
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={async () => {
@@ -125,7 +122,7 @@ export function VoiceMessagePlayer({
           <button
             ref={waveformRef}
             type="button"
-            className="flex h-10 w-full items-center gap-[3px]"
+            className="flex h-8 w-full items-center gap-[3px]"
             onClick={(event) => {
               const audio = audioRef.current;
               const waveform = waveformRef.current;
@@ -145,12 +142,12 @@ export function VoiceMessagePlayer({
             {levels.map((height, index) => (
               <span
                 key={`${height}-${index}`}
-                className={`block w-[4px] rounded-full transition-colors ${
+                className={`block w-[3px] rounded-full transition-colors ${
                   index / levels.length <= progress
                     ? barActiveClassName
                     : barIdleClassName
                 }`}
-                style={{ height }}
+                style={{ height: Math.max(6, height - 2) }}
               />
             ))}
           </button>
@@ -158,8 +155,13 @@ export function VoiceMessagePlayer({
           <div
             className={`mt-1 flex items-center justify-between text-[10px] font-medium ${subTextClassName}`}
           >
-            <span>{formatDuration(currentTime)}</span>
-            <span>{formatFileSize(payload.fileSize) ?? formatDuration(duration)}</span>
+            <span>
+              {formatDuration(currentTime)}
+              {formatFileSize(payload.fileSize)
+                ? `, ${formatFileSize(payload.fileSize)}`
+                : ""}
+            </span>
+            <span>{formatDuration(duration)}</span>
           </div>
         </div>
       </div>
