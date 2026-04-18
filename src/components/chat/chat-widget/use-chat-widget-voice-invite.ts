@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
+import { useChatWidgetExpireVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-expire-voice-invite";
 import { useChatWidgetRestoreVoiceToken } from "@/components/chat/chat-widget/use-chat-widget-restore-voice-token";
 import { useChatWidgetVoiceInviteCountdown } from "@/components/chat/chat-widget/use-chat-widget-voice-invite-countdown";
 import { useChatWidgetVoiceTokenStorage } from "@/components/chat/chat-widget/use-chat-widget-voice-token-storage";
@@ -44,18 +45,13 @@ export function useChatWidgetVoiceInvite({
     setVoiceCountdownNow,
   });
 
-  useEffect(() => {
-    if (!availableVoiceInvite) {
-      return;
-    }
-
-    if (new Date(availableVoiceInvite.expiresAt).getTime() <= voiceCountdownNow) {
-      setAvailableVoiceInvite(null);
-      if (activeVoiceToken === availableVoiceInvite.token) {
-        setActiveVoiceToken(null);
-      }
-    }
-  }, [activeVoiceToken, availableVoiceInvite, setActiveVoiceToken, setAvailableVoiceInvite, voiceCountdownNow]);
+  useChatWidgetExpireVoiceInvite({
+    activeVoiceToken,
+    availableVoiceInvite,
+    setAvailableVoiceInvite,
+    setActiveVoiceToken,
+    voiceCountdownNow,
+  });
 
   useEffect(() => {
     if (!sessionId || !isOpen || activeVoiceToken || !availableVoiceInvite) {
