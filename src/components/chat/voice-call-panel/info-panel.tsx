@@ -74,8 +74,7 @@ export function VoiceInfoPanel({
                 {usageLabel}
               </p>
               <p className="mt-1 text-[11px] text-forest/45">
-                {((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000
-                GB
+                {((usageBytes / MONTHLY_CAP_BYTES) * 100).toFixed(4)}% из 1000 GB
               </p>
             </div>
           </div>

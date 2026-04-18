@@ -18,7 +18,7 @@ export function ChatWidgetErrorState({ error, loading, onRetry }: ChatWidgetErro
         className="mx-auto flex items-center gap-2 rounded-xl bg-forest px-6 py-2 text-sm font-bold text-white shadow-lg transition-all hover:bg-forest/90 active:scale-95"
       >
         <Loader2 className={`h-3.5 w-3.5 animate-spin ${loading ? "block" : "hidden"}`} />
-        Р СџР С•Р С—РЎР‚Р С•Р В±Р С•Р Р†Р В°РЎвЂљРЎРЉ РЎРѓР Р…Р С•Р Р†Р В°
+        Попробовать снова
       </button>
     </div>
   );

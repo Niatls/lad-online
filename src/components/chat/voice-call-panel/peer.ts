@@ -96,7 +96,7 @@ export async function createVoicePeer({
 
   void postVoiceEvent(
     "peer-config",
-    relayOnly ? "РЎРѕР·РґР°РЅ peer СЃ relay-only СЂРµРєРѕРЅРЅРµРєС‚РѕРј" : "РЎРѕР·РґР°РЅ peer СЃРѕ СЃС‚Р°РЅРґР°СЂС‚РЅС‹Рј ICE РјР°СЂС€СЂСѓС‚РѕРј",
+    relayOnly ? "Создан peer с relay-only реконнектом" : "Создан peer со стандартным ICE маршрутом",
     {
       relayOnly,
       totalIceServers: iceServers.length,
@@ -145,11 +145,11 @@ export function createVoiceOfferSender({
     const offer = await pc.createOffer({ offerToReceiveAudio: true, iceRestart });
     await pc.setLocalDescription(offer);
     await postSignal("offer", offer);
-    setStatus(iceRestart ? "РџРµСЂРµРїРѕРґРєР»СЋС‡Р°РµРј СЃРїРµС†РёР°Р»РёСЃС‚Р°..." : "Р’С‹Р·С‹РІР°РµРј СЃРїРµС†РёР°Р»РёСЃС‚Р°...");
-    updateLastEvent(iceRestart ? "РћС‚РїСЂР°РІР»РµРЅ offer СЃ ICE restart" : "РћС‚РїСЂР°РІР»РµРЅ РЅРѕРІС‹Р№ offer", true);
+    setStatus(iceRestart ? "Переподключаем специалиста..." : "Вызываем специалиста...");
+    updateLastEvent(iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer", true);
     void postVoiceEvent(
       iceRestart ? "offer-restart" : "offer-created",
-      iceRestart ? "РћС‚РїСЂР°РІР»РµРЅ offer СЃ ICE restart" : "РћС‚РїСЂР°РІР»РµРЅ РЅРѕРІС‹Р№ offer",
+      iceRestart ? "Отправлен offer с ICE restart" : "Отправлен новый offer",
     );
   };
 }

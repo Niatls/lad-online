@@ -39,7 +39,7 @@ export function syncVoiceMediaSession({
   try {
     mediaSession.metadata = new MediaMetadata({
       title,
-      artist: role === "admin" ? "РџРѕСЃРµС‚РёС‚РµР»СЊ" : "РџРѕРґРґРµСЂР¶РєР° Р›Р°Рґ",
+      artist: role === "admin" ? "Посетитель" : "Поддержка Лад",
       album: "Voice Mode",
     });
   } catch {

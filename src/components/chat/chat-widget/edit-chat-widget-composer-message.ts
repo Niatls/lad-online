@@ -31,7 +31,7 @@ export async function editChatWidgetComposerMessage({
     setInput("");
   } catch (err) {
     console.error("Failed to edit:", err);
-    setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р С‘РЎвЂљРЎРЉ Р С‘Р В·Р СР ВµР Р…Р ВµР Р…Р С‘РЎРЏ.");
+    setError("Не удалось сохранить изменения.");
   } finally {
     setSending(false);
   }

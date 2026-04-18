@@ -3,7 +3,7 @@ import { createChatMessage, getChatMessages, updateChatMessage } from "@/lib/cha
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-// GET /api/chat/sessions/[id]/messages вЂ” poll for messages
+// GET /api/chat/sessions/[id]/messages - poll for messages
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
   }
 }
 
-// POST /api/chat/sessions/[id]/messages вЂ” send a message
+// POST /api/chat/sessions/[id]/messages - send a message
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;

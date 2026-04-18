@@ -64,14 +64,14 @@ export function attachVoicePeerEvents({
     }
 
     if (pc.connectionState === "connected") {
-      setStatus("РђСѓРґРёРѕРєР°РЅР°Р» РіРѕС‚РѕРІ. РџРѕРґРєР»СЋС‡Р°РµРј СЃРѕР±РµСЃРµРґРЅРёРєР°...");
+      setStatus("Аудиоканал готов. Подключаем собеседника...");
       if (callEstablishedRef.current) {
         resumeDurationTracking();
       }
       updateLastEvent("WebRTC connectionState: connected");
       void postVoiceEvent("connection-state", "WebRTC connectionState: connected");
     } else if (pc.connectionState === "connecting") {
-      setStatus("РЎРѕРµРґРёРЅСЏРµРј Р°СѓРґРёРѕРєР°РЅР°Р»...");
+      setStatus("Соединяем аудиоканал...");
       updateLastEvent("WebRTC connectionState: connecting");
     } else if (pc.connectionState === "failed") {
       pauseDurationTracking();
@@ -101,10 +101,10 @@ export function attachVoicePeerEvents({
       if (callEstablishedRef.current) {
         pauseDurationTracking();
       }
-      setStatus("РџСЂРѕРІРµСЂСЏРµРј РјР°СЂС€СЂСѓС‚ РґР»СЏ Р·РІРѕРЅРєР°...");
+      setStatus("Проверяем маршрут для звонка...");
       updateLastEvent("ICE: checking");
     } else if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-      setStatus("РњР°СЂС€СЂСѓС‚ РЅР°Р№РґРµРЅ. Р–РґС‘Рј Р°СѓРґРёРѕ...");
+      setStatus("Маршрут найден. Ждём аудио...");
       if (callEstablishedRef.current) {
         resumeDurationTracking();
       }

@@ -46,7 +46,7 @@ export async function sendChatWidgetComposerVisitorMessage({
     lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
   } catch (err) {
     console.error("Failed to send:", err);
-    setError("Р В РЎСљР В Р’Вµ Р РЋРЎвЂњР В РўвЂР В Р’В°Р В Р’В»Р В РЎвЂўР РЋР С“Р РЋР Р‰ Р В РЎвЂўР РЋРІР‚С™Р В РЎвЂ—Р ՌЋՌвЂљՌ Վ Ռ’В°Ռ Վ Ռ вЂ Ռ Վ ՌЎвЂՌ ՌЋՌІՌ‚Ս™Ռ ՌЋՌР‰ Ռ ՌЋՌС“Ռ Վ ՌЎвЂўՌ Վ ՌЎвЂўՌ Վ Ռ’В±Ռ ՌЋՌІՌ‚В°Ռ Վ Ռ’ВµՌ Վ Ռ вЂ¦Ռ Վ ՌЎвЂՌ Վ Ռ’Вµ.");
+    setError("Не удалось отправить сообщение. Проверьте соединение и попробуйте ещё раз.");
     setMessages((prev) => prev.filter((message) => message.id !== tempId));
     setInput(text);
     setReplyTarget(currentReplyTarget);
