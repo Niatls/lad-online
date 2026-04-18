@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 
 import { startChatWidgetVoiceRecording } from "@/components/chat/chat-widget/composer-voice-recording";
+import type { VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetToggleVoiceRecordingParams = {
+  existingVoiceDraft: VoiceDraft | null;
   needsName: boolean;
   sessionId: number | null;
   sendingVoice: boolean;
@@ -15,11 +17,12 @@ type UseChatWidgetToggleVoiceRecordingParams = {
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
+  setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
   stopVoiceCapture: () => void;
-  uploadVoiceMessage: (blob: Blob, durationMs: number) => Promise<void>;
 };
 
 export function useChatWidgetToggleVoiceRecording({
+  existingVoiceDraft,
   needsName,
   sessionId,
   sendingVoice,
@@ -32,8 +35,8 @@ export function useChatWidgetToggleVoiceRecording({
   setError,
   setIsRecordingVoice,
   setRecordingStartedAt,
+  setVoiceDraft,
   stopVoiceCapture,
-  uploadVoiceMessage,
 }: UseChatWidgetToggleVoiceRecordingParams) {
   return useCallback(async () => {
     if (!sessionId || needsName || sendingVoice || editingMessageId) {
@@ -42,23 +45,24 @@ export function useChatWidgetToggleVoiceRecording({
 
     if (isRecordingVoice) {
       mediaRecorderRef.current?.stop();
-      setIsRecordingVoice(false);
       return;
     }
 
     await startChatWidgetVoiceRecording({
+      existingVoiceDraft,
       mediaRecorderRef,
       mediaStreamRef,
       recordingStartedAtRef,
       setError,
       setIsRecordingVoice,
       setRecordingStartedAt,
+      setVoiceDraft,
       stopVoiceCapture,
-      uploadVoiceMessage,
       voiceChunksRef,
     });
   }, [
     editingMessageId,
+    existingVoiceDraft,
     isRecordingVoice,
     mediaRecorderRef,
     mediaStreamRef,
@@ -69,8 +73,8 @@ export function useChatWidgetToggleVoiceRecording({
     setError,
     setIsRecordingVoice,
     setRecordingStartedAt,
+    setVoiceDraft,
     stopVoiceCapture,
-    uploadVoiceMessage,
     voiceChunksRef,
   ]);
 }

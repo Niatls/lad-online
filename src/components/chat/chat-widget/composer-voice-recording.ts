@@ -3,29 +3,32 @@ import { attachChatWidgetVoiceErrorHandler } from "@/components/chat/chat-widget
 import { attachChatWidgetVoiceStopHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-stop-handler";
 import { createChatWidgetVoiceRecorder } from "@/components/chat/chat-widget/create-chat-widget-voice-recorder";
 import { initializeChatWidgetVoiceRecording } from "@/components/chat/chat-widget/initialize-chat-widget-voice-recording";
+import type { VoiceDraft } from "@/components/chat/chat-widget/types";
 import { getSupportedRecorderMimeType } from "@/components/chat/chat-widget/utils";
 
 type StartChatWidgetVoiceRecordingParams = {
+  existingVoiceDraft: VoiceDraft | null;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   mediaStreamRef: React.MutableRefObject<MediaStream | null>;
   recordingStartedAtRef: React.MutableRefObject<number | null>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
+  setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
   stopVoiceCapture: () => void;
-  uploadVoiceMessage: (blob: Blob, durationMs: number) => Promise<void>;
   voiceChunksRef: React.MutableRefObject<Blob[]>;
 };
 
 export async function startChatWidgetVoiceRecording({
+  existingVoiceDraft,
   mediaRecorderRef,
   mediaStreamRef,
   recordingStartedAtRef,
   setError,
   setIsRecordingVoice,
   setRecordingStartedAt,
+  setVoiceDraft,
   stopVoiceCapture,
-  uploadVoiceMessage,
   voiceChunksRef,
 }: StartChatWidgetVoiceRecordingParams) {
   const mimeType = getSupportedRecorderMimeType();
@@ -66,13 +69,15 @@ export async function startChatWidgetVoiceRecording({
     });
 
     attachChatWidgetVoiceStopHandler({
+      existingVoiceDraft,
       mimeType,
       recorder,
       recordingStartedAtRef,
       setError,
+      setIsRecordingVoice,
       setRecordingStartedAt,
+      setVoiceDraft,
       stopVoiceCapture,
-      uploadVoiceMessage,
       voiceChunksRef,
     });
 

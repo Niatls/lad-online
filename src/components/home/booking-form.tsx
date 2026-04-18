@@ -26,7 +26,19 @@ export function BookingForm({
   onSubmit,
 }: BookingFormProps) {
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form
+      onSubmit={onSubmit}
+      autoComplete="off"
+      className="space-y-6"
+      onContextMenuCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("input, textarea")) {
+          return;
+        }
+
+        event.preventDefault();
+      }}
+    >
       <NameField
         value={formData.name}
         onChange={(value) => onFieldChange("name", value)}

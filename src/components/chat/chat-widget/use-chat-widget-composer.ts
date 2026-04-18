@@ -1,8 +1,9 @@
 import { useChatWidgetComposerHandleSend } from "@/components/chat/chat-widget/use-chat-widget-composer-handle-send";
 import { useChatWidgetComposerToggleVoiceRecording } from "@/components/chat/chat-widget/use-chat-widget-composer-toggle-voice-recording";
-import type { Message } from "@/components/chat/chat-widget/types";
+import type { Message, VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetComposerParams = {
+  voiceDraft: VoiceDraft | null;
   needsName: boolean;
   sessionId: number | null;
   input: string;
@@ -20,6 +21,7 @@ type UseChatWidgetComposerParams = {
   setSendingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
+  setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
   lastMsgIdRef: React.MutableRefObject<number>;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   mediaStreamRef: React.MutableRefObject<MediaStream | null>;
@@ -28,6 +30,7 @@ type UseChatWidgetComposerParams = {
 };
 
 export function useChatWidgetComposer({
+  voiceDraft,
   needsName,
   sessionId,
   input,
@@ -45,13 +48,19 @@ export function useChatWidgetComposer({
   setSendingVoice,
   setIsRecordingVoice,
   setRecordingStartedAt,
+  setVoiceDraft,
   lastMsgIdRef,
   mediaRecorderRef,
   mediaStreamRef,
   recordingStartedAtRef,
   voiceChunksRef,
 }: UseChatWidgetComposerParams) {
-  const handleToggleVoiceRecording = useChatWidgetComposerToggleVoiceRecording({
+  const {
+    clearVoiceDraft,
+    handleSendVoiceDraft,
+    handleToggleVoiceRecording,
+  } = useChatWidgetComposerToggleVoiceRecording({
+    voiceDraft,
     needsName,
     sessionId,
     sendingVoice,
@@ -64,6 +73,7 @@ export function useChatWidgetComposer({
     setSendingVoice,
     setIsRecordingVoice,
     setRecordingStartedAt,
+    setVoiceDraft,
     lastMsgIdRef,
     mediaRecorderRef,
     mediaStreamRef,
@@ -87,7 +97,9 @@ export function useChatWidgetComposer({
   });
 
   return {
+    clearVoiceDraft,
     handleSend,
+    handleSendVoiceDraft,
     handleToggleVoiceRecording,
   };
 }

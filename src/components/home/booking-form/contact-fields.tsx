@@ -35,7 +35,11 @@ export function ContactFields({
         >
           Способ связи
         </Label>
-        <Select modal={false} value={contactMethod} onValueChange={onContactMethodChange}>
+        <Select
+          modal={false}
+          value={contactMethod}
+          onValueChange={onContactMethodChange}
+        >
           <SelectTrigger
             id="contactMethod"
             className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest focus:border-sage"
@@ -54,12 +58,15 @@ export function ContactFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm font-medium text-forest">
+          <Label htmlFor="booking-phone" className="text-sm font-medium text-forest">
             Телефон по желанию
           </Label>
           <Input
-            id="phone"
+            id="booking-phone"
+            name="booking_phone"
             type="tel"
+            autoComplete="off"
+            inputMode="tel"
             placeholder="+7 (___) ___-__-__"
             value={phone}
             onChange={(event) => onPhoneChange(event.target.value)}
@@ -68,13 +75,16 @@ export function ContactFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-forest">
+          <Label htmlFor="booking-email" className="text-sm font-medium text-forest">
             Email по желанию
           </Label>
           <Input
-            id="email"
+            id="booking-email"
+            name="booking_email"
             type="email"
-            placeholder="your@email.com"
+            autoComplete="off"
+            inputMode="email"
+            placeholder="you@example.com"
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
             className="h-12 select-text rounded-xl border-sage-light/30 bg-white px-4 text-forest placeholder:text-forest/30 focus:border-sage"

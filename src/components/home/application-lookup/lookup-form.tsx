@@ -38,18 +38,33 @@ export function LookupForm({
   resultNumber,
 }: LookupFormProps) {
   return (
-    <form onSubmit={onSubmit} className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]">
+    <form
+      onSubmit={onSubmit}
+      autoComplete="off"
+      className="mt-3 grid gap-2.5 sm:grid-cols-[1fr_auto]"
+      onContextMenuCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("input, textarea")) {
+          return;
+        }
+
+        event.preventDefault();
+      }}
+    >
       <Input
         aria-label="Код заявки"
+        name="lookup_code"
+        autoComplete="off"
         placeholder="LAD-NG6GDW-K05"
         value={applicationCode}
         onChange={(event) => onCodeChange(event.target.value)}
-        className="h-11 rounded-xl border-white/60 bg-white/70 select-text placeholder:text-forest/28"
+        className="h-11 select-text rounded-xl border-white/60 bg-white/70 placeholder:text-forest/28"
         required
       />
       <Button
         type="submit"
         disabled={isLoading}
+        onContextMenu={(event) => event.preventDefault()}
         className="h-11 rounded-xl bg-sage px-4 text-white hover:bg-sage-dark"
       >
         {isLoading ? (

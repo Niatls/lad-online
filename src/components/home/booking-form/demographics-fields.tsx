@@ -29,24 +29,30 @@ export function DemographicsFields({
           {genderOptions.map((option) => (
             <label
               key={option.value}
-              className="flex cursor-pointer items-center gap-3 rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm font-medium text-forest transition hover:border-sage"
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-sage-light/30 bg-white px-4 py-3 text-sm font-medium text-forest transition hover:border-sage"
             >
-              <RadioGroupItem value={option.value} id={option.value} />
-              <span>{option.label}</span>
+              <RadioGroupItem
+                value={option.value}
+                id={option.value}
+                className="-ml-1 mr-1"
+              />
+              <span className="min-w-0 text-center">{option.label}</span>
             </label>
           ))}
         </RadioGroup>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="age" className="text-sm font-medium text-forest">
+        <Label htmlFor="booking-age" className="text-sm font-medium text-forest">
           Возраст
         </Label>
         <Input
-          id="age"
+          id="booking-age"
+          name="booking_age"
           type="number"
           min={12}
           max={120}
+          autoComplete="off"
           placeholder="Например: 32"
           required
           value={age}

@@ -58,6 +58,7 @@ export function BookingDateTimeField({
             <Button
               type="button"
               variant="outline"
+              onContextMenu={(event) => event.preventDefault()}
               className="h-12 w-full justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest shadow-sm transition hover:bg-sage-light/10"
             >
               <CalendarDays className="mr-2 h-4 w-4 text-sage-dark" />
@@ -68,7 +69,8 @@ export function BookingDateTimeField({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-2 shadow-xl select-none"
+            onContextMenu={(event) => event.preventDefault()}
+            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] select-none rounded-2xl border-sage-light/30 bg-cream p-2 shadow-xl"
           >
             <Calendar
               locale={ru}
@@ -125,6 +127,7 @@ export function BookingDateTimeField({
               type="button"
               variant="outline"
               disabled={!selectedDate}
+              onContextMenu={(event) => event.preventDefault()}
               className="h-12 w-full justify-start rounded-xl border-sage-light/30 bg-white px-4 font-normal text-forest shadow-sm transition hover:bg-sage-light/10 disabled:cursor-not-allowed disabled:opacity-70"
             >
               <Clock3 className="mr-2 h-4 w-4 text-sage-dark" />
@@ -137,7 +140,8 @@ export function BookingDateTimeField({
           </PopoverTrigger>
           <PopoverContent
             align="end"
-            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] rounded-2xl border-sage-light/30 bg-cream p-3 shadow-xl select-none"
+            onContextMenu={(event) => event.preventDefault()}
+            className="w-[var(--radix-popover-trigger-width)] max-w-[var(--radix-popover-trigger-width)] select-none rounded-2xl border-sage-light/30 bg-cream p-3 shadow-xl"
           >
             <div className="mb-3 flex items-center justify-between px-1">
               <span className="text-xs font-semibold uppercase tracking-[0.22em] text-forest/40">

@@ -1,9 +1,10 @@
 import { useChatWidgetStopVoiceCapture } from "@/components/chat/chat-widget/use-chat-widget-stop-voice-capture";
 import { useChatWidgetToggleVoiceRecording } from "@/components/chat/chat-widget/use-chat-widget-toggle-voice-recording";
 import { useChatWidgetUploadVoiceMessage } from "@/components/chat/chat-widget/use-chat-widget-upload-voice-message";
-import type { Message } from "@/components/chat/chat-widget/types";
+import type { Message, VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetVoiceRecordingControlsParams = {
+  voiceDraft: VoiceDraft | null;
   needsName: boolean;
   sessionId: number | null;
   sendingVoice: boolean;
@@ -16,6 +17,7 @@ type UseChatWidgetVoiceRecordingControlsParams = {
   setSendingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
+  setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
   lastMsgIdRef: React.MutableRefObject<number>;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   mediaStreamRef: React.MutableRefObject<MediaStream | null>;
@@ -24,6 +26,7 @@ type UseChatWidgetVoiceRecordingControlsParams = {
 };
 
 export function useChatWidgetVoiceRecordingControls({
+  voiceDraft,
   needsName,
   sessionId,
   sendingVoice,
@@ -36,6 +39,7 @@ export function useChatWidgetVoiceRecordingControls({
   setSendingVoice,
   setIsRecordingVoice,
   setRecordingStartedAt,
+  setVoiceDraft,
   lastMsgIdRef,
   mediaRecorderRef,
   mediaStreamRef,
@@ -57,7 +61,8 @@ export function useChatWidgetVoiceRecordingControls({
     setSendingVoice,
   });
 
-  return useChatWidgetToggleVoiceRecording({
+  const handleToggleVoiceRecording = useChatWidgetToggleVoiceRecording({
+    existingVoiceDraft: voiceDraft,
     needsName,
     sessionId,
     sendingVoice,
@@ -70,7 +75,27 @@ export function useChatWidgetVoiceRecordingControls({
     setError,
     setIsRecordingVoice,
     setRecordingStartedAt,
+    setVoiceDraft,
     stopVoiceCapture,
-    uploadVoiceMessage,
   });
+
+  const handleSendVoiceDraft = async () => {
+    if (!voiceDraft || sendingVoice) {
+      return;
+    }
+
+    await uploadVoiceMessage(voiceDraft.blob, voiceDraft.durationMs);
+    setVoiceDraft(null);
+  };
+
+  const clearVoiceDraft = () => {
+    setVoiceDraft(null);
+    setError(null);
+  };
+
+  return {
+    clearVoiceDraft,
+    handleSendVoiceDraft,
+    handleToggleVoiceRecording,
+  };
 }

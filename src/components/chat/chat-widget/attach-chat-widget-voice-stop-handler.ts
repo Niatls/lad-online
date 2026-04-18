@@ -1,22 +1,28 @@
+import type { VoiceDraft } from "@/components/chat/chat-widget/types";
+
 type AttachChatWidgetVoiceStopHandlerParams = {
+  existingVoiceDraft: VoiceDraft | null;
   mimeType: string | null;
   recorder: MediaRecorder;
   recordingStartedAtRef: React.MutableRefObject<number | null>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
+  setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
   stopVoiceCapture: () => void;
-  uploadVoiceMessage: (blob: Blob, durationMs: number) => Promise<void>;
   voiceChunksRef: React.MutableRefObject<Blob[]>;
 };
 
 export function attachChatWidgetVoiceStopHandler({
+  existingVoiceDraft,
   mimeType,
   recorder,
   recordingStartedAtRef,
   setError,
+  setIsRecordingVoice,
   setRecordingStartedAt,
+  setVoiceDraft,
   stopVoiceCapture,
-  uploadVoiceMessage,
   voiceChunksRef,
 }: AttachChatWidgetVoiceStopHandlerParams) {
   recorder.onstop = async () => {
@@ -29,6 +35,7 @@ export function attachChatWidgetVoiceStopHandler({
     });
 
     voiceChunksRef.current = [];
+    setIsRecordingVoice(false);
     setRecordingStartedAt(null);
     recordingStartedAtRef.current = null;
     stopVoiceCapture();
@@ -38,6 +45,23 @@ export function attachChatWidgetVoiceStopHandler({
       return;
     }
 
-    await uploadVoiceMessage(blob, durationMs);
+    const nextMimeType =
+      recorder.mimeType || mimeType || existingVoiceDraft?.mimeType || "audio/webm";
+
+    setVoiceDraft(
+      existingVoiceDraft
+        ? {
+            blob: new Blob([existingVoiceDraft.blob, blob], {
+              type: nextMimeType,
+            }),
+            durationMs: existingVoiceDraft.durationMs + durationMs,
+            mimeType: nextMimeType,
+          }
+        : {
+            blob,
+            durationMs,
+            mimeType: nextMimeType,
+          }
+    );
   };
 }

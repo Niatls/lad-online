@@ -1,6 +1,6 @@
 import { ChatWidgetComposerBottomSection } from "@/components/chat/chat-widget/composer-bottom-section";
 import { ChatWidgetComposerTopBanners } from "@/components/chat/chat-widget/composer-top-banners";
-import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
+import type { Message, VoiceDraft, VoiceInvite } from "@/components/chat/chat-widget/types";
 
 type ChatWidgetComposerProps = {
   error: string | null;
@@ -17,13 +17,16 @@ type ChatWidgetComposerProps = {
   sendingVoice: boolean;
   isRecordingVoice: boolean;
   recordingStartedAt: number | null;
+  voiceDraft: VoiceDraft | null;
   getMessagePreview: (message: Message) => string;
   onDismissError: () => void;
   onJoinVoice: (token: string) => void;
   onClearReply: () => void;
+  onClearVoiceDraft: () => void;
   onCancelEditing: () => void;
   onInputChange: (value: string) => void;
   onKeyDown: (event: React.KeyboardEvent) => void;
+  onSendVoiceDraft: () => void;
   onToggleVoiceRecording: () => void;
   onSend: () => void;
 };
@@ -43,13 +46,16 @@ export function ChatWidgetComposer({
   sendingVoice,
   isRecordingVoice,
   recordingStartedAt,
+  voiceDraft,
   getMessagePreview,
   onDismissError,
   onJoinVoice,
   onClearReply,
+  onClearVoiceDraft,
   onCancelEditing,
   onInputChange,
   onKeyDown,
+  onSendVoiceDraft,
   onToggleVoiceRecording,
   onSend,
 }: ChatWidgetComposerProps) {
@@ -81,9 +87,12 @@ export function ChatWidgetComposer({
         sending={sending}
         sendingVoice={sendingVoice}
         sessionId={sessionId}
+        voiceDraft={voiceDraft}
+        onClearVoiceDraft={onClearVoiceDraft}
         onInputChange={onInputChange}
         onKeyDown={onKeyDown}
         onSend={onSend}
+        onSendVoiceDraft={onSendVoiceDraft}
         onToggleVoiceRecording={onToggleVoiceRecording}
       />
     </div>

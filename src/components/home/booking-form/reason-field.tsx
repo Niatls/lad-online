@@ -9,11 +9,13 @@ type ReasonFieldProps = {
 export function ReasonField({ value, onChange }: ReasonFieldProps) {
   return (
     <div className="space-y-2">
-      <Label htmlFor="reason" className="text-sm font-medium text-forest">
+      <Label htmlFor="booking-reason" className="text-sm font-medium text-forest">
         Описание проблемы
       </Label>
       <Textarea
-        id="reason"
+        id="booking-reason"
+        name="booking_reason"
+        autoComplete="off"
         placeholder="Можно кратко: что сейчас беспокоит?"
         required
         rows={4}
