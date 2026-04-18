@@ -1,7 +1,7 @@
 import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-handle-open";
-import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
 import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/use-chat-widget-restore-visitor-name";
 import { useChatWidgetSessionInit } from "@/components/chat/chat-widget/use-chat-widget-session-init";
+import { useChatWidgetSessionMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-session-message-polling";
 import { useChatWidgetSessionSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
@@ -70,7 +70,7 @@ export function useChatWidgetSessionData({
     syncVoiceInvite,
   });
 
-  useChatWidgetMessagePolling({
+  useChatWidgetSessionMessagePolling({
     isOpen,
     sessionId,
     scrollToBottom,
