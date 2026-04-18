@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
 import { useChatWidgetRestoreVoiceToken } from "@/components/chat/chat-widget/use-chat-widget-restore-voice-token";
+import { useChatWidgetVoiceInviteCountdown } from "@/components/chat/chat-widget/use-chat-widget-voice-invite-countdown";
 import { useChatWidgetVoiceTokenStorage } from "@/components/chat/chat-widget/use-chat-widget-voice-token-storage";
 
 type UseChatWidgetVoiceInviteParams = {
@@ -38,18 +39,10 @@ export function useChatWidgetVoiceInvite({
     setActiveVoiceToken,
   });
 
-  useEffect(() => {
-    if (!availableVoiceInvite) {
-      return;
-    }
-
-    setVoiceCountdownNow(Date.now());
-    const interval = setInterval(() => {
-      setVoiceCountdownNow(Date.now());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [availableVoiceInvite, setVoiceCountdownNow]);
+  useChatWidgetVoiceInviteCountdown({
+    availableVoiceInvite,
+    setVoiceCountdownNow,
+  });
 
   useEffect(() => {
     if (!availableVoiceInvite) {
