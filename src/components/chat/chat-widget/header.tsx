@@ -23,11 +23,11 @@ export function ChatWidgetHeader({
           </div>
           <div>
             <h3 className="text-base font-bold tracking-tight sm:text-lg">
-              РџРѕРґРґРµСЂР¶РєР° Р›Р°Рґ
+              {"\u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u041b\u0430\u0434"}
             </h3>
             <div className="flex items-center gap-1.5 text-[11px] text-white/70 sm:text-xs">
               <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
-              РћРЅР»Р°Р№РЅ
+              {"\u041e\u043d\u043b\u0430\u0439\u043d"}
             </div>
           </div>
         </div>

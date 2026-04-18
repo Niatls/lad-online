@@ -113,11 +113,18 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousOverscroll =
+      document.documentElement.style.overscrollBehavior;
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = previousOverscroll;
+      document.body.style.overflow = previousBodyOverflow;
     };
   }, [isOpen, nativeShell]);
 
@@ -129,9 +136,14 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
     const updateVisualHeight = () => {
       const visualViewport = window.visualViewport;
       const height = visualViewport?.height ?? window.innerHeight;
+      const top = visualViewport?.offsetTop ?? 0;
       document.documentElement.style.setProperty(
         "--chat-visual-height",
         `${Math.round(height)}px`,
+      );
+      document.documentElement.style.setProperty(
+        "--chat-visual-top",
+        `${Math.round(top)}px`,
       );
     };
 
@@ -145,6 +157,7 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
       window.visualViewport?.removeEventListener("scroll", updateVisualHeight);
       window.removeEventListener("resize", updateVisualHeight);
       document.documentElement.style.removeProperty("--chat-visual-height");
+      document.documentElement.style.removeProperty("--chat-visual-top");
     };
   }, [isOpen]);
 
@@ -314,8 +327,8 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
           className={cn(
             "fixed z-50 flex flex-col overflow-hidden bg-white",
             nativeShell
-              ? "inset-0 h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 pt-[env(safe-area-inset-top)]"
-              : "inset-0 h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 shadow-none sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:max-h-[calc(100vh-96px)] sm:w-[400px] sm:max-w-[calc(100vw-48px)] sm:rounded-[2.5rem] sm:border sm:border-sage-light/20 sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] sm:animate-in sm:zoom-in-95 sm:slide-in-from-bottom-8 sm:duration-500 sm:ease-out",
+              ? "left-0 right-0 top-[var(--chat-visual-top,0px)] h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 pt-[env(safe-area-inset-top)]"
+              : "left-0 right-0 top-[var(--chat-visual-top,0px)] h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 shadow-none sm:left-auto sm:right-6 sm:top-auto sm:bottom-6 sm:h-[600px] sm:max-h-[calc(100vh-96px)] sm:w-[400px] sm:max-w-[calc(100vw-48px)] sm:rounded-[2.5rem] sm:border sm:border-sage-light/20 sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] sm:animate-in sm:zoom-in-95 sm:slide-in-from-bottom-8 sm:duration-500 sm:ease-out",
           )}
           onContextMenuCapture={(event) => {
             const target = event.target as HTMLElement;
