@@ -1,3 +1,4 @@
+import { attachChatWidgetVoiceErrorHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-error-handler";
 import { attachChatWidgetVoiceStopHandler } from "@/components/chat/chat-widget/attach-chat-widget-voice-stop-handler";
 import { createChatWidgetVoiceRecorder } from "@/components/chat/chat-widget/create-chat-widget-voice-recorder";
 import { getSupportedRecorderMimeType } from "@/components/chat/chat-widget/utils";
@@ -27,7 +28,7 @@ export async function startChatWidgetVoiceRecording({
 }: StartChatWidgetVoiceRecordingParams) {
   const mimeType = getSupportedRecorderMimeType();
   if (mimeType === null) {
-    setError("Р вЂњР С•Р В»Р С•РЎРѓР С•Р Р†РЎвЂ№Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘РЎРЏ Р Р…Р Вµ Р С—Р С•Р Т‘Р Т‘Р ВµРЎР‚Р В¶Р С‘Р Р†Р В°РЎР‹РЎвЂљРЎРѓРЎРЏ Р Р† РЎРЊРЎвЂљР С•Р С Р В±РЎР‚Р В°РЎС“Р В·Р ВµРЎР‚Р Вµ.");
+    setError("Р В РІР‚СљР В РЎвЂўР В Р’В»Р В РЎвЂўР РЋР С“Р В РЎвЂўР В Р вЂ Р РЋРІР‚в„–Р В Р’Вµ Р РЋР С“Р В РЎвЂўР В РЎвЂўР В Р’В±Р РЋРІР‚В°Р В Р’ВµР В Р вЂ¦Р В РЎвЂР РЋР РЏ Р В Р вЂ¦Р В Р’Вµ Р В РЎвЂ”Р В РЎвЂўР В РўвЂР В РўвЂР В Р’ВµР РЋР вЂљР В Р’В¶Р В РЎвЂР В Р вЂ Р В Р’В°Р РЋР вЂ№Р РЋРІР‚С™Р РЋР С“Р РЋР РЏ Р В Р вЂ  Ռ РЋР РЉР РЋРІР‚С™Р В РЎвЂўР В РЎВ Ռ В Р’В±Р РЋР вЂљР В Р’В°Р РЋРЎвЂњР В Р’В·Р В Р’ВµР РЋР вЂљР В Р’Вµ.");
     return;
   }
 
@@ -47,13 +48,14 @@ export async function startChatWidgetVoiceRecording({
       }
     };
 
-    recorder.onerror = () => {
-      setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р В·Р В°Р С—Р С‘РЎРѓР В°РЎвЂљРЎРЉ Р С–Р С•Р В»Р С•РЎРѓР С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ.");
-      setIsRecordingVoice(false);
-      setRecordingStartedAt(null);
-      recordingStartedAtRef.current = null;
-      stopVoiceCapture();
-    };
+    attachChatWidgetVoiceErrorHandler({
+      recorder,
+      recordingStartedAtRef,
+      setError,
+      setIsRecordingVoice,
+      setRecordingStartedAt,
+      stopVoiceCapture,
+    });
 
     attachChatWidgetVoiceStopHandler({
       mimeType,
@@ -70,7 +72,7 @@ export async function startChatWidgetVoiceRecording({
     setIsRecordingVoice(true);
   } catch (err) {
     console.error("Failed to start voice recording:", err);
-    setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С—Р С•Р В»РЎС“РЎвЂЎР С‘РЎвЂљРЎРЉ Р Т‘Р С•РЎРѓРЎвЂљРЎС“Р С— Р С” Р СР С‘Р С”РЎР‚Р С•РЎвЂћР С•Р Р…РЎС“.");
+    setError("Р В РЎСљР В Р’Вµ Ռ ՌЋРЎвЂњР Վ ՌўвЂР Վ Ռ’В°Р Վ Ռ’В»Р Վ ՌЎвЂўР ՌЋՌС“Ռ ՌЋՌР‰ Ռ Վ ՌЎвЂ”Ռ Վ ՌЎвЂўՌ Վ Ռ’В»Ռ ՌЋՌЎвЂњՌ ՌЋՌІР‚ՌЋՌ Վ ՌЎвЂՌ ՌЋՌІՌ‚Ս™Ռ ՌЋՌР‰ Ռ Վ ՌўвЂՌ Վ ՌЎвЂўՌ ՌЋՌС“Ռ ՌЋՌІՌ‚Ս™Ռ ՌЋՌЎвЂњՌ Վ ՌЎвЂ” Ռ Վ ՌЎвЂќ Ռ Վ ՌЎВՌ Վ ՌЎвЂՌ Վ ՌЎвЂќՌ ՌЋՌвЂљՌ Վ ՌЎвЂўՌ ՌЋՌІՌ‚Ս›Ռ Վ ՌЎвЂўՌ Վ Ռ вЂ¦Ռ ՌЋՌЎвЂњ.");
     stopVoiceCapture();
   }
 }
