@@ -2,7 +2,7 @@ import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-
 import { useChatWidgetInitSession } from "@/components/chat/chat-widget/use-chat-widget-init-session";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
 import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/use-chat-widget-restore-visitor-name";
-import { useChatWidgetSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-sync-voice-invite";
+import { useChatWidgetSessionSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-sync-voice-invite";
 import { useChatWidgetVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-voice-invite";
 import type { Message, VoiceInvite } from "@/components/chat/chat-widget/types";
 
@@ -49,7 +49,7 @@ export function useChatWidgetSessionData({
   lastMsgIdRef,
   pollRef,
 }: UseChatWidgetSessionDataParams) {
-  const syncVoiceInvite = useChatWidgetSyncVoiceInvite({
+  const syncVoiceInvite = useChatWidgetSessionSyncVoiceInvite({
     activeVoiceToken,
     setAvailableVoiceInvite,
     setActiveVoiceToken,
