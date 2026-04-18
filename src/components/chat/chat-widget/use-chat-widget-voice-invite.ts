@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
 import { getVoiceSessionStorageKey } from "@/components/chat/chat-widget/utils";
+import { useChatWidgetVoiceTokenStorage } from "@/components/chat/chat-widget/use-chat-widget-voice-token-storage";
 
 type UseChatWidgetVoiceInviteParams = {
   isOpen: boolean;
@@ -26,19 +27,10 @@ export function useChatWidgetVoiceInvite({
   setVoiceCountdownNow,
   syncVoiceInvite,
 }: UseChatWidgetVoiceInviteParams) {
-  useEffect(() => {
-    if (typeof window === "undefined" || !sessionId) {
-      return;
-    }
-
-    const storageKey = getVoiceSessionStorageKey(sessionId);
-    if (activeVoiceToken) {
-      sessionStorage.setItem(storageKey, activeVoiceToken);
-      return;
-    }
-
-    sessionStorage.removeItem(storageKey);
-  }, [activeVoiceToken, sessionId]);
+  useChatWidgetVoiceTokenStorage({
+    activeVoiceToken,
+    sessionId,
+  });
 
   useEffect(() => {
     if (!availableVoiceInvite) {
