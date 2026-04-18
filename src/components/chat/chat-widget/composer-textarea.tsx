@@ -1,4 +1,5 @@
 import { useCustomPasteContextMenu } from "@/components/ui/use-custom-paste-context-menu";
+import { useExtensionOverlaySuppressor } from "@/components/ui/use-extension-overlay-suppressor";
 
 type ChatWidgetComposerTextareaProps = {
   error: string | null;
@@ -20,6 +21,7 @@ export function ChatWidgetComposerTextarea({
   onKeyDown,
 }: ChatWidgetComposerTextareaProps) {
   const { handleContextMenu, menu } = useCustomPasteContextMenu();
+  const { handleBlur, handleFocus } = useExtensionOverlaySuppressor();
 
   return (
     <>
@@ -37,7 +39,9 @@ export function ChatWidgetComposerTextarea({
         data-translation-ignore="true"
         data-translation-proxy="none"
         lang="zxx"
+        onBlur={handleBlur}
         onChange={(event) => onInputChange(event.target.value)}
+        onFocus={handleFocus}
         onKeyDown={onKeyDown}
         onContextMenu={handleContextMenu}
         translate="no"

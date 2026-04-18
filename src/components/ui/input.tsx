@@ -1,11 +1,13 @@
 import * as React from "react"
 
 import { useCustomPasteContextMenu } from "@/components/ui/use-custom-paste-context-menu"
+import { useExtensionOverlaySuppressor } from "@/components/ui/use-extension-overlay-suppressor"
 import { cn } from "@/lib/utils"
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ autoComplete, className, onContextMenu, spellCheck, type, ...props }, ref) => {
     const { handleContextMenu, menu } = useCustomPasteContextMenu()
+    const { handleBlur, handleFocus } = useExtensionOverlaySuppressor()
 
     return (
       <>
@@ -24,6 +26,8 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           data-translation-proxy="none"
           autoComplete={autoComplete ?? (type === "password" ? "current-password" : "off")}
           lang="zxx"
+          onBlur={handleBlur}
+          onFocus={handleFocus}
           spellCheck={spellCheck ?? false}
           translate="no"
           className={cn(

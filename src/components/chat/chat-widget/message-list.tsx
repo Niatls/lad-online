@@ -4,6 +4,7 @@ import { ChatWidgetMessageItem } from "@/components/chat/chat-widget/message-ite
 type ChatWidgetMessageListProps = {
   messages: Message[];
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  onDelete: (message: Message) => void;
   onJumpToMessage: (messageId: number) => void;
   onReply: (message: Message) => void;
   onEdit: (message: Message) => void;
@@ -13,6 +14,7 @@ type ChatWidgetMessageListProps = {
 export function ChatWidgetMessageList({
   messages,
   messagesEndRef,
+  onDelete,
   onJumpToMessage,
   onReply,
   onEdit,
@@ -24,6 +26,7 @@ export function ChatWidgetMessageList({
         <ChatWidgetMessageItem
           key={message.id}
           message={message}
+          onDelete={onDelete}
           onJumpToMessage={onJumpToMessage}
           onReply={onReply}
           onEdit={onEdit}

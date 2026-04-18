@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { useCustomPasteContextMenu } from "@/components/ui/use-custom-paste-context-menu"
+import { useExtensionOverlaySuppressor } from "@/components/ui/use-extension-overlay-suppressor"
 import { cn } from "@/lib/utils"
 
 const Textarea = React.forwardRef<
@@ -8,6 +9,7 @@ const Textarea = React.forwardRef<
   React.ComponentProps<"textarea">
 >(({ className, onContextMenu, spellCheck, ...props }, ref) => {
   const { handleContextMenu, menu } = useCustomPasteContextMenu()
+  const { handleBlur, handleFocus } = useExtensionOverlaySuppressor()
 
   return (
     <>
@@ -25,6 +27,8 @@ const Textarea = React.forwardRef<
         data-translation-proxy="none"
         autoComplete="off"
         lang="zxx"
+        onBlur={handleBlur}
+        onFocus={handleFocus}
         spellCheck={spellCheck ?? false}
         translate="no"
         className={cn(

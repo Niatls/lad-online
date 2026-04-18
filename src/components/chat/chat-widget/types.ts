@@ -22,3 +22,9 @@ export type VoiceInvite = {
   status: string;
   expiresAt: string;
 };
+
+export type VoiceDraft = {
+  blob: Blob;
+  durationMs: number;
+  mimeType: string;
+};

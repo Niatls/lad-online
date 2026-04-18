@@ -22,27 +22,44 @@ function formatDuration(durationMs: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function VoiceBars({ animated }: { animated: boolean }) {
-  const bars = useMemo(
-    () => Array.from({ length: 40 }, (_, index) => 8 + ((index * 5) % 18)),
-    []
-  );
+function buildBars(seed: number) {
+  return Array.from({ length: 28 }, (_, index) => 8 + ((seed + index * 9) % 18));
+}
+
+type VoiceBarsProps = {
+  activeColor: string;
+  animated: boolean;
+  idleColor: string;
+  now: number;
+  progress?: number;
+};
+
+function VoiceBars({
+  activeColor,
+  animated,
+  idleColor,
+  now,
+  progress = 0,
+}: VoiceBarsProps) {
+  const bars = useMemo(() => buildBars(now % 23), [now]);
 
   return (
-    <div className="flex h-8 flex-1 items-center gap-[2px] overflow-hidden px-1">
-      {bars.map((height, index) => (
-        <span
-          key={`${height}-${index}`}
-          className={`block w-[3px] rounded-full bg-white/75 ${
-            animated ? "animate-pulse" : ""
-          }`}
-          style={{
-            height,
-            animationDelay: `${index * 0.025}s`,
-            opacity: animated ? 0.8 : 0.55,
-          }}
-        />
-      ))}
+    <div className="flex h-9 flex-1 items-center gap-[3px] overflow-hidden">
+      {bars.map((baseHeight, index) => {
+        const height = animated
+          ? Math.max(8, baseHeight + Math.round(Math.sin(now / 160 + index) * 5))
+          : baseHeight;
+
+        return (
+          <span
+            key={`${baseHeight}-${index}`}
+            className={`block w-[4px] rounded-full transition-all ${
+              index / bars.length <= progress ? activeColor : idleColor
+            }`}
+            style={{ height }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -58,20 +75,25 @@ export function ChatWidgetComposerVoicePanel({
 }: ChatWidgetComposerVoicePanelProps) {
   const [now, setNow] = useState(() => Date.now());
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useMemo(
     () => (voiceDraft ? URL.createObjectURL(voiceDraft.blob) : null),
-    [voiceDraft]
+    [voiceDraft],
   );
+  const draftProgress =
+    voiceDraft && voiceDraft.durationMs > 0
+      ? currentTime / (voiceDraft.durationMs / 1000)
+      : 0;
 
   useEffect(() => {
-    if (!isRecordingVoice) {
+    if (!isRecordingVoice && !voiceDraft) {
       return;
     }
 
-    const intervalId = window.setInterval(() => setNow(Date.now()), 250);
+    const intervalId = window.setInterval(() => setNow(Date.now()), 120);
     return () => window.clearInterval(intervalId);
-  }, [isRecordingVoice]);
+  }, [isRecordingVoice, voiceDraft]);
 
   useEffect(() => {
     return () => {
@@ -83,20 +105,23 @@ export function ChatWidgetComposerVoicePanel({
 
   if (isRecordingVoice) {
     return (
-      <div className="mb-3 flex items-center gap-3 rounded-[1.5rem] bg-slate-500 px-3 py-2 text-white shadow-[0_12px_30px_rgba(100,116,139,0.2)]">
+      <div className="mb-3 flex items-center gap-3 rounded-[1.6rem] bg-forest px-3.5 py-3 text-white shadow-[0_16px_36px_rgba(45,74,62,0.24)]">
         <button
           type="button"
           onClick={onToggleVoiceRecording}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red-500 transition hover:bg-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-red-500 transition hover:bg-white/90"
           aria-label="Остановить запись"
         >
           <span className="h-3.5 w-3.5 rounded-sm bg-current" />
         </button>
-        <VoiceBars animated />
-        <span className="min-w-[2.75rem] text-sm font-semibold tabular-nums">
-          {formatDuration(
-            recordingStartedAt ? now - recordingStartedAt : 0
-          )}
+        <VoiceBars
+          activeColor="bg-sage-light"
+          animated
+          idleColor="bg-white/30"
+          now={now}
+        />
+        <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-white/90">
+          {formatDuration(recordingStartedAt ? now - recordingStartedAt : 0)}
         </span>
       </div>
     );
@@ -107,12 +132,12 @@ export function ChatWidgetComposerVoicePanel({
   }
 
   return (
-    <div className="mb-3 rounded-[1.5rem] bg-slate-400/90 px-3 py-2 text-white shadow-[0_12px_30px_rgba(148,163,184,0.24)]">
+    <div className="mb-3 rounded-[1.6rem] border border-sage-light/25 bg-cream/80 px-3.5 py-3 text-forest shadow-[0_16px_36px_rgba(45,74,62,0.12)]">
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onToggleVoiceRecording}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red-400 transition hover:bg-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-sage-dark transition hover:bg-white/90"
           aria-label="Дополнить запись"
         >
           <Mic className="h-4 w-4" />
@@ -127,27 +152,31 @@ export function ChatWidgetComposerVoicePanel({
 
             if (isPlaying) {
               audio.pause();
-              setIsPlaying(false);
               return;
             }
 
             await audio.play();
-            setIsPlaying(true);
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 transition hover:bg-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-dark text-white transition hover:bg-sage-dark/90"
           aria-label={isPlaying ? "Пауза" : "Прослушать запись"}
         >
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
         </button>
-        <VoiceBars animated={false} />
-        <span className="min-w-[2.75rem] text-sm font-semibold tabular-nums">
+        <VoiceBars
+          activeColor="bg-sage-dark"
+          animated={false}
+          idleColor="bg-sage-light/35"
+          now={now}
+          progress={draftProgress}
+        />
+        <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-forest/80">
           {formatDuration(voiceDraft.durationMs)}
         </span>
         <button
           type="button"
           onClick={onSendVoiceDraft}
           disabled={sendingVoice}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-sage-dark transition hover:bg-white disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-dark text-white transition hover:bg-sage-dark/90 disabled:opacity-50"
           aria-label="Отправить запись"
         >
           <Send className="h-4 w-4" />
@@ -156,11 +185,18 @@ export function ChatWidgetComposerVoicePanel({
           type="button"
           onClick={onClearVoiceDraft}
           disabled={sendingVoice}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-forest/70 transition hover:bg-white/90 disabled:opacity-50"
           aria-label="Удалить запись"
         >
           <Trash2 className="h-4 w-4" />
         </button>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between px-1 text-[11px] font-medium text-forest/55">
+        <span>Голосовое сообщение</span>
+        <span>
+          {formatDuration(currentTime * 1000)} / {formatDuration(voiceDraft.durationMs)}
+        </span>
       </div>
 
       <audio
@@ -168,8 +204,13 @@ export function ChatWidgetComposerVoicePanel({
         preload="metadata"
         src={audioUrl}
         className="hidden"
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }}
         onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
       />
     </div>
   );

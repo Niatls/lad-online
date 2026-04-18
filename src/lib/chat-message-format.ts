@@ -16,11 +16,16 @@ export function buildVoiceInviteMessage(token: string) {
 }
 
 export function parseVoiceInviteToken(content: string) {
-  if (!content.startsWith(VOICE_TOKEN_PREFIX) || !content.endsWith(VOICE_TOKEN_SUFFIX)) {
+  if (
+    !content.startsWith(VOICE_TOKEN_PREFIX) ||
+    !content.endsWith(VOICE_TOKEN_SUFFIX)
+  ) {
     return null;
   }
 
-  const token = content.slice(VOICE_TOKEN_PREFIX.length, -VOICE_TOKEN_SUFFIX.length).trim();
+  const token = content
+    .slice(VOICE_TOKEN_PREFIX.length, -VOICE_TOKEN_SUFFIX.length)
+    .trim();
   return token || null;
 }
 
@@ -29,14 +34,24 @@ export function buildVoiceMessageContent(payload: VoiceMessagePayload) {
 }
 
 export function parseVoiceMessageContent(content: string): VoiceMessagePayload | null {
-  if (!content.startsWith(VOICE_MESSAGE_PREFIX) || !content.endsWith(VOICE_MESSAGE_SUFFIX)) {
+  if (
+    !content.startsWith(VOICE_MESSAGE_PREFIX) ||
+    !content.endsWith(VOICE_MESSAGE_SUFFIX)
+  ) {
     return null;
   }
 
   try {
-    const raw = content.slice(VOICE_MESSAGE_PREFIX.length, -VOICE_MESSAGE_SUFFIX.length).trim();
+    const raw = content
+      .slice(VOICE_MESSAGE_PREFIX.length, -VOICE_MESSAGE_SUFFIX.length)
+      .trim();
     const parsed = JSON.parse(raw) as VoiceMessagePayload;
-    if (!parsed || typeof parsed !== "object" || typeof parsed.url !== "string" || !parsed.url.trim()) {
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      typeof parsed.url !== "string" ||
+      !parsed.url.trim()
+    ) {
       return null;
     }
 

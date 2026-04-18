@@ -9,6 +9,7 @@ import {
   ChatWidgetNameStep,
 } from "@/components/chat/chat-widget/body-states";
 import { ChatWidgetComposer } from "@/components/chat/chat-widget/composer";
+import { deleteChatWidgetMessage } from "@/components/chat/chat-widget/delete-chat-widget-message";
 import { ChatWidgetHeader } from "@/components/chat/chat-widget/header";
 import { ChatWidgetLauncher } from "@/components/chat/chat-widget/launcher";
 import { ChatWidgetMessageList } from "@/components/chat/chat-widget/message-list";
@@ -40,7 +41,7 @@ export function ChatWidget() {
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [sendingVoice, setSendingVoice] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(
-    null
+    null,
   );
   const [voiceDraft, setVoiceDraft] = useState<VoiceDraft | null>(null);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
@@ -148,19 +149,19 @@ export function ChatWidget() {
       Math.floor(
         (new Date(availableVoiceInvite.expiresAt).getTime() -
           voiceCountdownNow) /
-          1000
-      )
+          1000,
+      ),
     );
     const minutes = Math.floor(seconds / 60);
     const remSeconds = seconds % 60;
     return `${String(minutes).padStart(2, "0")}:${String(remSeconds).padStart(
       2,
-      "0"
+      "0",
     )}`;
   }, [availableVoiceInvite, voiceCountdownNow]);
 
   const visibleMessages = messages.filter(
-    (message) => !parseVoiceInviteToken(message.content)
+    (message) => !parseVoiceInviteToken(message.content),
   );
 
   const jumpToMessage = useCallback((messageId: number) => {
@@ -184,6 +185,49 @@ export function ChatWidget() {
     return getChatMessagePreviewText(message.content) ?? "Системное сообщение";
   }, []);
 
+  const handleDeleteMessage = useCallback(
+    async (message: Message) => {
+      if (!sessionId || message.isDeleted) {
+        return;
+      }
+
+      try {
+        const result = await deleteChatWidgetMessage({
+          messageId: message.id,
+          sessionId,
+        });
+        const deletedAt = new Date().toISOString();
+
+        setMessages((prev) =>
+          prev.map((entry) =>
+            result.deletedIds.includes(entry.id)
+              ? {
+                  ...entry,
+                  content: "",
+                  deletedAt,
+                  deletedBy: "visitor",
+                  isDeleted: true,
+                }
+              : entry,
+          ),
+        );
+
+        if (editingMessageId === message.id) {
+          setEditingMessageId(null);
+          setInput("");
+        }
+
+        if (replyTarget?.id === message.id) {
+          setReplyTarget(null);
+        }
+      } catch (deleteError) {
+        console.error("Failed to delete chat message:", deleteError);
+        setError("Не удалось удалить сообщение.");
+      }
+    },
+    [editingMessageId, replyTarget, sessionId],
+  );
+
   return (
     <>
       {!isOpen ? (
@@ -203,7 +247,7 @@ export function ChatWidget() {
             const target = event.target as HTMLElement;
             if (
               target.closest(
-                "input, textarea, audio, [data-allow-native-context-menu='true']"
+                "input, textarea, audio, [data-allow-native-context-menu='true']",
               )
             ) {
               return;
@@ -269,6 +313,9 @@ export function ChatWidget() {
               <ChatWidgetMessageList
                 messages={visibleMessages}
                 messagesEndRef={messagesEndRef}
+                onDelete={(message) => {
+                  void handleDeleteMessage(message);
+                }}
                 onJumpToMessage={jumpToMessage}
                 onReply={(message) => {
                   setEditingMessageId(null);

@@ -61,9 +61,7 @@ export function useCustomPasteContextMenu() {
 
   const closeMenu = React.useCallback(() => {
     setMenuState((prev) =>
-      prev.open
-        ? { open: false, target: null, x: 0, y: 0 }
-        : prev
+      prev.open ? { open: false, target: null, x: 0, y: 0 } : prev,
     );
   }, []);
 
@@ -105,12 +103,13 @@ export function useCustomPasteContextMenu() {
         y,
       });
     },
-    []
+    [],
   );
 
   const menu = menuState.open
     ? createPortal(
         <div
+          data-custom-paste-menu-root="true"
           className="fixed z-[1000] overflow-hidden rounded-xl border border-sage-light/30 bg-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]"
           style={{ left: menuState.x, top: menuState.y }}
           onMouseDown={(event) => event.stopPropagation()}
@@ -131,7 +130,7 @@ export function useCustomPasteContextMenu() {
             Вставить
           </button>
         </div>,
-        document.body
+        document.body,
       )
     : null;
 

@@ -151,3 +151,13 @@
 .animation-delay-800 {
   animation-delay: 800ms;
 }
+
+body[data-hide-extension-overlays="true"] [id*="deepl"],
+body[data-hide-extension-overlays="true"] [class*="deepl"],
+body[data-hide-extension-overlays="true"] iframe[src*="cofdbpoegempjloogbagkncekinflcnj"],
+body[data-hide-extension-overlays="true"] iframe[src*="deepl"],
+body[data-hide-extension-overlays="true"] [data-extension-id*="cofdbpoegempjloogbagkncekinflcnj"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
