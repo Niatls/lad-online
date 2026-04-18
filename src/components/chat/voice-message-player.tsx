@@ -42,23 +42,18 @@ export function VoiceMessagePlayer({
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const levels = useAudioWaveform({
-    barCount: 36,
+    barCount: 42,
     source: payload.url,
   });
   const progress = duration > 0 ? currentTime / duration : 0;
   const isVisitor = tone === "visitor";
-  const isSystem = tone === "system";
-  const shellClassName = isVisitor
-    ? "bg-white/12"
-    : isSystem
-      ? "bg-forest/5"
-      : "bg-forest/6";
   const buttonClassName = isVisitor
     ? "bg-white text-forest hover:bg-white/90"
     : "bg-sage-dark text-white hover:bg-sage-dark/90";
-  const barIdleClassName = isVisitor ? "bg-white/30" : "bg-sage-light/40";
+  const barIdleClassName = isVisitor ? "bg-white/35" : "bg-sage-light/55";
   const barActiveClassName = isVisitor ? "bg-sage-light" : "bg-sage-dark";
-  const subTextClassName = isVisitor ? "text-white/72" : "text-forest/50";
+  const metaClassName = isVisitor ? "text-white/88" : "text-forest/72";
+  const labelClassName = isVisitor ? "text-white/92" : "text-forest/84";
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -91,7 +86,7 @@ export function VoiceMessagePlayer({
   }, [payload.durationMs]);
 
   return (
-    <div className={`rounded-[1.15rem] px-3 py-2.5 ${shellClassName}`}>
+    <div className="space-y-1.5">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -108,7 +103,7 @@ export function VoiceMessagePlayer({
 
             await audio.play();
           }}
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${buttonClassName}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${buttonClassName}`}
           aria-label={isPlaying ? "Пауза" : "Воспроизвести"}
         >
           {isPlaying ? (
@@ -122,7 +117,7 @@ export function VoiceMessagePlayer({
           <button
             ref={waveformRef}
             type="button"
-            className="flex h-8 w-full items-center gap-[3px]"
+            className="flex h-7 w-full items-center gap-[3px]"
             onClick={(event) => {
               const audio = audioRef.current;
               const waveform = waveformRef.current;
@@ -147,15 +142,13 @@ export function VoiceMessagePlayer({
                     ? barActiveClassName
                     : barIdleClassName
                 }`}
-                style={{ height: Math.max(6, height - 2) }}
+                style={{ height: Math.max(5, height - 3) }}
               />
             ))}
           </button>
 
-          <div
-            className={`mt-1 flex items-center justify-between text-[10px] font-medium ${subTextClassName}`}
-          >
-            <span>
+          <div className={`mt-1 flex items-center justify-between text-[11px] font-semibold ${metaClassName}`}>
+            <span className={labelClassName}>
               {formatDuration(currentTime)}
               {formatFileSize(payload.fileSize)
                 ? `, ${formatFileSize(payload.fileSize)}`
