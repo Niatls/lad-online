@@ -16,9 +16,9 @@ export type PageElement = {
   kind: ElementKind;
   content: string;
   target?: string;
-  colStart?: number; // 1-24, default 1
-  colSpan?: number;  // 1-24, default 24
-  rowSpan?: number;  // number of rows, default 1
+  colStart?: number;
+  colSpan?: number;
+  rowSpan?: number;
 };
 
 export type HomePageSection = {
@@ -37,9 +37,9 @@ export type HomePageSection = {
 
 const builtInSectionOrder: BuiltInHomeSectionKind[] = [
   "hero",
+  "about",
   "process",
   "services",
-  "about",
   "articles",
   "pricing",
   "booking",
@@ -47,9 +47,9 @@ const builtInSectionOrder: BuiltInHomeSectionKind[] = [
 
 const builtInSectionTitles: Record<BuiltInHomeSectionKind, string> = {
   hero: "Первый экран",
+  about: "О нас",
   process: "Как это работает",
   services: "Услуги",
-  about: "О нас",
   articles: "Статьи",
   pricing: "Цены",
   booking: "Запись",
@@ -68,7 +68,7 @@ export const defaultHomeSections: HomePageSection[] = builtInSectionOrder.map(
     ctaTarget: "",
     variant: "default",
     elements: [],
-  })
+  }),
 );
 
 export function getSectionDisplayTitle(section: HomePageSection) {
@@ -83,7 +83,7 @@ export function getSectionDisplayTitle(section: HomePageSection) {
 }
 
 export function createCustomHomeSection(
-  variant: HomeSectionVariant = "default"
+  variant: HomeSectionVariant = "default",
 ): HomePageSection {
   const suffix = Date.now().toString(36);
 
@@ -115,7 +115,7 @@ export function createCustomHomeSection(
 }
 
 function normalizeBuiltInSection(
-  section: Partial<HomePageSection> & { kind: BuiltInHomeSectionKind }
+  section: Partial<HomePageSection> & { kind: BuiltInHomeSectionKind },
 ): HomePageSection {
   return {
     id: section.kind,
@@ -133,7 +133,7 @@ function normalizeBuiltInSection(
 }
 
 function normalizeCustomSection(
-  section: Partial<HomePageSection>
+  section: Partial<HomePageSection>,
 ): HomePageSection | null {
   const id = typeof section.id === "string" ? section.id.trim() : "";
   const title = typeof section.title === "string" ? section.title.trim() : "";
@@ -164,7 +164,7 @@ function normalizeCustomSection(
 }
 
 function normalizeConstructorSection(
-  section: Partial<HomePageSection>
+  section: Partial<HomePageSection>,
 ): HomePageSection | null {
   const id = typeof section.id === "string" ? section.id.trim() : "";
   if (!id) return null;
@@ -186,8 +186,8 @@ function normalizeConstructorSection(
 
 export function normalizeHomeSections(value: unknown): HomePageSection[] {
   const sections = Array.isArray(value) ? value : [];
-  const result: HomePageSection[] = [];
-  const builtInKinds = new Set<BuiltInHomeSectionKind>();
+  const builtInMap = new Map<BuiltInHomeSectionKind, HomePageSection>();
+  const customSections: HomePageSection[] = [];
   const seenIds = new Set<string>();
 
   for (const item of sections) {
@@ -196,6 +196,7 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
     }
 
     const section = item as Partial<HomePageSection>;
+
     if (
       section.kind === "hero" ||
       section.kind === "process" ||
@@ -205,9 +206,13 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
       section.kind === "pricing" ||
       section.kind === "booking"
     ) {
-      if (!builtInKinds.has(section.kind)) {
-        result.push(normalizeBuiltInSection(section as Partial<HomePageSection> & { kind: BuiltInHomeSectionKind }));
-        builtInKinds.add(section.kind);
+      if (!builtInMap.has(section.kind)) {
+        builtInMap.set(
+          section.kind,
+          normalizeBuiltInSection(
+            section as Partial<HomePageSection> & { kind: BuiltInHomeSectionKind },
+          ),
+        );
       }
       continue;
     }
@@ -215,7 +220,7 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
     if (section.kind === "custom") {
       const normalized = normalizeCustomSection(section);
       if (normalized && !seenIds.has(normalized.id)) {
-        result.push(normalized);
+        customSections.push(normalized);
         seenIds.add(normalized.id);
       }
       continue;
@@ -224,18 +229,15 @@ export function normalizeHomeSections(value: unknown): HomePageSection[] {
     if (section.kind === "constructor") {
       const normalized = normalizeConstructorSection(section);
       if (normalized && !seenIds.has(normalized.id)) {
-        result.push(normalized);
+        customSections.push(normalized);
         seenIds.add(normalized.id);
       }
-      continue;
     }
   }
 
-  for (const kind of builtInSectionOrder) {
-    if (!builtInKinds.has(kind)) {
-      result.push(normalizeBuiltInSection({ kind }));
-    }
-  }
+  const orderedBuiltIns = builtInSectionOrder.map(
+    (kind) => builtInMap.get(kind) ?? normalizeBuiltInSection({ kind }),
+  );
 
-  return result;
+  return [...orderedBuiltIns, ...customSections];
 }

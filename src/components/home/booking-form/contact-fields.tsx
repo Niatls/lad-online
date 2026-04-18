@@ -35,7 +35,7 @@ export function ContactFields({
         >
           Способ связи
         </Label>
-        <Select value={contactMethod} onValueChange={onContactMethodChange}>
+        <Select modal={false} value={contactMethod} onValueChange={onContactMethodChange}>
           <SelectTrigger
             id="contactMethod"
             className="h-12 rounded-xl border-sage-light/30 bg-white px-4 text-forest focus:border-sage"

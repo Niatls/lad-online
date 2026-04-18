@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -28,7 +28,7 @@ export function HomeHeader({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-500 ${
         scrolled
           ? "border-b border-sage-light/20 bg-white/90 shadow-sm backdrop-blur-md"
           : "bg-transparent"
@@ -68,7 +68,7 @@ export function HomeHeader({
                 >
                   {link.label}
                 </button>
-              )
+              ),
             )}
             <Button
               onClick={() => onScrollToSection("booking")}
@@ -76,6 +76,14 @@ export function HomeHeader({
             >
               Записаться
               <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => onScrollToSection("lookup")}
+              className="ml-2 rounded-xl border-sage-light/40 bg-white/85 text-forest transition-all duration-300 hover:bg-sage-light/10"
+            >
+              Проверить запись
+              <Search className="ml-1 h-4 w-4" />
             </Button>
           </nav>
 
@@ -94,7 +102,7 @@ export function HomeHeader({
 
       <div
         className={`overflow-hidden transition-all duration-300 md:hidden ${
-          mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          mobileMenuOpen ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="space-y-1 border-t border-sage-light/20 bg-white/95 px-4 py-4 backdrop-blur-md">
@@ -115,13 +123,20 @@ export function HomeHeader({
               >
                 {link.label}
               </button>
-            )
+            ),
           )}
           <Button
             onClick={() => onScrollToSection("booking")}
             className="mt-2 w-full rounded-xl border-0 bg-gradient-to-r from-sage to-sage-dark text-white"
           >
-            Записаться на прием
+            Записаться на приём
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => onScrollToSection("lookup")}
+            className="w-full rounded-xl border-sage-light/40 bg-white text-forest"
+          >
+            Проверить запись
           </Button>
         </div>
       </div>

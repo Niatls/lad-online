@@ -155,7 +155,15 @@ export function ChatWidget() {
 
   return (
     <>
-      {!isOpen ? <ChatWidgetLauncher hasUnread={hasUnread} onOpen={handleOpen} /> : null}
+      {!isOpen ? (
+        <ChatWidgetLauncher
+          hasUnread={hasUnread}
+          onOpen={() => {
+            setIsOpen(true);
+            handleOpen();
+          }}
+        />
+      ) : null}
 
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50 flex flex-col w-[400px] max-w-[calc(100vw-48px)] h-[600px] max-h-[calc(100vh-96px)] rounded-[2.5rem] bg-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-sage-light/20 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 ease-out">
