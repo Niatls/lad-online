@@ -1,3 +1,4 @@
+import { createChatWidgetVoiceRecorder } from "@/components/chat/chat-widget/create-chat-widget-voice-recorder";
 import { getSupportedRecorderMimeType } from "@/components/chat/chat-widget/utils";
 
 type StartChatWidgetVoiceRecordingParams = {
@@ -30,8 +31,7 @@ export async function startChatWidgetVoiceRecording({
   }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+    const { recorder, stream } = await createChatWidgetVoiceRecorder({ mimeType });
     mediaStreamRef.current = stream;
     mediaRecorderRef.current = recorder;
     voiceChunksRef.current = [];
