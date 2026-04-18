@@ -1,4 +1,5 @@
 import { createOptimisticChatWidgetMessage } from "@/components/chat/chat-widget/create-optimistic-chat-widget-message";
+import { editChatWidgetMessage } from "@/components/chat/chat-widget/edit-chat-widget-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
 type SendChatWidgetMessageParams = {
@@ -14,25 +15,7 @@ type UploadChatWidgetVoiceMessageParams = {
   sessionId: number;
 };
 
-export async function editChatWidgetMessage(
-  sessionId: number,
-  messageId: number,
-  content: string,
-): Promise<Message> {
-  const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageId, content, sender: "visitor" }),
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to edit");
-  }
-
-  return res.json();
-}
-
-export { createOptimisticChatWidgetMessage };
+export { createOptimisticChatWidgetMessage, editChatWidgetMessage };
 
 export async function sendChatWidgetMessage({
   content,
