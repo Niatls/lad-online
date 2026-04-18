@@ -1,4 +1,3 @@
-import { ChatWidgetComposerFooter } from "@/components/chat/chat-widget/composer-footer";
 import { ChatWidgetComposerSendButton } from "@/components/chat/chat-widget/composer-send-button";
 import { ChatWidgetComposerTextarea } from "@/components/chat/chat-widget/composer-textarea";
 import { ChatWidgetComposerVoicePanel } from "@/components/chat/chat-widget/composer-voice-panel";
@@ -51,8 +50,7 @@ export function ChatWidgetComposerInputBar({
   const hasVoiceState = isRecordingVoice || Boolean(voiceDraft);
 
   return (
-    <>
-      <div className="rounded-[1.75rem] border border-sage-light/20 bg-cream/30 p-2 transition-all focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5">
+    <div className="rounded-[1.75rem] border border-sage-light/20 bg-cream/30 p-1.5 transition-all focus-within:border-forest/20 focus-within:ring-4 focus-within:ring-forest/5 sm:p-2">
         {hasVoiceState ? (
           <ChatWidgetComposerVoicePanel
             isRecordingVoice={isRecordingVoice}
@@ -98,9 +96,6 @@ export function ChatWidgetComposerInputBar({
             />
           </div>
         )}
-      </div>
-
-      <ChatWidgetComposerFooter />
-    </>
+    </div>
   );
 }

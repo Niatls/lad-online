@@ -10,22 +10,24 @@ export function ChatWidgetHeader({
   onClose,
 }: ChatWidgetHeaderProps) {
   return (
-    <div className="relative shrink-0 select-none overflow-hidden bg-forest p-6 text-white">
+    <div className="relative shrink-0 select-none overflow-hidden bg-forest px-4 py-3.5 text-white sm:p-6">
       <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-sage-light/10 blur-3xl" />
 
       <div className="relative flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="relative">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md">
-              <User className="h-6 w-6 text-white" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/20 bg-white/10 backdrop-blur-md sm:h-12 sm:w-12">
+              <User className="h-5 w-5 text-white sm:h-6 sm:w-6" />
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-forest bg-green-400" />
+            <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-forest bg-green-400 sm:h-3.5 sm:w-3.5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold tracking-tight">Поддержка Лад</h3>
-            <div className="flex items-center gap-1.5 text-xs text-white/70">
+            <h3 className="text-base font-bold tracking-tight sm:text-lg">
+              РџРѕРґРґРµСЂР¶РєР° Р›Р°Рґ
+            </h3>
+            <div className="flex items-center gap-1.5 text-[11px] text-white/70 sm:text-xs">
               <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
-              Онлайн
+              РћРЅР»Р°Р№РЅ
             </div>
           </div>
         </div>

@@ -122,6 +122,33 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
   }, [isOpen, nativeShell]);
 
   useEffect(() => {
+    if (!isOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const updateVisualHeight = () => {
+      const visualViewport = window.visualViewport;
+      const height = visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty(
+        "--chat-visual-height",
+        `${Math.round(height)}px`,
+      );
+    };
+
+    updateVisualHeight();
+    window.visualViewport?.addEventListener("resize", updateVisualHeight);
+    window.visualViewport?.addEventListener("scroll", updateVisualHeight);
+    window.addEventListener("resize", updateVisualHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", updateVisualHeight);
+      window.visualViewport?.removeEventListener("scroll", updateVisualHeight);
+      window.removeEventListener("resize", updateVisualHeight);
+      document.documentElement.style.removeProperty("--chat-visual-height");
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
@@ -287,8 +314,8 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
           className={cn(
             "fixed z-50 flex flex-col overflow-hidden bg-white",
             nativeShell
-              ? "inset-0 h-[100dvh] w-screen rounded-none border-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-              : "inset-0 h-[100dvh] w-screen rounded-none border-0 shadow-none sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:max-h-[calc(100vh-96px)] sm:w-[400px] sm:max-w-[calc(100vw-48px)] sm:rounded-[2.5rem] sm:border sm:border-sage-light/20 sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] sm:animate-in sm:zoom-in-95 sm:slide-in-from-bottom-8 sm:duration-500 sm:ease-out",
+              ? "inset-0 h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 pt-[env(safe-area-inset-top)]"
+              : "inset-0 h-[var(--chat-visual-height,100dvh)] w-screen rounded-none border-0 shadow-none sm:inset-auto sm:bottom-6 sm:right-6 sm:h-[600px] sm:max-h-[calc(100vh-96px)] sm:w-[400px] sm:max-w-[calc(100vw-48px)] sm:rounded-[2.5rem] sm:border sm:border-sage-light/20 sm:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] sm:animate-in sm:zoom-in-95 sm:slide-in-from-bottom-8 sm:duration-500 sm:ease-out",
           )}
           onContextMenuCapture={(event) => {
             const target = event.target as HTMLElement;
@@ -337,7 +364,7 @@ export function ChatWidget({ nativeShell = false }: ChatWidgetProps) {
             onClose={() => setIsOpen(false)}
           />
 
-          <div className="flex-1 space-y-4 overflow-y-auto bg-[url('/bg-pattern.png')] bg-repeat bg-cream/10 px-5 py-5 sm:px-6 sm:py-6">
+          <div className="flex-1 space-y-2.5 overflow-y-auto bg-[url('/bg-pattern.png')] bg-repeat bg-cream/10 px-4 py-3 sm:space-y-4 sm:px-6 sm:py-6">
             {needsName ? (
               <ChatWidgetNameStep
                 pendingVisitorName={pendingVisitorName}

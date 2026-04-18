@@ -19,7 +19,7 @@ export function ChatWidgetMessageReplyPreview({
     <button
       type="button"
       onClick={() => onJumpToMessage(replyTo.id)}
-      className={`mb-2 w-full rounded-2xl border px-3 py-2 text-left text-xs transition ${
+      className={`mb-1.5 w-full rounded-2xl border px-2.5 py-1.5 text-left text-xs leading-snug transition sm:mb-2 sm:px-3 sm:py-2 ${
         isSystem
           ? "border-forest/10 bg-white/60 text-forest/70"
           : isVisitor

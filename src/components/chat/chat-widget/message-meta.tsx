@@ -13,7 +13,7 @@ export function ChatWidgetMessageMeta({
 }: ChatWidgetMessageMetaProps) {
   return (
     <div
-      className={`mt-1.5 text-[10px] font-medium ${
+      className={`mt-1 text-[10px] font-medium sm:mt-1.5 ${
         isSystem
           ? "text-forest/35"
           : isVisitor

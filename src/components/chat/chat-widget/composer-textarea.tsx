@@ -52,7 +52,7 @@ export function ChatWidgetComposerTextarea({
         }
         disabled={needsName || (!sessionId && !loading)}
         rows={1}
-        className="notranslate max-h-[120px] flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest outline-none placeholder:text-forest/30 disabled:opacity-50"
+        className="notranslate max-h-[120px] flex-1 resize-none bg-transparent px-3 py-2.5 text-sm leading-snug text-forest outline-none placeholder:text-forest/30 disabled:opacity-50 sm:px-4 sm:py-3"
       />
       {menu}
     </>
