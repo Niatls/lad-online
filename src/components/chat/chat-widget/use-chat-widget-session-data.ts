@@ -1,5 +1,6 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
+import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-handle-open";
 import { useChatWidgetInitSession } from "@/components/chat/chat-widget/use-chat-widget-init-session";
 import { useChatWidgetMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-message-polling";
 import { useChatWidgetSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-sync-voice-invite";
@@ -95,12 +96,12 @@ export function useChatWidgetSessionData({
     syncVoiceInvite,
   });
 
-  const handleOpen = useCallback(() => {
-    setHasUnread(false);
-    if (!sessionId && visitorName.trim()) {
-      void initSession(visitorName);
-    }
-  }, [initSession, sessionId, setHasUnread, visitorName]);
+  const handleOpen = useChatWidgetHandleOpen({
+    visitorName,
+    sessionId,
+    setHasUnread,
+    initSession,
+  });
 
   return {
     syncVoiceInvite,
