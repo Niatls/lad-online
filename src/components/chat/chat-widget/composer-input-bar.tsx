@@ -1,4 +1,6 @@
-import { Loader2, Mic, Send, Square } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
+
+import { ChatWidgetComposerVoiceToggleButton } from "@/components/chat/chat-widget/composer-voice-toggle-button";
 
 type ChatWidgetComposerInputBarProps = {
   error: string | null;
@@ -37,24 +39,23 @@ export function ChatWidgetComposerInputBar({
         value={input}
         onChange={(event) => onInputChange(event.target.value)}
         onKeyDown={onKeyDown}
-        placeholder={error && !sessionId ? "Р§Р°С‚ РЅРµРґРѕСЃС‚СѓРїРµРЅ..." : "Р’Р°С€Рµ СЃРѕРѕР±С‰РµРЅРёРµ..."}
+        placeholder={error && !sessionId ? "Р В§Р В°РЎвЂљ Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…..." : "Р вЂ™Р В°РЎв‚¬Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ..."}
         disabled={needsName || (!sessionId && !loading)}
         rows={1}
         className="max-h-[120px] flex-1 resize-none bg-transparent px-4 py-3 text-sm text-forest outline-none placeholder:text-forest/30 disabled:opacity-50"
       />
-      <button
-        type="button"
-        onClick={onToggleVoiceRecording}
-        disabled={needsName || sending || sendingVoice || (!sessionId && !loading) || Boolean(editingMessageId)}
-        className={`mb-1 rounded-2xl p-3 shadow-lg transition-all active:scale-95 ${
-          isRecordingVoice
-            ? "bg-red-500 text-white shadow-red-500/20"
-            : "border border-sage-light/20 bg-white text-forest hover:bg-cream/60"
-        } disabled:cursor-not-allowed disabled:opacity-30`}
-        aria-label={isRecordingVoice ? "РћСЃС‚Р°РЅРѕРІРёС‚СЊ Р·Р°РїРёСЃСЊ" : "Р—Р°РїРёСЃР°С‚СЊ РіРѕР»РѕСЃРѕРІРѕРµ"}
-      >
-        {sendingVoice ? <Loader2 className="h-5 w-5 animate-spin" /> : isRecordingVoice ? <Square className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-      </button>
+
+      <ChatWidgetComposerVoiceToggleButton
+        editingMessageId={editingMessageId}
+        isRecordingVoice={isRecordingVoice}
+        loading={loading}
+        needsName={needsName}
+        sending={sending}
+        sendingVoice={sendingVoice}
+        sessionId={sessionId}
+        onToggleVoiceRecording={onToggleVoiceRecording}
+      />
+
       <button
         onClick={onSend}
         disabled={needsName || !input.trim() || sending || (!sessionId && !loading)}
