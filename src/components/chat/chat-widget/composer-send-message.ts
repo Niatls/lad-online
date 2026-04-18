@@ -1,8 +1,8 @@
 import {
   createOptimisticChatWidgetMessage,
-  editChatWidgetMessage,
   sendChatWidgetMessage,
 } from "@/components/chat/chat-widget/composer-message-api";
+import { editChatWidgetComposerMessage } from "@/components/chat/chat-widget/edit-chat-widget-composer-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
 type SendChatWidgetComposerMessageParams = {
@@ -36,18 +36,16 @@ export async function sendChatWidgetComposerMessage({
 
   const text = input.trim();
   if (editingMessageId) {
-    setSending(true);
-    try {
-      const updated = await editChatWidgetMessage(sessionId, editingMessageId, text);
-      setMessages((prev) => prev.map((message) => (message.id === editingMessageId ? updated : message)));
-      setEditingMessageId(null);
-      setInput("");
-    } catch (err) {
-      console.error("Failed to edit:", err);
-      setError("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ.");
-    } finally {
-      setSending(false);
-    }
+    await editChatWidgetComposerMessage({
+      editingMessageId,
+      sessionId,
+      text,
+      setEditingMessageId,
+      setError,
+      setInput,
+      setMessages,
+      setSending,
+    });
     return;
   }
 
@@ -70,7 +68,7 @@ export async function sendChatWidgetComposerMessage({
     lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
   } catch (err) {
     console.error("Failed to send:", err);
-    setError("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ.");
+    setError("Р СњР Вµ РЎС“Р Т‘Р В°Р В»Р С•РЎРѓРЎРЉ Р С•РЎвЂљР С—РЎР‚Р В°Р Р†Р С‘РЎвЂљРЎРЉ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ.");
     setMessages((prev) => prev.filter((message) => message.id !== tempId));
     setInput(text);
     setReplyTarget(currentReplyTarget);
