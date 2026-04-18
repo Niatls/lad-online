@@ -1,5 +1,5 @@
-import { useChatWidgetHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-handle-open";
 import { useChatWidgetRestoreVisitorName } from "@/components/chat/chat-widget/use-chat-widget-restore-visitor-name";
+import { useChatWidgetSessionHandleOpen } from "@/components/chat/chat-widget/use-chat-widget-session-handle-open";
 import { useChatWidgetSessionInit } from "@/components/chat/chat-widget/use-chat-widget-session-init";
 import { useChatWidgetSessionMessagePolling } from "@/components/chat/chat-widget/use-chat-widget-session-message-polling";
 import { useChatWidgetSessionSyncVoiceInvite } from "@/components/chat/chat-widget/use-chat-widget-session-sync-voice-invite";
@@ -93,7 +93,7 @@ export function useChatWidgetSessionData({
     syncVoiceInvite,
   });
 
-  const handleOpen = useChatWidgetHandleOpen({
+  const handleOpen = useChatWidgetSessionHandleOpen({
     visitorName,
     sessionId,
     setHasUnread,
