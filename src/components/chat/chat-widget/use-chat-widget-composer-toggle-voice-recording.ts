@@ -3,6 +3,7 @@ import type { Message, VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetComposerToggleVoiceRecordingParams = {
   voiceDraft: VoiceDraft | null;
+  voiceTranscript: string;
   needsName: boolean;
   sessionId: number | null;
   sendingVoice: boolean;
@@ -16,6 +17,7 @@ type UseChatWidgetComposerToggleVoiceRecordingParams = {
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
   setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
+  setVoiceTranscript: React.Dispatch<React.SetStateAction<string>>;
   lastMsgIdRef: React.MutableRefObject<number>;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   mediaStreamRef: React.MutableRefObject<MediaStream | null>;
@@ -25,6 +27,7 @@ type UseChatWidgetComposerToggleVoiceRecordingParams = {
 
 export function useChatWidgetComposerToggleVoiceRecording({
   voiceDraft,
+  voiceTranscript,
   needsName,
   sessionId,
   sendingVoice,
@@ -38,6 +41,7 @@ export function useChatWidgetComposerToggleVoiceRecording({
   setIsRecordingVoice,
   setRecordingStartedAt,
   setVoiceDraft,
+  setVoiceTranscript,
   lastMsgIdRef,
   mediaRecorderRef,
   mediaStreamRef,
@@ -46,6 +50,7 @@ export function useChatWidgetComposerToggleVoiceRecording({
 }: UseChatWidgetComposerToggleVoiceRecordingParams) {
   return useChatWidgetVoiceRecordingControls({
     voiceDraft,
+    voiceTranscript,
     needsName,
     sessionId,
     sendingVoice,
@@ -59,6 +64,7 @@ export function useChatWidgetComposerToggleVoiceRecording({
     setIsRecordingVoice,
     setRecordingStartedAt,
     setVoiceDraft,
+    setVoiceTranscript,
     lastMsgIdRef,
     mediaRecorderRef,
     mediaStreamRef,

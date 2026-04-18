@@ -5,6 +5,7 @@ type UploadChatWidgetVoiceMessageParams = {
   durationMs: number;
   replyToId: number | null;
   sessionId: number;
+  transcript: string;
 };
 
 export async function uploadChatWidgetVoiceMessage({
@@ -12,10 +13,14 @@ export async function uploadChatWidgetVoiceMessage({
   durationMs,
   replyToId,
   sessionId,
+  transcript,
 }: UploadChatWidgetVoiceMessageParams): Promise<Message> {
   const formData = new FormData();
   formData.append("sender", "visitor");
   formData.append("durationMs", String(durationMs));
+  if (transcript.trim()) {
+    formData.append("transcript", transcript.trim());
+  }
   if (replyToId) {
     formData.append("replyToId", String(replyToId));
   }

@@ -38,6 +38,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const file = formData.get("file");
     const replyToIdValue = formData.get("replyToId");
     const durationMsValue = formData.get("durationMs");
+    const transcriptValue = formData.get("transcript");
 
     if ((sender !== "visitor" && sender !== "admin") || !(file instanceof File)) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
@@ -75,6 +76,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
       mimeType,
       durationMs: Number.isFinite(durationMs) ? durationMs : null,
       fileSize: file.size,
+      transcript:
+        typeof transcriptValue === "string" && transcriptValue.trim()
+          ? transcriptValue.trim()
+          : null,
     });
 
     const message = await createChatMessage(

@@ -5,6 +5,7 @@ import type { Message, VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type UseChatWidgetVoiceRecordingControlsParams = {
   voiceDraft: VoiceDraft | null;
+  voiceTranscript: string;
   needsName: boolean;
   sessionId: number | null;
   sendingVoice: boolean;
@@ -18,6 +19,7 @@ type UseChatWidgetVoiceRecordingControlsParams = {
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
   setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
+  setVoiceTranscript: React.Dispatch<React.SetStateAction<string>>;
   lastMsgIdRef: React.MutableRefObject<number>;
   mediaRecorderRef: React.MutableRefObject<MediaRecorder | null>;
   mediaStreamRef: React.MutableRefObject<MediaStream | null>;
@@ -27,6 +29,7 @@ type UseChatWidgetVoiceRecordingControlsParams = {
 
 export function useChatWidgetVoiceRecordingControls({
   voiceDraft,
+  voiceTranscript,
   needsName,
   sessionId,
   sendingVoice,
@@ -40,6 +43,7 @@ export function useChatWidgetVoiceRecordingControls({
   setIsRecordingVoice,
   setRecordingStartedAt,
   setVoiceDraft,
+  setVoiceTranscript,
   lastMsgIdRef,
   mediaRecorderRef,
   mediaStreamRef,
@@ -76,6 +80,7 @@ export function useChatWidgetVoiceRecordingControls({
     setIsRecordingVoice,
     setRecordingStartedAt,
     setVoiceDraft,
+    setVoiceTranscript,
     stopVoiceCapture,
   });
 
@@ -84,12 +89,15 @@ export function useChatWidgetVoiceRecordingControls({
       return;
     }
 
-    await uploadVoiceMessage(voiceDraft.blob, voiceDraft.durationMs);
+    const transcript = voiceTranscript.trim() || voiceDraft.transcript?.trim() || "";
+    await uploadVoiceMessage(voiceDraft.blob, voiceDraft.durationMs, transcript);
     setVoiceDraft(null);
+    setVoiceTranscript("");
   };
 
   const clearVoiceDraft = () => {
     setVoiceDraft(null);
+    setVoiceTranscript("");
     setError(null);
   };
 

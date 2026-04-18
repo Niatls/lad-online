@@ -9,6 +9,7 @@ export type VoiceMessagePayload = {
   mimeType?: string | null;
   durationMs?: number | null;
   fileSize?: number | null;
+  transcript?: string | null;
 };
 
 export function buildVoiceInviteMessage(token: string) {
@@ -61,6 +62,7 @@ export function parseVoiceMessageContent(content: string): VoiceMessagePayload |
       mimeType: typeof parsed.mimeType === "string" ? parsed.mimeType : null,
       durationMs: typeof parsed.durationMs === "number" ? parsed.durationMs : null,
       fileSize: typeof parsed.fileSize === "number" ? parsed.fileSize : null,
+      transcript: typeof parsed.transcript === "string" ? parsed.transcript : null,
     };
   } catch {
     return null;

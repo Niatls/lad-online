@@ -27,4 +27,5 @@ export type VoiceDraft = {
   blob: Blob;
   durationMs: number;
   mimeType: string;
+  transcript?: string;
 };

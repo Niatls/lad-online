@@ -19,6 +19,7 @@ type ChatWidgetComposerProps = {
   isRecordingVoice: boolean;
   recordingStartedAt: number | null;
   voiceDraft: VoiceDraft | null;
+  voiceTranscript: string;
   getMessagePreview: (message: Message) => string;
   onDismissError: () => void;
   onJoinVoice: (token: string) => void;
@@ -49,6 +50,7 @@ export function ChatWidgetComposer({
   isRecordingVoice,
   recordingStartedAt,
   voiceDraft,
+  voiceTranscript,
   getMessagePreview,
   onDismissError,
   onJoinVoice,
@@ -91,6 +93,7 @@ export function ChatWidgetComposer({
         sendingVoice={sendingVoice}
         sessionId={sessionId}
         voiceDraft={voiceDraft}
+        voiceTranscript={voiceTranscript}
         onClearVoiceDraft={onClearVoiceDraft}
         onInputChange={onInputChange}
         onKeyDown={onKeyDown}

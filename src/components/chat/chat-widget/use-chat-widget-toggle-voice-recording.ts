@@ -18,6 +18,7 @@ type UseChatWidgetToggleVoiceRecordingParams = {
   setIsRecordingVoice: React.Dispatch<React.SetStateAction<boolean>>;
   setRecordingStartedAt: React.Dispatch<React.SetStateAction<number | null>>;
   setVoiceDraft: React.Dispatch<React.SetStateAction<VoiceDraft | null>>;
+  setVoiceTranscript: React.Dispatch<React.SetStateAction<string>>;
   stopVoiceCapture: () => void;
 };
 
@@ -36,6 +37,7 @@ export function useChatWidgetToggleVoiceRecording({
   setIsRecordingVoice,
   setRecordingStartedAt,
   setVoiceDraft,
+  setVoiceTranscript,
   stopVoiceCapture,
 }: UseChatWidgetToggleVoiceRecordingParams) {
   return useCallback(async () => {
@@ -46,6 +48,10 @@ export function useChatWidgetToggleVoiceRecording({
     if (isRecordingVoice) {
       mediaRecorderRef.current?.stop();
       return;
+    }
+
+    if (!existingVoiceDraft) {
+      setVoiceTranscript("");
     }
 
     await startChatWidgetVoiceRecording({
@@ -74,6 +80,7 @@ export function useChatWidgetToggleVoiceRecording({
     setIsRecordingVoice,
     setRecordingStartedAt,
     setVoiceDraft,
+    setVoiceTranscript,
     stopVoiceCapture,
     voiceChunksRef,
   ]);

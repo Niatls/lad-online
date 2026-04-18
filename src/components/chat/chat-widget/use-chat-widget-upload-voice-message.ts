@@ -23,7 +23,7 @@ export function useChatWidgetUploadVoiceMessage({
   setSendingVoice,
 }: UseChatWidgetUploadVoiceMessageParams) {
   return useCallback(
-    async (blob: Blob, durationMs: number) => {
+    async (blob: Blob, durationMs: number, transcript: string) => {
       if (!sessionId) {
         return;
       }
@@ -37,6 +37,7 @@ export function useChatWidgetUploadVoiceMessage({
           durationMs,
           replyToId: replyTarget?.id ?? null,
           sessionId,
+          transcript,
         });
         setMessages((prev) => [...prev, message]);
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, message.id);
@@ -45,7 +46,7 @@ export function useChatWidgetUploadVoiceMessage({
         setError(
           err instanceof Error
             ? `Голосовое: ${err.message}`
-            : "Не удалось отправить голосовое сообщение."
+            : "Не удалось отправить голосовое сообщение.",
         );
       } finally {
         setSendingVoice(false);
@@ -59,6 +60,6 @@ export function useChatWidgetUploadVoiceMessage({
       setMessages,
       setReplyTarget,
       setSendingVoice,
-    ]
+    ],
   );
 }

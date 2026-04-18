@@ -12,6 +12,7 @@ type ChatWidgetComposerVoicePanelProps = {
   recordingStartedAt: number | null;
   sendingVoice: boolean;
   voiceDraft: VoiceDraft | null;
+  voiceTranscript: string;
   onClearVoiceDraft: () => void;
   onSendVoiceDraft: () => void;
   onToggleVoiceRecording: () => void;
@@ -62,6 +63,7 @@ export function ChatWidgetComposerVoicePanel({
   recordingStartedAt,
   sendingVoice,
   voiceDraft,
+  voiceTranscript,
   onClearVoiceDraft,
   onSendVoiceDraft,
   onToggleVoiceRecording,
@@ -159,23 +161,36 @@ export function ChatWidgetComposerVoicePanel({
 
   if (isRecordingVoice) {
     return (
-      <div className="mb-3 flex items-center gap-3 rounded-[1.6rem] bg-forest px-3.5 py-3 text-white shadow-[0_16px_36px_rgba(45,74,62,0.24)]">
-        <button
-          type="button"
-          onClick={onToggleVoiceRecording}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-red-500 transition hover:bg-white/90"
-          aria-label="Остановить запись"
-        >
-          <span className="h-3.5 w-3.5 rounded-sm bg-current" />
-        </button>
-        <VoiceBars
-          activeColor="bg-sage-light"
-          idleColor="bg-white/30"
-          levels={liveLevels}
-        />
-        <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-white/90">
-          {formatDuration(recordingStartedAt ? now - recordingStartedAt : 0)}
-        </span>
+      <div className="space-y-2">
+        <div className="flex items-center gap-3 rounded-[1.45rem] bg-forest px-3.5 py-3 text-white">
+          <button
+            type="button"
+            onClick={onToggleVoiceRecording}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-red-500 transition hover:bg-white/90"
+            aria-label="Остановить запись"
+          >
+            <span className="h-3.5 w-3.5 rounded-sm bg-current" />
+          </button>
+          <VoiceBars
+            activeColor="bg-sage-light"
+            idleColor="bg-white/30"
+            levels={liveLevels}
+          />
+          <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-white/90">
+            {formatDuration(recordingStartedAt ? now - recordingStartedAt : 0)}
+          </span>
+          <button
+            type="button"
+            disabled
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-white/40"
+            aria-label="Отправка будет доступна после записи"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="px-3 text-xs font-medium text-forest/45">
+          {voiceTranscript || "Распознаю речь..."}
+        </p>
       </div>
     );
   }
@@ -185,8 +200,8 @@ export function ChatWidgetComposerVoicePanel({
   }
 
   return (
-    <div className="mb-3 rounded-[1.6rem] border border-sage-light/25 bg-cream/80 px-3.5 py-3 text-forest shadow-[0_16px_36px_rgba(45,74,62,0.12)]">
-      <div className="flex items-center gap-2">
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 rounded-[1.45rem] bg-cream/80 px-3.5 py-3 text-forest">
         <button
           type="button"
           onClick={onToggleVoiceRecording}
@@ -248,9 +263,11 @@ export function ChatWidgetComposerVoicePanel({
         </button>
       </div>
 
-      <div className="mt-2 flex items-center justify-between px-1 text-[11px] font-medium text-forest/55">
-        <span>Голосовое сообщение</span>
-        <span>
+      <div className="flex items-start justify-between gap-3 px-3 text-[11px] font-medium text-forest/55">
+        <span className="min-w-0 flex-1">
+          {voiceTranscript || "Голосовое сообщение"}
+        </span>
+        <span className="shrink-0">
           {formatDuration(currentTime * 1000)} / {formatDuration(voiceDraft.durationMs)}
         </span>
       </div>

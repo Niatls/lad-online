@@ -20,6 +20,7 @@ import type {
 } from "@/components/chat/chat-widget/types";
 import { useChatWidgetComposer } from "@/components/chat/chat-widget/use-chat-widget-composer";
 import { useChatWidgetSessionData } from "@/components/chat/chat-widget/use-chat-widget-session-data";
+import { useChatWidgetVoiceTranscription } from "@/components/chat/chat-widget/use-chat-widget-voice-transcription";
 import { VoiceCallBoundary } from "@/components/chat/voice-call-boundary";
 import { VoiceCallPanel } from "@/components/chat/voice-call-panel";
 import {
@@ -44,6 +45,7 @@ export function ChatWidget() {
     null,
   );
   const [voiceDraft, setVoiceDraft] = useState<VoiceDraft | null>(null);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [availableVoiceInvite, setAvailableVoiceInvite] =
     useState<VoiceInvite | null>(null);
@@ -91,6 +93,12 @@ export function ChatWidget() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  useChatWidgetVoiceTranscription({
+    isRecordingVoice,
+    setVoiceTranscript,
+    voiceDraftExists: Boolean(voiceDraft),
+  });
+
   const handleSaveName = async () => {
     const normalized = pendingVisitorName.trim();
     if (!normalized) {
@@ -110,6 +118,7 @@ export function ChatWidget() {
     handleToggleVoiceRecording,
   } = useChatWidgetComposer({
     voiceDraft,
+    voiceTranscript,
     needsName,
     sessionId,
     input,
@@ -128,6 +137,7 @@ export function ChatWidget() {
     setIsRecordingVoice,
     setRecordingStartedAt,
     setVoiceDraft,
+    setVoiceTranscript,
     lastMsgIdRef,
     mediaRecorderRef,
     mediaStreamRef,
@@ -350,6 +360,7 @@ export function ChatWidget() {
             isRecordingVoice={isRecordingVoice}
             recordingStartedAt={recordingStartedAt}
             voiceDraft={voiceDraft}
+            voiceTranscript={voiceTranscript}
             getMessagePreview={getMessagePreview}
             onDismissError={() => setError(null)}
             onJoinVoice={setActiveVoiceToken}

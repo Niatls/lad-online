@@ -159,6 +159,12 @@ export function VoiceMessagePlayer({
         </div>
       </div>
 
+      {payload.transcript ? (
+        <p className={`text-xs font-medium leading-relaxed ${metaClassName}`}>
+          {payload.transcript}
+        </p>
+      ) : null}
+
       <audio
         ref={audioRef}
         preload="metadata"
