@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pause, Play, Waves } from "lucide-react";
 
+import { useAudioWaveform } from "@/components/chat/use-audio-waveform";
 import type { VoiceMessagePayload } from "@/lib/chat-message-format";
 
 function formatDuration(durationSeconds: number) {
@@ -24,14 +25,6 @@ function formatFileSize(fileSize?: number | null) {
   return `${(fileSize / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
-function buildBars(seedSource: string, durationMs?: number | null) {
-  let seed = seedSource.length + Math.round((durationMs ?? 0) / 1000);
-  return Array.from({ length: 32 }, (_, index) => {
-    seed = (seed * 31 + index * 17 + 13) % 97;
-    return 10 + (seed % 18);
-  });
-}
-
 type VoiceMessagePlayerProps = {
   payload: VoiceMessagePayload;
   tone: "visitor" | "admin" | "system";
@@ -42,29 +35,25 @@ export function VoiceMessagePlayer({
   tone,
 }: VoiceMessagePlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const waveformRef = useRef<HTMLButtonElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(
     payload.durationMs ? payload.durationMs / 1000 : 0,
   );
   const [isPlaying, setIsPlaying] = useState(false);
-  const waveformRef = useRef<HTMLDivElement | null>(null);
-  const bars = useMemo(
-    () => buildBars(payload.url, payload.durationMs),
-    [payload.durationMs, payload.url],
-  );
+  const levels = useAudioWaveform({
+    barCount: 32,
+    source: payload.url,
+  });
   const progress = duration > 0 ? currentTime / duration : 0;
   const isVisitor = tone === "visitor";
-  const shellClassName = isVisitor
-    ? "border-white/10 bg-white/12 text-white"
-    : tone === "system"
-      ? "border-forest/10 bg-white/75 text-forest"
-      : "border-sage-light/20 bg-cream/70 text-forest";
   const subTextClassName = isVisitor ? "text-white/65" : "text-forest/45";
   const buttonClassName = isVisitor
     ? "bg-white text-forest hover:bg-white/90"
     : "bg-sage-dark text-white hover:bg-sage-dark/90";
-  const barIdleClassName = isVisitor ? "bg-white/30" : "bg-sage-light/35";
+  const barIdleClassName = isVisitor ? "bg-white/28" : "bg-sage-light/35";
   const barActiveClassName = isVisitor ? "bg-sage-light" : "bg-sage-dark";
+  const railClassName = isVisitor ? "bg-white/10" : "bg-forest/5";
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -73,7 +62,9 @@ export function VoiceMessagePlayer({
     }
 
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration || (payload.durationMs ? payload.durationMs / 1000 : 0));
+      setDuration(
+        audio.duration || (payload.durationMs ? payload.durationMs / 1000 : 0),
+      );
     };
     const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handlePause = () => setIsPlaying(false);
@@ -95,8 +86,8 @@ export function VoiceMessagePlayer({
   }, [payload.durationMs]);
 
   return (
-    <div className={`rounded-[1.25rem] border px-3 py-3 ${shellClassName}`}>
-      <div className="mb-2 flex items-center gap-2">
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
         <Waves className="h-4 w-4 shrink-0" />
         <p className="text-xs font-bold">Голосовое сообщение</p>
         <span className={`text-[10px] font-medium ${subTextClassName}`}>
@@ -104,7 +95,7 @@ export function VoiceMessagePlayer({
         </span>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center gap-3 rounded-[1.15rem] px-3 py-2.5 ${railClassName}`}>
         <button
           type="button"
           onClick={async () => {
@@ -123,7 +114,11 @@ export function VoiceMessagePlayer({
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${buttonClassName}`}
           aria-label={isPlaying ? "Пауза" : "Воспроизвести"}
         >
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="ml-0.5 h-4 w-4" />
+          )}
         </button>
 
         <div className="min-w-0 flex-1">
@@ -147,11 +142,11 @@ export function VoiceMessagePlayer({
               setCurrentTime(audio.currentTime);
             }}
           >
-            {bars.map((height, index) => (
+            {levels.map((height, index) => (
               <span
                 key={`${height}-${index}`}
                 className={`block w-[4px] rounded-full transition-colors ${
-                  index / bars.length <= progress
+                  index / levels.length <= progress
                     ? barActiveClassName
                     : barIdleClassName
                 }`}
@@ -160,7 +155,9 @@ export function VoiceMessagePlayer({
             ))}
           </button>
 
-          <div className={`mt-1 flex items-center justify-between text-[10px] font-medium ${subTextClassName}`}>
+          <div
+            className={`mt-1 flex items-center justify-between text-[10px] font-medium ${subTextClassName}`}
+          >
             <span>{formatDuration(currentTime)}</span>
             <span>{formatFileSize(payload.fileSize) ?? formatDuration(duration)}</span>
           </div>

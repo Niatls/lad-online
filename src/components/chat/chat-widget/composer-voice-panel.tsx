@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Mic, Pause, Play, Send, Trash2 } from "lucide-react";
 
+import { useAudioWaveform } from "@/components/chat/use-audio-waveform";
 import type { VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type ChatWidgetComposerVoicePanelProps = {
@@ -23,46 +24,34 @@ function formatDuration(durationMs: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function buildBars(seed: number) {
-  return Array.from({ length: 28 }, (_, index) => 8 + ((seed + index * 9) % 18));
+function getInitialBars() {
+  return Array.from({ length: 28 }, (_, index) => 8 + ((index * 9) % 18));
 }
 
 type VoiceBarsProps = {
   activeColor: string;
-  animated: boolean;
   idleColor: string;
-  levels?: number[];
-  now: number;
+  levels: number[];
   progress?: number;
 };
 
 function VoiceBars({
   activeColor,
-  animated,
   idleColor,
   levels,
-  now,
   progress = 0,
 }: VoiceBarsProps) {
-  const bars = useMemo(() => levels ?? buildBars(now % 23), [levels, now]);
-
   return (
     <div className="flex h-9 flex-1 items-center gap-[3px] overflow-hidden">
-      {bars.map((baseHeight, index) => {
-        const height = animated
-          ? Math.max(8, baseHeight + Math.round(Math.sin(now / 160 + index) * 5))
-          : baseHeight;
-
-        return (
-          <span
-            key={`${baseHeight}-${index}`}
-            className={`block w-[4px] rounded-full transition-all ${
-              index / bars.length <= progress ? activeColor : idleColor
-            }`}
-            style={{ height }}
-          />
-        );
-      })}
+      {levels.map((height, index) => (
+        <span
+          key={`${height}-${index}`}
+          className={`block w-[4px] rounded-full transition-all ${
+            index / levels.length <= progress ? activeColor : idleColor
+          }`}
+          style={{ height }}
+        />
+      ))}
     </div>
   );
 }
@@ -80,12 +69,16 @@ export function ChatWidgetComposerVoicePanel({
   const [now, setNow] = useState(() => Date.now());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [liveLevels, setLiveLevels] = useState<number[]>(() => buildBars(7));
+  const [liveLevels, setLiveLevels] = useState<number[]>(() => getInitialBars());
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useMemo(
     () => (voiceDraft ? URL.createObjectURL(voiceDraft.blob) : null),
     [voiceDraft],
   );
+  const decodedLevels = useAudioWaveform({
+    barCount: 28,
+    source: voiceDraft?.blob ?? null,
+  });
   const draftProgress =
     voiceDraft && voiceDraft.durationMs > 0
       ? currentTime / (voiceDraft.durationMs / 1000)
@@ -102,7 +95,7 @@ export function ChatWidgetComposerVoicePanel({
 
   useEffect(() => {
     if (!isRecordingVoice || !mediaStreamRef.current) {
-      setLiveLevels(buildBars(7));
+      setLiveLevels(getInitialBars());
       return;
     }
 
@@ -177,10 +170,8 @@ export function ChatWidgetComposerVoicePanel({
         </button>
         <VoiceBars
           activeColor="bg-sage-light"
-          animated={false}
           idleColor="bg-white/30"
           levels={liveLevels}
-          now={now}
         />
         <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-white/90">
           {formatDuration(recordingStartedAt ? now - recordingStartedAt : 0)}
@@ -222,13 +213,16 @@ export function ChatWidgetComposerVoicePanel({
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-dark text-white transition hover:bg-sage-dark/90"
           aria-label={isPlaying ? "Пауза" : "Прослушать запись"}
         >
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="ml-0.5 h-4 w-4" />
+          )}
         </button>
         <VoiceBars
           activeColor="bg-sage-dark"
-          animated={false}
           idleColor="bg-sage-light/35"
-          now={now}
+          levels={decodedLevels}
           progress={draftProgress}
         />
         <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-forest/80">
