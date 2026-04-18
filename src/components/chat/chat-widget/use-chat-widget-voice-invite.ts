@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
-import { getVoiceSessionStorageKey } from "@/components/chat/chat-widget/utils";
+import { useChatWidgetRestoreVoiceToken } from "@/components/chat/chat-widget/use-chat-widget-restore-voice-token";
 import { useChatWidgetVoiceTokenStorage } from "@/components/chat/chat-widget/use-chat-widget-voice-token-storage";
 
 type UseChatWidgetVoiceInviteParams = {
@@ -30,6 +30,12 @@ export function useChatWidgetVoiceInvite({
   useChatWidgetVoiceTokenStorage({
     activeVoiceToken,
     sessionId,
+  });
+
+  useChatWidgetRestoreVoiceToken({
+    activeVoiceToken,
+    sessionId,
+    setActiveVoiceToken,
   });
 
   useEffect(() => {
@@ -69,17 +75,4 @@ export function useChatWidgetVoiceInvite({
 
     return () => clearInterval(interval);
   }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !sessionId || activeVoiceToken) {
-      return;
-    }
-
-    const storedToken = sessionStorage.getItem(getVoiceSessionStorageKey(sessionId));
-    if (!storedToken) {
-      return;
-    }
-
-    setActiveVoiceToken(storedToken);
-  }, [activeVoiceToken, sessionId, setActiveVoiceToken]);
 }
