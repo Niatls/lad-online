@@ -28,5 +28,9 @@ export function ChatWidgetMessageContent({
     );
   }
 
-  return <p className="leading-snug sm:leading-relaxed">{message.content}</p>;
+  return (
+    <p className="pr-[1ch] leading-snug sm:leading-relaxed">
+      {message.content}
+    </p>
+  );
 }
