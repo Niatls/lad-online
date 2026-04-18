@@ -1,3 +1,4 @@
+import { createOptimisticChatWidgetMessage } from "@/components/chat/chat-widget/create-optimistic-chat-widget-message";
 import type { Message } from "@/components/chat/chat-widget/types";
 
 type SendChatWidgetMessageParams = {
@@ -31,32 +32,7 @@ export async function editChatWidgetMessage(
   return res.json();
 }
 
-export function createOptimisticChatWidgetMessage(
-  tempId: number,
-  content: string,
-  replyTarget: Message | null,
-): Message {
-  return {
-    id: tempId,
-    sender: "visitor",
-    content,
-    replyToId: replyTarget?.id ?? null,
-    deletedAt: null,
-    deletedBy: null,
-    editedAt: null,
-    isEdited: false,
-    isDeleted: false,
-    replyTo: replyTarget
-      ? {
-          id: replyTarget.id,
-          sender: replyTarget.sender,
-          content: replyTarget.isDeleted ? "РЎРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ" : replyTarget.content,
-          isDeleted: replyTarget.isDeleted,
-        }
-      : null,
-    createdAt: new Date().toISOString(),
-  };
-}
+export { createOptimisticChatWidgetMessage };
 
 export async function sendChatWidgetMessage({
   content,
