@@ -18,7 +18,7 @@ export function ChatWidgetMessageBody({
 }: ChatWidgetMessageBodyProps) {
   return (
     <div
-      className={`max-w-[86%] rounded-[1.05rem] px-3.5 py-2 text-sm leading-snug shadow-sm sm:max-w-[85%] sm:rounded-[1.2rem] sm:px-5 sm:py-3.5 sm:leading-relaxed ${
+      className={`max-w-[86%] rounded-[0.525rem] px-3.5 py-2 text-sm leading-snug shadow-sm sm:max-w-[85%] sm:rounded-[0.6rem] sm:px-5 sm:py-3.5 sm:leading-relaxed ${
         isSystem
           ? "border border-sage-light/20 bg-cream text-forest"
           : isVisitor
