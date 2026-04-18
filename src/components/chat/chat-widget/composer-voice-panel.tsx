@@ -7,6 +7,7 @@ import type { VoiceDraft } from "@/components/chat/chat-widget/types";
 
 type ChatWidgetComposerVoicePanelProps = {
   isRecordingVoice: boolean;
+  mediaStreamRef: React.MutableRefObject<MediaStream | null>;
   recordingStartedAt: number | null;
   sendingVoice: boolean;
   voiceDraft: VoiceDraft | null;
@@ -30,6 +31,7 @@ type VoiceBarsProps = {
   activeColor: string;
   animated: boolean;
   idleColor: string;
+  levels?: number[];
   now: number;
   progress?: number;
 };
@@ -38,10 +40,11 @@ function VoiceBars({
   activeColor,
   animated,
   idleColor,
+  levels,
   now,
   progress = 0,
 }: VoiceBarsProps) {
-  const bars = useMemo(() => buildBars(now % 23), [now]);
+  const bars = useMemo(() => levels ?? buildBars(now % 23), [levels, now]);
 
   return (
     <div className="flex h-9 flex-1 items-center gap-[3px] overflow-hidden">
@@ -66,6 +69,7 @@ function VoiceBars({
 
 export function ChatWidgetComposerVoicePanel({
   isRecordingVoice,
+  mediaStreamRef,
   recordingStartedAt,
   sendingVoice,
   voiceDraft,
@@ -76,6 +80,7 @@ export function ChatWidgetComposerVoicePanel({
   const [now, setNow] = useState(() => Date.now());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [liveLevels, setLiveLevels] = useState<number[]>(() => buildBars(7));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useMemo(
     () => (voiceDraft ? URL.createObjectURL(voiceDraft.blob) : null),
@@ -94,6 +99,62 @@ export function ChatWidgetComposerVoicePanel({
     const intervalId = window.setInterval(() => setNow(Date.now()), 120);
     return () => window.clearInterval(intervalId);
   }, [isRecordingVoice, voiceDraft]);
+
+  useEffect(() => {
+    if (!isRecordingVoice || !mediaStreamRef.current) {
+      setLiveLevels(buildBars(7));
+      return;
+    }
+
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    const audioContext = new AudioContextCtor();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+
+    const source = audioContext.createMediaStreamSource(mediaStreamRef.current);
+    source.connect(analyser);
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    let animationFrameId = 0;
+
+    const updateLevels = () => {
+      analyser.getByteFrequencyData(dataArray);
+
+      const chunkSize = Math.max(1, Math.floor(dataArray.length / 28));
+      const nextLevels = Array.from({ length: 28 }, (_, index) => {
+        const start = index * chunkSize;
+        const slice = dataArray.slice(start, start + chunkSize);
+        const average =
+          slice.length > 0
+            ? slice.reduce((sum, value) => sum + value, 0) / slice.length
+            : 0;
+
+        return 8 + Math.round((average / 255) * 22);
+      });
+
+      setLiveLevels(nextLevels);
+      animationFrameId = window.requestAnimationFrame(updateLevels);
+    };
+
+    void audioContext.resume().catch(() => undefined);
+    updateLevels();
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      source.disconnect();
+      analyser.disconnect();
+      void audioContext.close().catch(() => undefined);
+    };
+  }, [isRecordingVoice, mediaStreamRef]);
 
   useEffect(() => {
     return () => {
@@ -116,8 +177,9 @@ export function ChatWidgetComposerVoicePanel({
         </button>
         <VoiceBars
           activeColor="bg-sage-light"
-          animated
+          animated={false}
           idleColor="bg-white/30"
+          levels={liveLevels}
           now={now}
         />
         <span className="min-w-[3rem] text-sm font-semibold tabular-nums text-white/90">

@@ -343,6 +343,7 @@ export function ChatWidget() {
             editingMessageId={editingMessageId}
             input={input}
             loading={loading}
+            mediaStreamRef={mediaStreamRef}
             needsName={needsName}
             sending={sending}
             sendingVoice={sendingVoice}

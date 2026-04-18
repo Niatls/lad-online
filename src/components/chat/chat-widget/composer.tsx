@@ -12,6 +12,7 @@ type ChatWidgetComposerProps = {
   editingMessageId: number | null;
   input: string;
   loading: boolean;
+  mediaStreamRef: React.MutableRefObject<MediaStream | null>;
   needsName: boolean;
   sending: boolean;
   sendingVoice: boolean;
@@ -41,6 +42,7 @@ export function ChatWidgetComposer({
   editingMessageId,
   input,
   loading,
+  mediaStreamRef,
   needsName,
   sending,
   sendingVoice,
@@ -82,6 +84,7 @@ export function ChatWidgetComposer({
         input={input}
         isRecordingVoice={isRecordingVoice}
         loading={loading}
+        mediaStreamRef={mediaStreamRef}
         needsName={needsName}
         recordingStartedAt={recordingStartedAt}
         sending={sending}

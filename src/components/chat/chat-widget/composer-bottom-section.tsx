@@ -9,6 +9,7 @@ type ChatWidgetComposerBottomSectionProps = {
   input: string;
   isRecordingVoice: boolean;
   loading: boolean;
+  mediaStreamRef: React.MutableRefObject<MediaStream | null>;
   needsName: boolean;
   recordingStartedAt: number | null;
   sending: boolean;
@@ -29,6 +30,7 @@ export function ChatWidgetComposerBottomSection({
   input,
   isRecordingVoice,
   loading,
+  mediaStreamRef,
   needsName,
   recordingStartedAt,
   sending,
@@ -46,6 +48,7 @@ export function ChatWidgetComposerBottomSection({
     <>
       <ChatWidgetComposerVoicePanel
         isRecordingVoice={isRecordingVoice}
+        mediaStreamRef={mediaStreamRef}
         recordingStartedAt={recordingStartedAt}
         sendingVoice={sendingVoice}
         voiceDraft={voiceDraft}
