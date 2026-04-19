@@ -104,3 +104,4 @@ server.log
 /skills/
 .codex-runtime/  
  
+.env*.local

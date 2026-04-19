@@ -1,4 +1,4 @@
-﻿import { neon } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 
 type ChatMessageRow = {
   id: number;
@@ -490,3 +490,39 @@ export async function getAdminChatSessions() {
   });
 }
 
+export async function updateVoiceTranscript(sessionId: number, messageId: number, transcript: string) {
+  return withRetry(async () => {
+    // 1. Fetch current message content
+    const existing = await sql<ChatMessageRow[]>`
+      select content from "ChatMessage"
+      where id = ${messageId} and "sessionId" = ${sessionId}
+      limit 1
+    `;
+
+    if (!existing[0] || !existing[0].content.startsWith('[[VOICE_MESSAGE:')) {
+      return null;
+    }
+
+    // 2. Parse and update
+    const contentStr = existing[0].content;
+    const jsonStr = contentStr.substring('[[VOICE_MESSAGE:'.length, contentStr.length - 2);
+    try {
+      const metadata = JSON.parse(jsonStr);
+      metadata.transcript = transcript;
+      const newContent = `[[VOICE_MESSAGE:${JSON.stringify(metadata)}]]`;
+
+      // 3. Save
+      const updated = await sql<ChatMessageRow[]>`
+        update "ChatMessage"
+        set content = ${newContent}
+        where id = ${messageId} and "sessionId" = ${sessionId}
+        returning *
+      `;
+
+      return updated[0] ? mapMessage(updated[0]) : null;
+    } catch (e) {
+      console.error('Error updating voice transcript:', e);
+      return null;
+    }
+  });
+}

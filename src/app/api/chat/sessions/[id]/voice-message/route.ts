@@ -70,16 +70,48 @@ export async function POST(req: NextRequest, context: RouteContext) {
     });
     const playbackUrl = `/api/chat/voice-file?pathname=${encodeURIComponent(blob.pathname)}`;
 
+    // Whisper Transcription logic
+    let transcript = typeof transcriptValue === "string" && transcriptValue.trim()
+      ? transcriptValue.trim()
+      : null;
+
+    if (!transcript && process.env.OPENAI_API_KEY) {
+      try {
+        const whisperFormData = new FormData();
+        whisperFormData.append("file", file);
+        whisperFormData.append("model", "whisper-1");
+        
+        // Optional: specify language
+        whisperFormData.append("language", "ru");
+
+        const whisperResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: whisperFormData,
+        });
+
+        if (whisperResponse.ok) {
+          const whisperData = await whisperResponse.json();
+          if (whisperData.text) {
+            transcript = whisperData.text;
+          }
+        } else {
+          console.error("Whisper API error:", await whisperResponse.text());
+        }
+      } catch (whisperError) {
+        console.error("Failed to transcribe with Whisper:", whisperError);
+      }
+    }
+
     const content = buildVoiceMessageContent({
       url: playbackUrl,
       pathname: blob.pathname,
       mimeType,
       durationMs: Number.isFinite(durationMs) ? durationMs : null,
       fileSize: file.size,
-      transcript:
-        typeof transcriptValue === "string" && transcriptValue.trim()
-          ? transcriptValue.trim()
-          : null,
+      transcript,
     });
 
     const message = await createChatMessage(
