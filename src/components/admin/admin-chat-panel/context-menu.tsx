@@ -1,4 +1,4 @@
-import { CornerUpLeft, Pencil, Trash2 } from "lucide-react";
+import { CornerUpLeft, Pencil, SquareCheck } from "lucide-react";
 
 import type { Message } from "./types";
 
@@ -64,7 +64,7 @@ export function AdminChatContextMenu({
         onClick={() => onSelect(contextMenu.message.id)}
         className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm font-medium text-forest transition hover:bg-cream/50"
       >
-        <Trash2 className="h-4 w-4" />
+        <SquareCheck className="h-4 w-4" />
         {selectedMessageIds.includes(contextMenu.message.id) ? "Снять выбор" : "Выбрать"}
       </button>
     </div>
