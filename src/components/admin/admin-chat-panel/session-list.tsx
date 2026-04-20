@@ -14,6 +14,7 @@ type AdminChatSessionListProps = {
   displayedUsagePercent: string;
   formatTime: (date: string) => string;
   onSelectSession: (sessionId: number) => void;
+  onOpenSessionContextMenu: (sessionId: number, x: number, y: number) => void;
 };
 
 export function AdminChatSessionList({
@@ -26,6 +27,7 @@ export function AdminChatSessionList({
   displayedUsagePercent,
   formatTime,
   onSelectSession,
+  onOpenSessionContextMenu,
 }: AdminChatSessionListProps) {
   return (
     <div className={`w-96 border-r border-sage-light/10 flex flex-col shrink-0 ${selectedId ? "hidden md:flex" : "flex w-full md:w-96"}`}>
@@ -74,6 +76,10 @@ export function AdminChatSessionList({
               <button
                 key={session.id}
                 onClick={() => onSelectSession(session.id)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  onOpenSessionContextMenu(session.id, event.clientX, event.clientY);
+                }}
                 className={`w-full text-left px-4 py-4 rounded-[1.5rem] transition-all duration-300 relative group overflow-hidden ${
                   isActive ? "bg-forest text-white shadow-xl shadow-forest/20" : "hover:bg-sage-light/10"
                 }`}

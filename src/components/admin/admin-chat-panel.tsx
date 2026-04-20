@@ -1,24 +1,13 @@
 ﻿"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import {
-  MessageCircle,
-  Send,
-  Loader2,
-  ArrowLeft,
-  User,
-  Clock,
-  Phone,
-  Trash2,
-  Archive,
-  X,
-} from "lucide-react";
 import { AdminChatContextMenu } from "@/components/admin/admin-chat-panel/context-menu";
 import { AdminChatComposer } from "@/components/admin/admin-chat-panel/composer";
 import { AdminChatEmptyState } from "@/components/admin/admin-chat-panel/empty-state";
 import { AdminChatMessageList } from "@/components/admin/admin-chat-panel/message-list";
 import { AdminChatSessionList } from "@/components/admin/admin-chat-panel/session-list";
 import { AdminChatSessionHeader } from "@/components/admin/admin-chat-panel/session-header";
+import { AdminChatSessionContextMenu } from "@/components/admin/admin-chat-panel/session-context-menu";
 import type {
   Message,
   Session,
@@ -38,6 +27,7 @@ import { getChatMessagePreviewText } from "@/lib/chat-message-format";
 export function AdminChatPanel() {
   const panelRef = useRef<HTMLDivElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const sessionContextMenuRef = useRef<HTMLDivElement>(null);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,6 +64,10 @@ export function AdminChatPanel() {
     left: number;
     top: number;
     message: Message;
+  } | null>(null);
+  const [sessionContextMenu, setSessionContextMenu] = useState<{
+    left: number;
+    top: number;
   } | null>(null);
   const lastMsgIdRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -228,13 +222,18 @@ export function AdminChatPanel() {
       if (contextMenuRef.current && target && contextMenuRef.current.contains(target)) {
         return;
       }
+      if (sessionContextMenuRef.current && target && sessionContextMenuRef.current.contains(target)) {
+        return;
+      }
 
       setContextMenu(null);
+      setSessionContextMenu(null);
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setContextMenu(null);
+        setSessionContextMenu(null);
       }
     };
 
@@ -258,6 +257,26 @@ export function AdminChatPanel() {
       left: Math.min(relativeX, Math.max(16, panelWidth - 220)),
       top: Math.min(relativeY, Math.max(16, panelHeight - 220)),
     });
+    setSessionContextMenu(null);
+  }, []);
+
+  const openSessionContextMenu = useCallback((sessionId: number, x: number, y: number) => {
+    const panelRect = panelRef.current?.getBoundingClientRect();
+    const relativeX = panelRect ? x - panelRect.left : x;
+    const relativeY = panelRect ? y - panelRect.top : y;
+    const panelWidth = panelRect?.width ?? relativeX;
+    const panelHeight = panelRect?.height ?? relativeY;
+
+    setSelectedId(sessionId);
+    setSessionContextMenu({
+      left: Math.min(relativeX, Math.max(16, panelWidth - 230)),
+      top: Math.min(relativeY, Math.max(16, panelHeight - 190)),
+    });
+    setContextMenu(null);
+  }, []);
+
+  const closeSessionContextMenu = useCallback(() => {
+    setSessionContextMenu(null);
   }, []);
 
   const handleReplyFromMenu = useCallback((message: Message) => {
@@ -291,6 +310,7 @@ export function AdminChatPanel() {
           displayedUsagePercent={displayedUsagePercent}
           formatTime={formatTime}
           onSelectSession={setSelectedId}
+          onOpenSessionContextMenu={openSessionContextMenu}
         />
 
         <div className={`relative flex-1 bg-white/40 ${!selectedId ? "hidden md:flex" : "flex"}`}>
@@ -325,14 +345,12 @@ export function AdminChatPanel() {
                 selectedId={selectedId}
                 selectedSessionName={selectedSession?.visitorName || ""}
                 createdAt={selectedSession?.createdAt || ""}
-                archivingSession={archivingSession}
-                deletingSession={deletingSession}
-                downloadingSession={downloadingSession}
                 formatTime={formatTime}
                 onBack={() => setSelectedId(null)}
-                onArchive={handleArchiveSession}
-                onDownload={handleDownloadSession}
-                onDelete={handleDeleteSession}
+                onOpenContextMenu={(event) => {
+                  event.preventDefault();
+                  openSessionContextMenu(selectedId, event.clientX, event.clientY);
+                }}
               />
 
               <AdminChatMessageList
@@ -418,6 +436,25 @@ export function AdminChatPanel() {
         onReply={handleReplyFromMenu}
         onEdit={handleEditFromMenu}
         onSelect={handleSelectFromMenu}
+      />
+      <AdminChatSessionContextMenu
+        contextMenu={sessionContextMenu}
+        contextMenuRef={sessionContextMenuRef}
+        archivingSession={archivingSession}
+        deletingSession={deletingSession}
+        downloadingSession={downloadingSession}
+        onDownload={() => {
+          closeSessionContextMenu();
+          void handleDownloadSession();
+        }}
+        onArchive={() => {
+          closeSessionContextMenu();
+          void handleArchiveSession();
+        }}
+        onDelete={() => {
+          closeSessionContextMenu();
+          void handleDeleteSession();
+        }}
       />
     </div>
   );
