@@ -142,6 +142,7 @@ model ChatVoiceInvite {
   expiresAt DateTime
   joinedAt  DateTime?
   endedAt   DateTime?
+  metadata  Json?
   session   ChatSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   signals   ChatVoiceSignal[]
   events    ChatVoiceEvent[]

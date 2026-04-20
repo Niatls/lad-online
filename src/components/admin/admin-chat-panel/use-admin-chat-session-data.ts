@@ -114,7 +114,14 @@ export function useAdminChatSessionData({
         return null;
       }
 
+      // If the call was started from the native app, don't show the full-screen UI in web
+      const metadata = invite.metadata as { source?: string } | undefined;
+      if (metadata?.source === "native") {
+        return null;
+      }
+
       if (!activeVoiceToken || activeVoiceToken !== invite.token) {
+
         setActiveVoiceToken(invite.token);
       }
 

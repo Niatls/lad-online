@@ -1,4 +1,4 @@
-﻿import { randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 import { buildVoiceInviteMessage } from "@/lib/chat-message-format";
 import { appendVoiceLog } from "@/lib/voice-log";
@@ -16,7 +16,9 @@ type VoiceInviteRow = {
   expiresAt: Date | string;
   joinedAt: Date | string | null;
   endedAt: Date | string | null;
+  metadata: any | null;
 };
+
 
 type VoiceSignalRow = {
   id: number;
@@ -82,7 +84,9 @@ function mapInvite(row: VoiceInviteRow) {
     expiresAt: new Date(row.expiresAt).toISOString(),
     joinedAt: row.joinedAt ? new Date(row.joinedAt).toISOString() : null,
     endedAt: row.endedAt ? new Date(row.endedAt).toISOString() : null,
+    metadata: row.metadata,
   };
+
 }
 
 function mapSignal(row: VoiceSignalRow) {
@@ -109,7 +113,8 @@ function formatCallDuration(seconds: number) {
   return [minutes, remSeconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
-export async function createVoiceInvite(sessionId: number) {
+export async function createVoiceInvite(sessionId: number, metadata?: any) {
+
   return withRetry(async () => {
     const session = await sql<{ id: number }[]>`
       select id from "ChatSession" where id = ${sessionId} limit 1
@@ -131,9 +136,10 @@ export async function createVoiceInvite(sessionId: number) {
 
     const token = randomBytes(12).toString("hex");
     const inviteRows = await sql<VoiceInviteRow[]>`
-      insert into "ChatVoiceInvite" ("sessionId", token, status, "dataUsageBytes", "durationSeconds", "createdAt", "updatedAt", "expiresAt")
-      values (${sessionId}, ${token}, 'pending', 0, 0, now(), now(), now() + interval '5 minutes')
+      insert into "ChatVoiceInvite" ("sessionId", token, status, "dataUsageBytes", "durationSeconds", "createdAt", "updatedAt", "expiresAt", metadata)
+      values (${sessionId}, ${token}, 'pending', 0, 0, now(), now(), now() + interval '5 minutes', ${JSON.stringify(metadata ?? null)}::jsonb)
       returning
+
         id,
         "sessionId",
         token,
@@ -145,8 +151,10 @@ export async function createVoiceInvite(sessionId: number) {
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
     `;
+
 
     await sql`
       insert into "ChatMessage" ("sessionId", sender, content, "createdAt")
@@ -187,8 +195,10 @@ export async function getSessionActiveVoiceInvite(sessionId: number) {
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
       from "ChatVoiceInvite"
+
       where "sessionId" = ${sessionId} and status in ('pending', 'active')
       order by "createdAt" desc
       limit 1
@@ -223,8 +233,10 @@ export async function getVoiceInviteByToken(token: string) {
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
       from "ChatVoiceInvite"
+
       where token = ${token}
       limit 1
     `;
@@ -262,8 +274,10 @@ export async function activateVoiceInvite(token: string, role: "admin" | "visito
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
       from "ChatVoiceInvite"
+
       where token = ${token}
       limit 1
     `;
@@ -299,7 +313,9 @@ export async function activateVoiceInvite(token: string, role: "admin" | "visito
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
+
     `;
 
     const invite = rows[0] ? mapInvite(rows[0]) : null;
@@ -343,8 +359,10 @@ export async function endVoiceInvite(
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
       from "ChatVoiceInvite"
+
       where token = ${token}
       limit 1
     `;
@@ -380,7 +398,9 @@ export async function endVoiceInvite(
         "updatedAt",
         "expiresAt",
         "joinedAt",
-        "endedAt"
+        "endedAt",
+        metadata
+
     `;
 
     const invite = rows[0];

@@ -19,12 +19,21 @@ export async function POST(_: Request, context: RouteContext) {
   }
 
   try {
-    const invite = await createVoiceInvite(sessionId);
+    let source: string | undefined;
+    try {
+      const body = await _.json();
+      source = body.source;
+    } catch {
+      // Body may be empty
+    }
+
+    const invite = await createVoiceInvite(sessionId, { source });
     if (!invite) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     return NextResponse.json(invite);
+
   } catch (error) {
     console.error("Create voice invite error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
