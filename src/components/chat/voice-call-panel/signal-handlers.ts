@@ -84,7 +84,7 @@ export async function handleIncomingVoiceSignal({
   flushPendingCandidates,
   handleVisitorRejoinRequest,
 }: HandleVoiceSignalParams) {
-  if (signal.signalType === "offer" && role === "admin") {
+  if (signal.signalType === "offer" && role === "visitor") {
     let pc = peerRef.current;
     const needsFreshPeer =
       !pc ||
@@ -100,7 +100,7 @@ export async function handleIncomingVoiceSignal({
     }
 
     setStatus("Входящий звонок. Подключаем аудио...");
-    updateLastEvent("Получен offer от посетителя", true);
+    updateLastEvent("Получен offer от специалиста", true);
     await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
     reconnectAllowedRef.current = true;
     await flushPendingCandidates();
@@ -111,7 +111,7 @@ export async function handleIncomingVoiceSignal({
     return;
   }
 
-  if (signal.signalType === "answer" && role === "visitor") {
+  if (signal.signalType === "answer" && role === "admin") {
     const pc = peerRef.current;
     if (!pc || pc.signalingState !== "have-local-offer") {
       return;
@@ -119,7 +119,7 @@ export async function handleIncomingVoiceSignal({
 
     await pc.setRemoteDescription(signal.payload as RTCSessionDescriptionInit);
     reconnectAllowedRef.current = true;
-    updateLastEvent("Получен answer от специалиста", true);
+    updateLastEvent("Получен answer от посетителя", true);
     await flushPendingCandidates();
     setStatus("Соединяемся...");
     return;
@@ -140,10 +140,11 @@ export async function handleIncomingVoiceSignal({
     return;
   }
 
-  if (signal.signalType === "rejoin-request" && role === "visitor") {
+  if (signal.signalType === "rejoin-request" && role === "admin") {
     await handleVisitorRejoinRequest();
     return;
   }
+
 
   if (signal.signalType === "hangup") {
     setStatus("Звонок завершён");

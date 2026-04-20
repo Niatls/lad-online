@@ -180,6 +180,17 @@ export function useVoiceCallPanel({
     updateLastEvent,
   });
 
+  const handleVisitorRejoinRequestDeps = useMemo(
+    () => ({
+      rejoinHandledAtRef,
+      lastReconnectStartedAtRef,
+      pendingVisitorRejoinRef,
+      createPeerRef,
+      sendOfferRef,
+    }),
+    [createPeerRef, lastReconnectStartedAtRef, pendingVisitorRejoinRef, rejoinHandledAtRef, sendOfferRef],
+  );
+
   const {
     cleanup,
     handleVisitorRejoinRequest,
@@ -195,13 +206,8 @@ export function useVoiceCallPanel({
     closedRef,
     endingRef,
     flushPendingCandidates,
-    handleVisitorRejoinRequestDeps: {
-      rejoinHandledAtRef,
-      lastReconnectStartedAtRef,
-      pendingVisitorRejoinRef,
-      createPeerRef,
-      sendOfferRef,
-    },
+    handleVisitorRejoinRequestDeps,
+
     invokeCreatePeer,
     invokeSendOffer,
     lastReconnectStartedAtRef,

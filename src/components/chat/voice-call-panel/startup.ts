@@ -116,17 +116,16 @@ export async function startVoiceCall({
       void pollSignals();
     }, 1200);
 
-    if (role === "visitor" && !joinedRef.current) {
+    if (role === "admin" && !initialOfferSentRef.current) {
+      initialOfferSentRef.current = true;
+      await sendOffer(false);
       joinedRef.current = true;
-      if (!initialOfferSentRef.current) {
-        initialOfferSentRef.current = true;
-        await sendOffer(false);
-      }
-    } else {
-      setStatus(`Ждём звонок от ${counterpartLabel}...`);
-      updateLastEvent(`Ожидаем ${counterpartLabel}`, true);
+    } else if (role === "visitor") {
+      setStatus(`Ожидаем подключение специалиста...`);
+      updateLastEvent(`Ожидаем специалиста`, true);
       joinedRef.current = true;
     }
+
   } catch (startError) {
     console.error("Voice call init failed:", startError);
     updateLastEvent("Ошибка инициализации voice", true);
