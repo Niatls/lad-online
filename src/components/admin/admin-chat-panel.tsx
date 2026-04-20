@@ -345,8 +345,12 @@ export function AdminChatPanel() {
                 selectedId={selectedId}
                 selectedSessionName={selectedSession?.visitorName || ""}
                 createdAt={selectedSession?.createdAt || ""}
+                creatingVoiceToken={creatingVoiceToken}
                 formatTime={formatTime}
                 onBack={() => setSelectedId(null)}
+                onGenerateVoiceToken={() => {
+                  void handleGenerateVoiceToken();
+                }}
                 onOpenContextMenu={(event) => {
                   event.preventDefault();
                   openSessionContextMenu(selectedId, event.clientX, event.clientY);
@@ -375,7 +379,6 @@ export function AdminChatPanel() {
               <AdminChatComposer
                 selectedMessageIds={selectedMessageIds}
                 deletingMessages={deletingMessages}
-                creatingVoiceToken={creatingVoiceToken}
                 replyTarget={replyTarget}
                 editingMessageId={editingMessageId}
                 input={input}
@@ -391,9 +394,6 @@ export function AdminChatPanel() {
                 }}
                 onDeleteMessages={() => {
                   void handleDeleteMessages();
-                }}
-                onGenerateVoiceToken={() => {
-                  void handleGenerateVoiceToken();
                 }}
                 onClearReply={() => setReplyTarget(null)}
                 onCancelEditing={() => {

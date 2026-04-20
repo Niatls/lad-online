@@ -5,12 +5,10 @@ import { ComposerInputRow } from "./composer-input-row";
 import { ComposerRecordingStatus } from "./composer-recording-status";
 import { ComposerReplyPreview } from "./composer-reply-preview";
 import { ComposerSelectionToolbar } from "./composer-selection-toolbar";
-import { ComposerVoiceInvite } from "./composer-voice-invite";
 
 type AdminChatComposerProps = {
   selectedMessageIds: number[];
   deletingMessages: boolean;
-  creatingVoiceToken: boolean;
   replyTarget: Message | null;
   editingMessageId: number | null;
   input: string;
@@ -23,7 +21,6 @@ type AdminChatComposerProps = {
   formatTime: (date: string) => string;
   onClearSelection: () => void;
   onDeleteMessages: () => void;
-  onGenerateVoiceToken: () => void;
   onClearReply: () => void;
   onCancelEditing: () => void;
   onInputChange: (value: string) => void;
@@ -35,7 +32,6 @@ type AdminChatComposerProps = {
 export function AdminChatComposer({
   selectedMessageIds,
   deletingMessages,
-  creatingVoiceToken,
   replyTarget,
   editingMessageId,
   input,
@@ -48,7 +44,6 @@ export function AdminChatComposer({
   formatTime,
   onClearSelection,
   onDeleteMessages,
-  onGenerateVoiceToken,
   onClearReply,
   onCancelEditing,
   onInputChange,
@@ -58,18 +53,6 @@ export function AdminChatComposer({
 }: AdminChatComposerProps) {
   return (
     <div className="shrink-0 border-t border-sage-light/10 bg-white/60 p-6 backdrop-blur-md">
-      <ComposerSelectionToolbar
-        deletingMessages={deletingMessages}
-        selectedCount={selectedMessageIds.length}
-        onClearSelection={onClearSelection}
-        onDeleteMessages={onDeleteMessages}
-      />
-
-      <ComposerVoiceInvite
-        creatingVoiceToken={creatingVoiceToken}
-        onGenerateVoiceToken={onGenerateVoiceToken}
-      />
-
       <ComposerReplyPreview
         getMessagePreview={getMessagePreview}
         replyTarget={replyTarget}
@@ -80,6 +63,13 @@ export function AdminChatComposer({
       <ComposerEditingBanner
         editingMessageId={editingMessageId}
         onCancelEditing={onCancelEditing}
+      />
+
+      <ComposerSelectionToolbar
+        deletingMessages={deletingMessages}
+        selectedCount={selectedMessageIds.length}
+        onClearSelection={onClearSelection}
+        onDeleteMessages={onDeleteMessages}
       />
 
       <ComposerInputRow
