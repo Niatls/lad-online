@@ -51,44 +51,50 @@ export function AdminChatComposer({
   onToggleVoiceRecording,
   onSend,
 }: AdminChatComposerProps) {
+  const hasSelectedMessages = selectedMessageIds.length > 0;
+
   return (
     <div className="shrink-0 border-t border-sage-light/10 bg-white/60 p-6 backdrop-blur-md">
-      <ComposerReplyPreview
-        getMessagePreview={getMessagePreview}
-        replyTarget={replyTarget}
-        selectedSession={selectedSession}
-        onClearReply={onClearReply}
-      />
+      {hasSelectedMessages ? (
+        <ComposerSelectionToolbar
+          deletingMessages={deletingMessages}
+          selectedCount={selectedMessageIds.length}
+          onClearSelection={onClearSelection}
+          onDeleteMessages={onDeleteMessages}
+        />
+      ) : (
+        <>
+          <ComposerReplyPreview
+            getMessagePreview={getMessagePreview}
+            replyTarget={replyTarget}
+            selectedSession={selectedSession}
+            onClearReply={onClearReply}
+          />
 
-      <ComposerEditingBanner
-        editingMessageId={editingMessageId}
-        onCancelEditing={onCancelEditing}
-      />
+          <ComposerEditingBanner
+            editingMessageId={editingMessageId}
+            onCancelEditing={onCancelEditing}
+          />
 
-      <ComposerSelectionToolbar
-        deletingMessages={deletingMessages}
-        selectedCount={selectedMessageIds.length}
-        onClearSelection={onClearSelection}
-        onDeleteMessages={onDeleteMessages}
-      />
+          <ComposerInputRow
+            editingMessageId={editingMessageId}
+            input={input}
+            isRecordingVoice={isRecordingVoice}
+            sending={sending}
+            sendingVoice={sendingVoice}
+            onInputChange={onInputChange}
+            onKeyDown={onKeyDown}
+            onSend={onSend}
+            onToggleVoiceRecording={onToggleVoiceRecording}
+          />
 
-      <ComposerInputRow
-        editingMessageId={editingMessageId}
-        input={input}
-        isRecordingVoice={isRecordingVoice}
-        sending={sending}
-        sendingVoice={sendingVoice}
-        onInputChange={onInputChange}
-        onKeyDown={onKeyDown}
-        onSend={onSend}
-        onToggleVoiceRecording={onToggleVoiceRecording}
-      />
-
-      <ComposerRecordingStatus
-        isRecordingVoice={isRecordingVoice}
-        recordingStartedAt={recordingStartedAt}
-        formatTime={formatTime}
-      />
+          <ComposerRecordingStatus
+            isRecordingVoice={isRecordingVoice}
+            recordingStartedAt={recordingStartedAt}
+            formatTime={formatTime}
+          />
+        </>
+      )}
     </div>
   );
 }

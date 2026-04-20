@@ -18,7 +18,7 @@ export function ComposerSelectionToolbar({
   }
 
   return (
-    <div className="mb-3 flex items-center justify-between gap-3 rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-[1.5rem] border border-red-200 bg-red-50 px-4 py-3">
       <div>
         <p className="text-sm font-bold text-red-700">
           {"\u0412\u044b\u0431\u0440\u0430\u043d\u043e \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439: "}
