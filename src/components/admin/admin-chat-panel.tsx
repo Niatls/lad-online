@@ -53,6 +53,7 @@ export function AdminChatPanel() {
   const [creatingVoiceToken, setCreatingVoiceToken] = useState(false);
   const [archivingSession, setArchivingSession] = useState(false);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [downloadingSession, setDownloadingSession] = useState(false);
   const [deletingMessages, setDeletingMessages] = useState(false);
   const [activeVoiceToken, setActiveVoiceToken] = useState<string | null>(null);
   const [voiceEvents, setVoiceEvents] = useState<VoiceEvent[]>([]);
@@ -147,6 +148,7 @@ export function AdminChatPanel() {
     handleGenerateVoiceToken,
     handleArchiveSession,
     handleDeleteSession,
+    handleDownloadSession,
     handleDeleteMessages,
   } = useAdminChatActions({
     selectedId,
@@ -155,6 +157,7 @@ export function AdminChatPanel() {
     creatingVoiceToken,
     archivingSession,
     deletingSession,
+    downloadingSession,
     deletingMessages,
     loadMessages,
     loadSessions,
@@ -172,6 +175,7 @@ export function AdminChatPanel() {
     setCreatingVoiceToken,
     setArchivingSession,
     setDeletingSession,
+    setDownloadingSession,
     setDeletingMessages,
   });
 
@@ -323,9 +327,11 @@ export function AdminChatPanel() {
                 createdAt={selectedSession?.createdAt || ""}
                 archivingSession={archivingSession}
                 deletingSession={deletingSession}
+                downloadingSession={downloadingSession}
                 formatTime={formatTime}
                 onBack={() => setSelectedId(null)}
                 onArchive={handleArchiveSession}
+                onDownload={handleDownloadSession}
                 onDelete={handleDeleteSession}
               />
 

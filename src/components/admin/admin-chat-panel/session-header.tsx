@@ -1,4 +1,4 @@
-import { Archive, ArrowLeft, Clock, Loader2, Trash2, User } from "lucide-react";
+import { Archive, ArrowLeft, Clock, Download, Loader2, Trash2, User } from "lucide-react";
 
 type AdminChatSessionHeaderProps = {
   selectedId: number;
@@ -6,9 +6,11 @@ type AdminChatSessionHeaderProps = {
   createdAt: string;
   archivingSession: boolean;
   deletingSession: boolean;
+  downloadingSession: boolean;
   formatTime: (date: string) => string;
   onBack: () => void;
   onArchive: () => void;
+  onDownload: () => void;
   onDelete: () => void;
 };
 
@@ -18,9 +20,11 @@ export function AdminChatSessionHeader({
   createdAt,
   archivingSession,
   deletingSession,
+  downloadingSession,
   formatTime,
   onBack,
   onArchive,
+  onDownload,
   onDelete,
 }: AdminChatSessionHeaderProps) {
   return (
@@ -53,6 +57,15 @@ export function AdminChatSessionHeader({
         </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap justify-end">
+        <button
+          type="button"
+          onClick={onDownload}
+          disabled={downloadingSession}
+          className="inline-flex items-center gap-2 rounded-2xl border border-sage-light/30 bg-white px-4 py-2.5 text-xs font-bold text-forest/70 transition hover:bg-sage-light/10 disabled:opacity-50"
+        >
+          {downloadingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Скачать
+        </button>
         <button
           type="button"
           onClick={onArchive}

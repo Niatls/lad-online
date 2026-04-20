@@ -4,6 +4,7 @@ import {
   createAdminVoiceToken,
   deleteAdminChatMessages,
   deleteAdminChatSession,
+  downloadAdminChatSession,
 } from "@/components/admin/admin-chat-panel/actions-api";
 import type { Message, Session, VoiceEvent, VoiceLiveStats } from "@/components/admin/admin-chat-panel/types";
 
@@ -14,6 +15,7 @@ type UseAdminChatActionsParams = {
   creatingVoiceToken: boolean;
   archivingSession: boolean;
   deletingSession: boolean;
+  downloadingSession: boolean;
   deletingMessages: boolean;
   loadMessages: (sessionId: number) => Promise<void>;
   loadSessions: () => Promise<void>;
@@ -31,6 +33,7 @@ type UseAdminChatActionsParams = {
   setCreatingVoiceToken: React.Dispatch<React.SetStateAction<boolean>>;
   setArchivingSession: React.Dispatch<React.SetStateAction<boolean>>;
   setDeletingSession: React.Dispatch<React.SetStateAction<boolean>>;
+  setDownloadingSession: React.Dispatch<React.SetStateAction<boolean>>;
   setDeletingMessages: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
@@ -44,6 +47,7 @@ export function useAdminChatActions({
   creatingVoiceToken,
   archivingSession,
   deletingSession,
+  downloadingSession,
   deletingMessages,
   loadMessages,
   loadSessions,
@@ -61,6 +65,7 @@ export function useAdminChatActions({
   setCreatingVoiceToken,
   setArchivingSession,
   setDeletingSession,
+  setDownloadingSession,
   setDeletingMessages,
 }: UseAdminChatActionsParams) {
   const resetSelectedSession = useCallback(async () => {
@@ -161,6 +166,21 @@ export function useAdminChatActions({
     }
   }, [deletingSession, resetSelectedSession, selectedId, selectedSession?.visitorName, setDeletingSession]);
 
+  const handleDownloadSession = useCallback(async () => {
+    if (!selectedId || downloadingSession) {
+      return;
+    }
+
+    setDownloadingSession(true);
+    try {
+      await downloadAdminChatSession(selectedId);
+    } catch (err) {
+      console.error("Failed to download session:", err);
+    } finally {
+      setDownloadingSession(false);
+    }
+  }, [downloadingSession, selectedId, setDownloadingSession]);
+
   const handleDeleteMessages = useCallback(async () => {
     if (!selectedId || selectedMessageIds.length === 0 || deletingMessages) {
       return;
@@ -201,6 +221,7 @@ export function useAdminChatActions({
     handleGenerateVoiceToken,
     handleArchiveSession,
     handleDeleteSession,
+    handleDownloadSession,
     handleDeleteMessages,
   };
 }

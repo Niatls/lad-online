@@ -490,6 +490,54 @@ export async function getAdminChatSessions() {
   });
 }
 
+export async function getAdminChatSessionExport(sessionId: number) {
+  return withRetry(async () => {
+    const sessions = await sql`
+      select
+        id,
+        "visitorId",
+        "visitorName",
+        status,
+        "createdAt",
+        "updatedAt"
+      from "ChatSession"
+      where id = ${sessionId}
+      limit 1
+    ` as ChatSessionRow[];
+
+    const session = sessions[0];
+    if (!session) {
+      return null;
+    }
+
+    const messages = await sql`
+      select
+        m.id,
+        m."sessionId",
+        m.sender,
+        m.content,
+        m."replyToId",
+        m."deletedAt",
+        m."deletedBy",
+        m."editedAt",
+        m."createdAt",
+        rp.id as "replyPreviewId",
+        rp.sender as "replyPreviewSender",
+        rp.content as "replyPreviewContent",
+        rp."deletedAt" as "replyPreviewDeletedAt"
+      from "ChatMessage" m
+      left join "ChatMessage" rp on rp.id = m."replyToId"
+      where m."sessionId" = ${sessionId}
+      order by m."createdAt" asc
+    ` as ChatMessageRow[];
+
+    return {
+      ...mapSession(session),
+      messages: messages.map(mapMessage),
+    };
+  });
+}
+
 export async function updateVoiceTranscript(sessionId: number, messageId: number, transcript: string) {
   return withRetry(async () => {
     // 1. Fetch current message content
