@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { getChatMessagePreviewText } from "@/lib/chat-message-format";
+import {
+  getChatMessagePreviewText,
+  parseVoiceMessageContent,
+} from "@/lib/chat-message-format";
 import { getAdminChatSessionExport } from "@/lib/chat-store";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -23,10 +26,28 @@ type ExportMessage = {
   createdAt: string;
 };
 
+type ExportVoiceFile = {
+  messageId: number;
+  url: string;
+  filename: string;
+  mimeType: string | null;
+  fileSize: number | null;
+  durationMs: number | null;
+};
+
 const senderLabels: Record<string, string> = {
   admin: "Администратор",
   visitor: "Посетитель",
   system: "Система",
+};
+
+const EXT_BY_TYPE: Record<string, string> = {
+  "audio/aac": "aac",
+  "audio/mp4": "m4a",
+  "audio/mpeg": "mp3",
+  "audio/ogg": "ogg",
+  "audio/webm": "webm",
+  "video/mp4": "m4a",
 };
 
 function formatDate(value: string) {
@@ -39,6 +60,7 @@ function formatDate(value: string) {
 
 function formatMessage(message: ExportMessage) {
   const sender = senderLabels[message.sender] ?? message.sender;
+  const voiceMessage = parseVoiceMessageContent(message.content);
   const flags = [
     message.isEdited ? "изменено" : null,
     message.isDeleted ? `удалено${message.deletedBy ? `: ${message.deletedBy}` : ""}` : null,
@@ -53,7 +75,14 @@ function formatMessage(message: ExportMessage) {
     : "";
   const content = message.isDeleted
     ? "Сообщение удалено"
-    : getChatMessagePreviewText(message.content) ?? "Системное сообщение";
+    : voiceMessage
+      ? [
+          "Голосовое сообщение",
+          voiceMessage.transcript ? `Расшифровка: ${voiceMessage.transcript}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : getChatMessagePreviewText(message.content) ?? "Системное сообщение";
 
   return `[${formatDate(message.createdAt)}] #${message.id} ${sender}${status}${reply}\n${content}`;
 }
@@ -78,6 +107,48 @@ function buildFilename(sessionId: number) {
   return `chat-dialog-${sessionId}-${date}.txt`;
 }
 
+function buildArchiveFilename(sessionId: number) {
+  const date = new Date().toISOString().slice(0, 10);
+  return `chat-dialog-${sessionId}-${date}.zip`;
+}
+
+function getVoiceExtension(mimeType?: string | null, url?: string | null) {
+  const normalizedMime = mimeType?.split(";")[0]?.trim().toLowerCase();
+  if (normalizedMime && EXT_BY_TYPE[normalizedMime]) {
+    return EXT_BY_TYPE[normalizedMime];
+  }
+
+  const path = url?.split("?")[0] ?? "";
+  const extension = path.match(/\.([a-z0-9]{2,5})$/i)?.[1]?.toLowerCase();
+  return extension || "webm";
+}
+
+function buildVoiceFiles(messages: ExportMessage[]) {
+  return messages.reduce<ExportVoiceFile[]>((files, message) => {
+    if (message.isDeleted) {
+      return files;
+    }
+
+    const voiceMessage = parseVoiceMessageContent(message.content);
+    if (!voiceMessage) {
+      return files;
+    }
+
+    const index = files.length + 1;
+    const extension = getVoiceExtension(voiceMessage.mimeType, voiceMessage.url);
+    files.push({
+      messageId: message.id,
+      url: voiceMessage.url,
+      filename: `voice/${String(index).padStart(2, "0")}-message-${message.id}.${extension}`,
+      mimeType: voiceMessage.mimeType,
+      fileSize: voiceMessage.fileSize,
+      durationMs: voiceMessage.durationMs,
+    });
+
+    return files;
+  }, []);
+}
+
 export async function GET(_req: Request, context: RouteContext) {
   const cookieStore = await cookies();
   if (!isAdminAuthenticated(cookieStore)) {
@@ -85,6 +156,7 @@ export async function GET(_req: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const requestUrl = new URL(_req.url);
   const sessionId = Number.parseInt(id, 10);
   if (Number.isNaN(sessionId)) {
     return NextResponse.json({ error: "Invalid session id" }, { status: 400 });
@@ -96,8 +168,20 @@ export async function GET(_req: Request, context: RouteContext) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
+    const text = buildExportText(session);
+    const voiceFiles = buildVoiceFiles(session.messages);
+
+    if (requestUrl.searchParams.get("format") === "json") {
+      return NextResponse.json({
+        filename: buildArchiveFilename(session.id),
+        textFilename: buildFilename(session.id),
+        text,
+        voiceFiles,
+      });
+    }
+
     const filename = buildFilename(session.id);
-    return new Response(buildExportText(session), {
+    return new Response(text, {
       headers: {
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Content-Type": "text/plain; charset=utf-8",
