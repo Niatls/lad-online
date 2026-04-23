@@ -13,7 +13,6 @@ export async function startVoiceKeepAliveAudio(audioRef: AudioRefLike) {
   if (!audio) {
     audio = new Audio(SILENT_KEEPALIVE_AUDIO);
     audio.loop = true;
-    audio.playsInline = true;
     audio.preload = "auto";
     audio.volume = 0.001;
     audioRef.current = audio;

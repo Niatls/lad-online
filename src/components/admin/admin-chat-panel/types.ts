@@ -38,6 +38,7 @@ export type VoiceInvite = {
   token: string;
   status: string;
   expiresAt: string;
+  metadata?: unknown;
 };
 
 export type VoiceEvent = {

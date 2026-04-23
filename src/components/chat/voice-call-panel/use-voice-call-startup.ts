@@ -188,7 +188,7 @@ export function useVoiceCallStartup({
       sendOfferRef.current = null;
       cleanup();
     };
-  ], [
+  }, [
     token,
     role,
   ]);

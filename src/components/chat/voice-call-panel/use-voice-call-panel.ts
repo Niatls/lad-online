@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { formatCallDuration, formatUsageBytes } from "./formatters";
 import { useVoiceCallActions } from "./use-voice-call-actions";
 import { useVoiceCallAudioRecovery } from "./use-voice-call-audio-recovery";
