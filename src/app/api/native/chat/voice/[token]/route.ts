@@ -1,0 +1,47 @@
+import { NextRequest, NextResponse } from "next/server";
+import { activateNativeVoiceInvite, endNativeVoiceInvite, getNativeVoiceInviteByToken } from "@/lib/native-voice-store";
+
+type RouteContext = { params: Promise<{ token: string }> };
+
+export async function GET(_: NextRequest, context: RouteContext) {
+  try {
+    const { token } = await context.params;
+    const invite = await getNativeVoiceInviteByToken(token);
+    if (!invite) {
+      return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+    }
+    if (["expired", "ended"].includes(invite.status)) {
+      return NextResponse.json({ error: "Invite unavailable", invite }, { status: 410 });
+    }
+    return NextResponse.json(invite);
+  } catch (error) {
+    console.error("Get native voice invite error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest, context: RouteContext) {
+  try {
+    const { token } = await context.params;
+    const body = await req.json().catch(() => ({}));
+    const action = typeof body?.action === "string" ? body.action : "join";
+    const role = body?.role === "admin" ? "admin" : "visitor";
+
+    if (action === "end") {
+      const invite = await endNativeVoiceInvite(token, {
+        dataUsageBytes: typeof body?.dataUsageBytes === "number" ? body.dataUsageBytes : 0,
+        durationSeconds: typeof body?.durationSeconds === "number" ? body.durationSeconds : 0,
+        closedBy: typeof body?.role === "string" ? body.role : undefined,
+      });
+      if (!invite) return NextResponse.json({ error: "Invite unavailable" }, { status: 404 });
+      return NextResponse.json(invite);
+    }
+
+    const invite = await activateNativeVoiceInvite(token, role);
+    if (!invite) return NextResponse.json({ error: "Invite unavailable" }, { status: 404 });
+    return NextResponse.json(invite);
+  } catch (error) {
+    console.error("Update native voice invite error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}

@@ -108,6 +108,8 @@ model ChatSession {
   messages     ChatMessage[]
   voiceInvites ChatVoiceInvite[]
   voiceEvents  ChatVoiceEvent[]
+  nativeVoiceInvites NativeVoiceInvite[]
+  nativeVoiceEvents  NativeVoiceEvent[]
 
   @@index([visitorId])
   @@index([status])
@@ -180,4 +182,56 @@ model ChatVoiceEvent {
   @@index([inviteId, createdAt])
   @@index([token, createdAt])
 }
+
+model NativeVoiceInvite {
+  id        Int               @id @default(autoincrement())
+  sessionId Int
+  token     String            @unique
+  status    String            @default("pending") // pending, active, ended, expired
+  dataUsageBytes BigInt       @default(0)
+  durationSeconds Int         @default(0)
+  closedBy  String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  expiresAt DateTime
+  joinedAt  DateTime?
+  endedAt   DateTime?
+  session   ChatSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  signals   NativeVoiceSignal[]
+  events    NativeVoiceEvent[]
+
+  @@index([sessionId])
+  @@index([status])
+}
+
+model NativeVoiceSignal {
+  id         Int             @id @default(autoincrement())
+  inviteId    Int
+  senderRole  String
+  signalType  String
+  payload     Json
+  createdAt   DateTime       @default(now())
+  invite      NativeVoiceInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+
+  @@index([inviteId, id])
+}
+
+model NativeVoiceEvent {
+  id         Int             @id @default(autoincrement())
+  inviteId    Int
+  sessionId   Int
+  token       String
+  role        String
+  eventType   String
+  message     String
+  details     Json?
+  createdAt   DateTime       @default(now())
+  invite      NativeVoiceInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  session     ChatSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([inviteId, createdAt])
+  @@index([token, createdAt])
+}
+
 

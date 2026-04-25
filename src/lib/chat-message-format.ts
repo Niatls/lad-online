@@ -12,8 +12,8 @@ export type VoiceMessagePayload = {
   transcript?: string | null;
 };
 
-export function buildVoiceInviteMessage(token: string) {
-  return `${VOICE_TOKEN_PREFIX}${token}${VOICE_TOKEN_SUFFIX}`;
+export function buildVoiceInviteMessage(token: string, source: "web" | "native" = "web") {
+  return `${VOICE_TOKEN_PREFIX}${source}:${token}${VOICE_TOKEN_SUFFIX}`;
 }
 
 export function parseVoiceInviteToken(content: string) {
@@ -24,11 +24,21 @@ export function parseVoiceInviteToken(content: string) {
     return null;
   }
 
-  const token = content
+  const raw = content
     .slice(VOICE_TOKEN_PREFIX.length, -VOICE_TOKEN_SUFFIX.length)
     .trim();
-  return token || null;
+
+  if (raw.includes(":")) {
+    const [source, ...tokenParts] = raw.split(":");
+    return {
+      token: tokenParts.join(":"),
+      source: source === "native" ? ("native" as const) : ("web" as const),
+    };
+  }
+
+  return { token: raw, source: "web" as const };
 }
+
 
 export function buildVoiceMessageContent(payload: VoiceMessagePayload) {
   return `${VOICE_MESSAGE_PREFIX}${JSON.stringify(payload)}${VOICE_MESSAGE_SUFFIX}`;
@@ -70,13 +80,16 @@ export function parseVoiceMessageContent(content: string): VoiceMessagePayload |
 }
 
 export function getChatMessagePreviewText(content: string) {
-  if (parseVoiceInviteToken(content)) {
-    return null;
+  const voiceInvite = parseVoiceInviteToken(content);
+  if (voiceInvite) {
+    const sourceLabel = voiceInvite.source === "native" ? "Приложение" : "Сайт";
+    return `Голосовой звонок (${sourceLabel})`;
   }
 
   if (parseVoiceMessageContent(content)) {
     return "Голосовое сообщение";
   }
+
 
   return content;
 }
