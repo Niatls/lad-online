@@ -1,3 +1,5 @@
+import { VOICE_SIGNAL_POLL_MS } from "./constants";
+
 type StartVoiceCallParams = {
   mountedRef: { current: boolean };
   token: string;
@@ -114,7 +116,7 @@ export async function startVoiceCall({
 
     pollRef.current = setInterval(() => {
       void pollSignals();
-    }, 1200);
+    }, VOICE_SIGNAL_POLL_MS);
 
     if (role === "admin" && !initialOfferSentRef.current) {
       initialOfferSentRef.current = true;

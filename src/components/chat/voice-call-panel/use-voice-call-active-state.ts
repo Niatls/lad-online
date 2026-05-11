@@ -2,6 +2,8 @@
 
 import { useCallback } from "react";
 
+import { VOICE_STATS_POLL_MS } from "./constants";
+
 type UseVoiceCallActiveStateParams = {
   callEstablishedRef: React.MutableRefObject<boolean>;
   clearReconnectTimeout: () => void;
@@ -64,7 +66,7 @@ export function useVoiceCallActiveState({
       void refreshConnectionStats();
       statsRef.current = setInterval(() => {
         void refreshConnectionStats();
-      }, 1000);
+      }, VOICE_STATS_POLL_MS);
     }
   }, [
     callEstablishedRef,

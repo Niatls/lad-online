@@ -1,7 +1,13 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import { getAdminVoiceSessionStorageKey } from "@/components/admin/admin-chat-panel/utils";
 import type { Message, Session, UsageSummary, VoiceEvent, VoiceInvite } from "@/components/admin/admin-chat-panel/types";
+
+const ACTIVE_SESSION_LIST_POLL_MS = 30_000;
+const BACKGROUND_SESSION_LIST_POLL_MS = 120_000;
+const ACTIVE_SELECTED_SESSION_POLL_MS = 8_000;
+const BACKGROUND_SELECTED_SESSION_POLL_MS = 60_000;
+const VOICE_META_POLL_MS = 30_000;
 
 type UseAdminChatSessionDataParams = {
   selectedId: number | null;
@@ -36,6 +42,9 @@ export function useAdminChatSessionData({
   lastMsgIdRef,
   pollRef,
 }: UseAdminChatSessionDataParams) {
+  const lastVoiceEventsLoadAtRef = useRef(0);
+  const lastVoiceInviteSyncAtRef = useRef(0);
+
   const loadSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/chat/sessions");
@@ -55,10 +64,39 @@ export function useAdminChatSessionData({
 
   useEffect(() => {
     void loadSessions();
-    const interval = setInterval(() => {
-      void loadSessions();
-    }, 5000);
-    return () => clearInterval(interval);
+
+    const getIntervalMs = () =>
+      typeof document !== "undefined" && document.visibilityState === "hidden"
+        ? BACKGROUND_SESSION_LIST_POLL_MS
+        : ACTIVE_SESSION_LIST_POLL_MS;
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const scheduleNextPoll = () => {
+      timeoutId = setTimeout(() => {
+        void loadSessions().finally(scheduleNextPoll);
+      }, getIntervalMs());
+    };
+
+    scheduleNextPoll();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      void loadSessions().finally(scheduleNextPoll);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [loadSessions]);
 
   const loadMessages = useCallback(async (sessionId: number) => {
@@ -133,10 +171,21 @@ export function useAdminChatSessionData({
     }
 
     try {
+      const now = Date.now();
+      const shouldSyncVoiceInvite = now - lastVoiceInviteSyncAtRef.current >= VOICE_META_POLL_MS;
+      const shouldLoadVoiceEvents = now - lastVoiceEventsLoadAtRef.current >= VOICE_META_POLL_MS;
+
+      if (shouldSyncVoiceInvite) {
+        lastVoiceInviteSyncAtRef.current = now;
+      }
+      if (shouldLoadVoiceEvents) {
+        lastVoiceEventsLoadAtRef.current = now;
+      }
+
       const [res] = await Promise.all([
         fetch(`/api/chat/sessions/${selectedId}/messages?after=${lastMsgIdRef.current}`),
-        syncAdminVoiceInvite(selectedId),
-        loadVoiceEvents(selectedId),
+        shouldSyncVoiceInvite ? syncAdminVoiceInvite(selectedId) : Promise.resolve(null),
+        shouldLoadVoiceEvents ? loadVoiceEvents(selectedId) : Promise.resolve(),
       ]);
 
       if (res.ok) {
@@ -161,11 +210,42 @@ export function useAdminChatSessionData({
     void loadMessages(selectedId);
     void syncAdminVoiceInvite(selectedId);
     void loadVoiceEvents(selectedId);
-    pollRef.current = setInterval(() => {
-      void pollMessages();
-    }, 2000);
 
-    return () => clearInterval(pollRef.current);
+    const getIntervalMs = () =>
+      typeof document !== "undefined" && document.visibilityState === "hidden"
+        ? BACKGROUND_SELECTED_SESSION_POLL_MS
+        : ACTIVE_SELECTED_SESSION_POLL_MS;
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const scheduleNextPoll = () => {
+      timeoutId = setTimeout(() => {
+        void pollMessages().finally(scheduleNextPoll);
+      }, getIntervalMs());
+    };
+
+    scheduleNextPoll();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      void pollMessages().finally(scheduleNextPoll);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+      }
+    };
   }, [lastMsgIdRef, loadMessages, loadVoiceEvents, pollMessages, pollRef, selectedId, syncAdminVoiceInvite]);
 
   useEffect(() => {

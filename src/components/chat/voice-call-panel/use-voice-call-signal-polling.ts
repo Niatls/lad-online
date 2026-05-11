@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
+import { VOICE_INVITE_STATUS_POLL_MS } from "./constants";
 import { pollVoiceSignals } from "./polling";
 import {
   handleIncomingVoiceSignal,
@@ -60,6 +61,8 @@ export function useVoiceCallSignalPolling({
   startedReconnectRecently,
   updateLastEvent,
 }: UseVoiceCallSignalPollingParams) {
+  const lastInviteStatusCheckAtRef = useRef(0);
+
   const handleVisitorRejoinRequest = useCallback(async () => {
     await handleVoiceVisitorRejoinRequest({
       ...handleVisitorRejoinRequestDeps,
@@ -109,9 +112,17 @@ export function useVoiceCallSignalPolling({
   ]);
 
   const pollSignals = useCallback(async () => {
+    const now = Date.now();
+    const shouldCheckInviteStatus =
+      now - lastInviteStatusCheckAtRef.current >= VOICE_INVITE_STATUS_POLL_MS;
+    if (shouldCheckInviteStatus) {
+      lastInviteStatusCheckAtRef.current = now;
+    }
+
     await pollVoiceSignals({
       token: pollToken,
       role: pollRole,
+      shouldCheckInviteStatus,
       lastSignalIdRef,
       handleSignal,
       setStatus,

@@ -6,6 +6,9 @@ export const defaultIceServers: IceServer[] = [
 ];
 
 export const MONTHLY_CAP_BYTES = 1000 * 1024 * 1024 * 1024;
+export const VOICE_SIGNAL_POLL_MS = 2_000;
+export const VOICE_INVITE_STATUS_POLL_MS = 6_000;
+export const VOICE_STATS_POLL_MS = 5_000;
 
 export const INITIAL_ICE_ROUTE = "Ищем маршрут...";
 export const INITIAL_TRAFFIC_ROUTE_LABEL = "Определяем маршрут трафика...";

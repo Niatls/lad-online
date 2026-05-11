@@ -2,6 +2,8 @@ import { useEffect } from "react";
 
 import type { VoiceInvite } from "@/components/chat/chat-widget/types";
 
+const VOICE_INVITE_POLL_MS = 5_000;
+
 type UseChatWidgetPollVoiceInviteParams = {
   isOpen: boolean;
   sessionId: number | null;
@@ -24,7 +26,7 @@ export function useChatWidgetPollVoiceInvite({
 
     const interval = setInterval(() => {
       void syncVoiceInvite(sessionId);
-    }, 1000);
+    }, VOICE_INVITE_POLL_MS);
 
     return () => clearInterval(interval);
   }, [activeVoiceToken, availableVoiceInvite, isOpen, sessionId, syncVoiceInvite]);

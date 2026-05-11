@@ -4,6 +4,7 @@ import type { Message } from "@/components/chat/chat-widget/types";
 type PollChatWidgetMessagesParams = {
   isOpen: boolean;
   sessionId: number | null;
+  shouldSyncVoiceInvite: boolean;
   scrollToBottom: () => void;
   lastMsgIdRef: React.MutableRefObject<number>;
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -14,6 +15,7 @@ type PollChatWidgetMessagesParams = {
 export async function pollChatWidgetMessages({
   isOpen,
   sessionId,
+  shouldSyncVoiceInvite,
   scrollToBottom,
   lastMsgIdRef,
   setMessages,
@@ -27,7 +29,7 @@ export async function pollChatWidgetMessages({
   try {
     const [newMessages] = await Promise.all([
       fetchChatWidgetMessages(sessionId, lastMsgIdRef.current),
-      syncVoiceInvite(sessionId),
+      shouldSyncVoiceInvite ? syncVoiceInvite(sessionId) : Promise.resolve(),
     ]);
     if (newMessages.length === 0) {
       return;

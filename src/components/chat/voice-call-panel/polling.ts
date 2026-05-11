@@ -3,6 +3,7 @@ import type { VoiceSignal } from "./types";
 type PollVoiceSignalsParams = {
   token: string;
   role: "admin" | "visitor";
+  shouldCheckInviteStatus: boolean;
   lastSignalIdRef: { current: number };
   handleSignal: (signal: VoiceSignal) => Promise<void>;
   setStatus: (value: string) => void;
@@ -16,6 +17,7 @@ type PollVoiceSignalsParams = {
 export async function pollVoiceSignals({
   token,
   role,
+  shouldCheckInviteStatus,
   lastSignalIdRef,
   handleSignal,
   setStatus,
@@ -35,6 +37,10 @@ export async function pollVoiceSignals({
     for (const signal of signals) {
       lastSignalIdRef.current = Math.max(lastSignalIdRef.current, signal.id);
       await handleSignal(signal);
+    }
+
+    if (!shouldCheckInviteStatus) {
+      return;
     }
 
     const inviteRes = await fetch(`/api/chat/voice/${token}`, { cache: "no-store" });
